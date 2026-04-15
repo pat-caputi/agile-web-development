@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My plans · LiftAGILE</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-logo">Lift<span>AGILE</span></div>
+    <a href="dashboard.html" class="nav-link">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="9" y="1" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="1" y="9" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="9" y="9" width="6" height="6" rx="1.5" fill="currentColor"/></svg>
+      Dashboard
+    </a>
+    <a href="log_workout.html" class="nav-link">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 8h2m8 0h2M4 8V5.5a1.5 1.5 0 013 0v5a1.5 1.5 0 003 0V5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Log workout
+    </a>
+    <a href="plans.html" class="nav-link active">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 6h6M5 9h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      My plans
+    </a>
+    <a href="leaderboard.html" class="nav-link">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 13V8m5 5V4m5 9V7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Leaderboard
+    </a>
+    <div class="nav-spacer"></div>
+    <a href="profile.html" class="nav-user">
+      <div class="avatar" style="background:var(--accent-light);color:var(--accent-dark);">AX</div>
+      <div>
+        <div class="nav-user-name">Kawhi</div>
+        <div class="nav-user-rank">Rank #3</div>
+      </div>
+    </a>
+  </nav>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;">
+      <div>
+        <h1 class="page-title">My plans</h1>
+        <p class="page-sub">Saved workout routines</p>
+      </div>
+      <button class="btn btn-primary" onclick="alert('Create plan (demo)')">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        New plan
+      </button>
+    </div>
+
+    <div class="plans-grid">
+
+      <!-- Plan 1 -->
+      <div class="plan-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <div class="plan-card-title">Push day</div>
+          <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;"
+                  onclick="alert('Edit plan (demo)')">Edit</button>
+        </div>
+        <div class="plan-card-meta">6 exercises · ~60 min</div>
+        <div>
+          <span class="plan-tag">Chest</span>
+          <span class="plan-tag">Shoulders</span>
+          <span class="plan-tag">Triceps</span>
+        </div>
+        <div style="margin-top:14px;padding-top:12px;border-top:0.5px solid var(--border);">
+          <div style="font-size:11.5px;color:var(--text-tertiary);margin-bottom:6px;">Exercises</div>
+          <div style="font-size:13px;color:var(--text-secondary);padding:3px 0;">Bench press</div>
+          <div style="font-size:13px;color:var(--text-secondary);padding:3px 0;">Incline press</div>
+          <div style="font-size:13px;color:var(--text-secondary);padding:3px 0;">Overhead press</div>
+          <div style="font-size:13px;color:var(--text-secondary);padding:3px 0;">Lateral raises</div>
+          <div style="font-size:12px;color:var(--text-tertiary);">+2 more</div>
+        </div>
+        <div style="margin-top:14px;">
+          <a href="log_workout.html" class="btn btn-primary btn-block">Start this plan</a>
+        </div>
+      </div>
+
+      <!-- Plan 2 -->
+      <div class="plan-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <div class="plan-card-title">Pull day</div>
+          <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;"
+                  onclick="alert('Edit plan (demo)')">Edit</button>
+        </div>
+        <div class="plan-card-meta">5 exercises · ~50 min</div>
+        <div>
+          <span class="plan-tag">Back</span>
+          <span class="plan-tag">Biceps</span>
+        </div>
+        <div style="margin-top:14px;padding-top:12px;border-top:0.5px solid var(--border);">
+          <div style="font-size:11.5px;color:var(--text-tertiary);margin-bottom:6px;">Exercises</div>
+          <div style="font-size:13px;color:var(--text-secondary);padding:3px 0;">Pull up</div>
+          <div style="font-size:13px;color:var(--text-secondary);padding:3px 0;">Barbell row</div>
+          <div style="font-size:13px;color:var(--text-secondary);padding:3px 0;">Seated cable row</div>
+          <div style="font-size:13px;color:var(--text-secondary);padding:3px 0;">Bicep curl</div>
+          <div style="font-size:12px;color:var(--text-tertiary);">+1 more</div>
+        </div>
+        <div style="margin-top:14px;">
+          <a href="log_workout.html" class="btn btn-primary btn-block">Start this plan</a>
+        </div>
+      </div>
+
+      <!-- Plan 3 -->
+      <div class="plan-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <div class="plan-card-title">Leg day</div>
+          <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;"
+                  onclick="alert('Edit plan (demo)')">Edit</button>
+        </div>
+        <div class="plan-card-meta">5 exercises · ~55 min</div>
+        <div>
+          <span class="plan-tag">Quads</span>
+          <span class="plan-tag">Hamstrings</span>
+          <span class="plan-tag">Glutes</span>
+        </div>
+        <div style="margin-top:14px;padding-top:12px;border-top:0.5px solid var(--border);">
+          <div style="font-size:11.5px;color:var(--text-tertiary);margin-bottom:6px;">Exercises</div>
+          <div style="font-size:13px;color:var(--text-secondary);padding:3px 0;">Squat</div>
+          <div style="font-size:13px;color:var(--text-secondary);padding:3px 0;">Leg press</div>
+          <div style="font-size:13px;color:var(--text-secondary);padding:3px 0;">Romanian deadlift</div>
+          <div style="font-size:13px;color:var(--text-secondary);padding:3px 0;">Leg curl</div>
+          <div style="font-size:12px;color:var(--text-tertiary);">+1 more</div>
+        </div>
+        <div style="margin-top:14px;">
+          <a href="log_workout.html" class="btn btn-primary btn-block">Start this plan</a>
+        </div>
+      </div>
+
+      <!-- New plan card -->
+      <button onclick="alert('Create plan (demo)')"
+              style="display:flex;flex-direction:column;align-items:center;justify-content:center;
+                     gap:8px;min-height:180px;border:0.5px dashed var(--border-md);
+                     border-radius:var(--radius-lg);color:var(--text-tertiary);
+                     background:none;cursor:pointer;transition:border-color 0.15s,color 0.15s;
+                     font-family:var(--font);">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <span style="font-size:13px;">Create new plan</span>
+      </button>
+
+    </div>
+  </main>
+</div>
+<script src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard · LiftAGILE</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-logo">Lift<span>AGILE</span></div>
+    <a href="dashboard.html" class="nav-link active">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="9" y="1" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="1" y="9" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="9" y="9" width="6" height="6" rx="1.5" fill="currentColor"/></svg>
+      Dashboard
+    </a>
+    <a href="log_workout.html" class="nav-link">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 8h2m8 0h2M4 8V5.5a1.5 1.5 0 013 0v5a1.5 1.5 0 003 0V5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Log workout
+    </a>
+    <a href="plans.html" class="nav-link">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 6h6M5 9h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      My plans
+    </a>
+    <a href="leaderboard.html" class="nav-link">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 13V8m5 5V4m5 9V7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Leaderboard
+    </a>
+    <div class="nav-spacer"></div>
+    <a href="profile.html" class="nav-user">
+      <div class="avatar" style="background:var(--accent-light);color:var(--accent-dark);">KL</div>
+      <div>
+        <div class="nav-user-name">Kawhi</div>
+        <div class="nav-user-rank">Rank #3</div>
+      </div>
+    </a>
+  </nav>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="page-header">
+      <h1 class="page-title">Good morning, Kawhi</h1>
+      <p class="page-sub">Thursday, 12 June · Week 24 · 4 workouts this week</p>
+    </div>
+
+    <!-- Stat cards -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Weekly volume</div>
+        <div class="stat-value">18,420<span class="stat-unit"> kg</span></div>
+        <div class="stat-meta"><span class="badge badge-success">+12% vs last week</span></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Workouts logged</div>
+        <div class="stat-value">4</div>
+        <div class="stat-meta">Goal: 5 / week</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Current streak</div>
+        <div class="stat-value">12<span class="stat-unit"> days</span></div>
+        <div class="stat-meta"><span class="badge badge-pr">Personal best</span></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Leaderboard rank</div>
+        <div class="stat-value">#3</div>
+        <div class="stat-meta">of 24 users</div>
+      </div>
+    </div>
+
+    <!-- Content grid -->
+    <div class="content-grid">
+
+      <!-- Left: chart + session -->
+      <div class="card">
+        <div class="card-title">Weekly volume (kg)</div>
+        <div class="bar-chart">
+          <div class="bar-col"><div class="bar-fill" style="height:45%"></div><span class="bar-day">Mon</span></div>
+          <div class="bar-col"><div class="bar-fill" style="height:68%"></div><span class="bar-day">Tue</span></div>
+          <div class="bar-col"><div class="bar-fill" style="height:32%"></div><span class="bar-day">Wed</span></div>
+          <div class="bar-col"><div class="bar-fill today" style="height:85%"></div><span class="bar-day">Thu</span></div>
+          <div class="bar-col"><div class="bar-fill rest" style="height:0%"></div><span class="bar-day">Fri</span></div>
+          <div class="bar-col"><div class="bar-fill rest" style="height:0%"></div><span class="bar-day">Sat</span></div>
+          <div class="bar-col"><div class="bar-fill rest" style="height:0%"></div><span class="bar-day">Sun</span></div>
+        </div>
+
+        <hr class="card-divider">
+
+        <div class="card-title">Today's session · Push day</div>
+        <div class="exercise-list">
+          <div class="exercise-item">
+            <div class="ex-icon" style="background:#EEEDFE;color:#534AB7;">B</div>
+            <div class="ex-info">
+              <div class="ex-name">Bench press</div>
+              <div class="ex-meta">4 sets · 80 kg</div>
+            </div>
+            <span class="badge badge-pr">PR</span>
+          </div>
+          <div class="exercise-item">
+            <div class="ex-icon" style="background:#E1F5EE;color:#085041;">O</div>
+            <div class="ex-info">
+              <div class="ex-name">Overhead press</div>
+              <div class="ex-meta">3 sets · 55 kg</div>
+            </div>
+            <span class="badge badge-success">Done</span>
+          </div>
+          <div class="exercise-item">
+            <div class="ex-icon" style="background:#F1EFE8;color:#5F5E5A;">T</div>
+            <div class="ex-info">
+              <div class="ex-name">Tricep pushdown</div>
+              <div class="ex-meta">3 sets · 30 kg</div>
+            </div>
+            <span class="badge badge-warning">Up next</span>
+          </div>
+          <div class="exercise-item">
+            <div class="ex-icon" style="background:#FAEEDA;color:#633806;">L</div>
+            <div class="ex-info">
+              <div class="ex-name">Lateral raises</div>
+              <div class="ex-meta">3 sets · 12 kg</div>
+            </div>
+            <span class="badge" style="background:var(--gray-100);color:var(--gray-600);">Pending</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: mini leaderboard + CTA -->
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div class="card" style="flex:1;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <span class="card-title" style="margin-bottom:0;">Leaderboard · This week</span>
+            <a href="leaderboard.html" style="font-size:12px;color:var(--accent);text-decoration:none;">View all</a>
+          </div>
+          <div class="rank-list">
+            <div class="rank-item">
+              <span class="rank-num">1</span>
+              <div class="avatar" style="background:#FAEEDA;color:#633806;">LJ</div>
+              <span class="rank-name">Lebron J.</span>
+              <span class="rank-score">24,810 kg</span>
+            </div>
+            <div class="rank-item">
+              <span class="rank-num">2</span>
+              <div class="avatar" style="background:#E1F5EE;color:#085041;">SC</div>
+              <span class="rank-name">Steph C.</span>
+              <span class="rank-score">21,340 kg</span>
+            </div>
+            <div class="rank-item you">
+              <span class="rank-num">3</span>
+              <div class="avatar" style="background:#AFA9EC;color:#26215C;">KL</div>
+              <span class="rank-name">You</span>
+              <span class="rank-score">18,420 kg</span>
+            </div>
+            <div class="rank-item">
+              <span class="rank-num">4</span>
+              <div class="avatar" style="background:#FAECE7;color:#712B13;">MJ</div>
+              <span class="rank-name">Michael J.</span>
+              <span class="rank-score">16,090 kg</span>
+            </div>
+            <div class="rank-item">
+              <span class="rank-num">5</span>
+              <div class="avatar" style="background:#FBEAF0;color:#72243E;">BR</div>
+              <span class="rank-name">Bill R.</span>
+              <span class="rank-score">14,720 kg</span>
+            </div>
+          </div>
+        </div>
+        <a href="log_workout.html" class="btn btn-primary btn-block">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          Log today's workout
+        </a>
+      </div>
+
+    </div>
+  </main>
+</div>
+<script src="js/main.js"></script>
+</body>
+</html>
