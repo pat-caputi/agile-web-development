@@ -5,11 +5,82 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Log workout · LiftAGILE</title>
   <link rel="stylesheet" href="css/style.css">
+  <style>
+    .timer-bar {
+      display:flex;align-items:center;gap:12px;
+      background:var(--sb-bg);color:#fff;
+      padding:10px 18px;border-radius:var(--radius-md);
+      margin-bottom:16px;
+    }
+    .timer-display { font-family:var(--mono);font-size:22px;font-weight:500;letter-spacing:0.05em;min-width:72px; }
+    .timer-label   { color:rgba(255,255,255,0.45);font-size:11px;margin-bottom:2px; }
+    .timer-spacer  { flex:1; }
+    .timer-btn {
+      padding:5px 12px;border-radius:var(--radius-sm);
+      border:0.5px solid rgba(255,255,255,0.14);
+      background:rgba(255,255,255,0.07);color:#fff;
+      font-family:var(--font);font-size:12px;cursor:pointer;
+      transition:background 0.14s;
+    }
+    .timer-btn:hover { background:rgba(255,255,255,0.14); }
+
+    .set-row.done td  { opacity:0.5; }
+    .set-row.done .set-num { background:var(--success-bg);color:var(--success-text); }
+
+    .btn-done {
+      width:28px;height:28px;border-radius:50%;
+      border:0.5px solid var(--border-md);background:var(--surface-2);
+      cursor:pointer;display:inline-flex;align-items:center;justify-content:center;
+      transition:background 0.12s,border-color 0.12s;
+    }
+    .btn-done:hover { background:var(--success-bg);border-color:var(--success-text); }
+    .btn-done.done  { background:var(--success-bg);border-color:var(--success-text); }
+
+    .rest-toast {
+      position:fixed;bottom:24px;right:24px;
+      background:var(--sb-bg);color:#fff;
+      padding:14px 18px;border-radius:var(--radius-lg);
+      font-size:13px;display:none;z-index:999;
+      min-width:170px;
+    }
+    .rest-toast.show { display:block; }
+    .rest-count { font-family:var(--mono);font-size:28px;font-weight:500; }
+
+    .modal-backdrop {
+      display:none;position:fixed;inset:0;
+      background:rgba(0,0,0,0.45);z-index:100;
+      align-items:center;justify-content:center;
+    }
+    .modal-backdrop.show { display:flex; }
+    .modal {
+      background:var(--surface);border-radius:var(--radius-xl);
+      padding:28px;width:100%;max-width:440px;
+      border:0.5px solid var(--border-md);
+    }
+    .modal-title { font-size:18px;font-weight:600;letter-spacing:-0.3px;margin-bottom:4px; }
+    .modal-sub   { font-size:13px;color:var(--text-secondary);margin-bottom:20px; }
+    .summary-row { display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:0.5px solid var(--border);font-size:13px; }
+    .summary-row:last-child { border-bottom:none; }
+    .s-stat-val  { font-size:22px;font-weight:600;letter-spacing:-0.3px; }
+    .s-stat-lbl  { font-size:11px;color:var(--text-tertiary);margin-top:2px; }
+
+    #exercisePicker::-webkit-scrollbar { width:3px; }
+    #exercisePicker::-webkit-scrollbar-thumb { background:var(--gray-200);border-radius:2px; }
+
+    .sec-lbl { font-size:10px;font-weight:600;color:var(--text-tertiary);letter-spacing:0.06em;padding:8px 10px 4px;text-transform:uppercase; }
+
+    .cat-chest     { background:#EEEDFE;color:#534AB7; }
+    .cat-back      { background:#E1F5EE;color:#085041; }
+    .cat-legs      { background:#FAECE7;color:#712B13; }
+    .cat-shoulders { background:#FAEEDA;color:#633806; }
+    .cat-arms      { background:#F1EFE8;color:#444441; }
+    .cat-core      { background:#FBEAF0;color:#72243E; }
+    .cat-cardio    { background:#EAF3DE;color:#27500A; }
+  </style>
 </head>
 <body>
 <div class="app-shell">
 
-  <!-- Sidebar -->
   <nav class="sidebar">
     <div class="sidebar-logo">Lift<span>AGILE</span></div>
     <a href="dashboard.html" class="nav-link">
@@ -30,154 +101,199 @@
     </a>
     <div class="nav-spacer"></div>
     <a href="profile.html" class="nav-user">
-      <div class="avatar" style="background:var(--accent-light);color:var(--accent-dark);">AX</div>
-      <div>
-        <div class="nav-user-name">Kawhi</div>
-        <div class="nav-user-rank">Rank #3</div>
-      </div>
+      <div class="avatar" style="background:var(--accent-light);color:var(--accent-dark);">KL</div>
+      <div><div class="nav-user-name">Kawhi</div><div class="nav-user-rank">Rank #3</div></div>
     </a>
   </nav>
 
-  <!-- Main -->
   <main class="main">
-    <div class="page-header">
-      <h1 class="page-title">Log workout</h1>
-      <p class="page-sub">Thursday, 12 June</p>
+    <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;">
+      <div>
+        <h1 class="page-title">Log workout</h1>
+        <p class="page-sub">Thursday, 12 June 2025</p>
+      </div>
+      <a href="plans.html" class="btn btn-secondary" style="font-size:13px;">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 6h6M5 9h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Load a plan
+      </a>
+    </div>
+
+    <!-- Timer -->
+    <div class="timer-bar">
+      <div>
+        <div class="timer-label">Workout time</div>
+        <div class="timer-display" id="workoutTimer">00:00</div>
+      </div>
+      <div class="timer-spacer"></div>
+      <button class="timer-btn" id="timerToggleBtn" onclick="toggleTimer()">Pause</button>
+      <button class="timer-btn" onclick="resetTimer()">Reset</button>
     </div>
 
     <div class="log-grid">
-
-      <!-- Left: exercise logger -->
+      <!-- Left column -->
       <div style="display:flex;flex-direction:column;gap:14px;">
 
         <!-- Workout name -->
-        <div class="card" style="padding:16px 20px;">
-          <input type="text" value="Push day"
+        <div class="card" style="padding:14px 18px;">
+          <div style="font-size:10px;color:var(--text-tertiary);letter-spacing:0.05em;margin-bottom:4px;">WORKOUT NAME</div>
+          <input type="text" id="workoutName" value="Push day"
                  style="width:100%;border:none;background:none;font-family:var(--font);
                         font-size:16px;font-weight:500;color:var(--text-primary);outline:none;">
         </div>
 
-        <!-- Bench press block -->
+        <!-- Bench press (pre-loaded) -->
         <div class="card exercise-block" id="ex-1">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
-            <div class="ex-icon" style="background:#EEEDFE;color:#534AB7;">B</div>
+            <div class="ex-icon cat-chest">B</div>
             <div style="flex:1;">
               <div style="font-size:14px;font-weight:500;">Bench press</div>
-              <div style="font-size:11.5px;color:var(--text-tertiary);">Chest</div>
+              <div style="font-size:11.5px;color:var(--text-tertiary);">Chest · Barbell</div>
             </div>
-            <button class="btn btn-secondary" style="padding:5px 10px;font-size:12px;"
-                    onclick="removeExercise('ex-1', 1)">Remove</button>
+            <button class="btn btn-secondary" style="padding:5px 10px;font-size:12px;" onclick="removeExercise('ex-1','bench press')">Remove</button>
           </div>
-          <table class="set-table">
-            <thead><tr><th>Set</th><th>Weight (kg)</th><th>Reps</th><th>Notes</th></tr></thead>
+          <table class="set-table" style="width:100%;">
+            <thead><tr><th style="width:28px;">Set</th><th>Previous</th><th>Weight (kg)</th><th>Reps</th><th>Notes</th><th style="width:34px;"></th></tr></thead>
             <tbody id="sets-1">
-              <tr class="set-row"><td><span class="set-num">1</span></td><td><input class="set-input" type="number" value="80"></td><td><input class="set-input" type="number" value="8"></td><td><input class="set-input" type="text" style="width:100px;" placeholder="—"></td></tr>
-              <tr class="set-row"><td><span class="set-num">2</span></td><td><input class="set-input" type="number" value="80"></td><td><input class="set-input" type="number" value="7"></td><td><input class="set-input" type="text" style="width:100px;" placeholder="—"></td></tr>
-              <tr class="set-row"><td><span class="set-num">3</span></td><td><input class="set-input" type="number" value="75"></td><td><input class="set-input" type="number" value="8"></td><td><input class="set-input" type="text" style="width:100px;" value="Drop set"></td></tr>
+              <tr class="set-row"><td><span class="set-num">1</span></td><td style="font-size:11.5px;color:var(--text-tertiary);">77.5 × 8</td><td><input class="set-input" type="number" value="80" min="0" step="0.5"></td><td><input class="set-input" type="number" value="8" min="0"></td><td><input class="set-input" type="text" style="width:84px;" placeholder="—"></td><td><button class="btn-done" onclick="toggleDone(this)"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button></td></tr>
+              <tr class="set-row"><td><span class="set-num">2</span></td><td style="font-size:11.5px;color:var(--text-tertiary);">77.5 × 8</td><td><input class="set-input" type="number" value="80" min="0" step="0.5"></td><td><input class="set-input" type="number" value="7" min="0"></td><td><input class="set-input" type="text" style="width:84px;" placeholder="—"></td><td><button class="btn-done" onclick="toggleDone(this)"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button></td></tr>
+              <tr class="set-row"><td><span class="set-num">3</span></td><td style="font-size:11.5px;color:var(--text-tertiary);">75 × 8</td><td><input class="set-input" type="number" value="75" min="0" step="0.5"></td><td><input class="set-input" type="number" value="8" min="0"></td><td><input class="set-input" type="text" style="width:84px;" value="Drop set"></td><td><button class="btn-done" onclick="toggleDone(this)"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button></td></tr>
             </tbody>
           </table>
-          <button class="btn btn-secondary" style="margin-top:10px;font-size:12px;padding:6px 12px;"
-                  onclick="addSet(1)">+ Add set</button>
+          <button class="btn btn-secondary" style="margin-top:10px;font-size:12px;padding:6px 12px;" onclick="addSet(1)">+ Add set</button>
         </div>
 
-        <!-- Overhead press block -->
+        <!-- Overhead press (pre-loaded) -->
         <div class="card exercise-block" id="ex-2">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
-            <div class="ex-icon" style="background:#E1F5EE;color:#085041;">O</div>
+            <div class="ex-icon cat-shoulders">O</div>
             <div style="flex:1;">
               <div style="font-size:14px;font-weight:500;">Overhead press</div>
-              <div style="font-size:11.5px;color:var(--text-tertiary);">Shoulders</div>
+              <div style="font-size:11.5px;color:var(--text-tertiary);">Shoulders · Barbell</div>
             </div>
-            <button class="btn btn-secondary" style="padding:5px 10px;font-size:12px;"
-                    onclick="removeExercise('ex-2', 5)">Remove</button>
+            <button class="btn btn-secondary" style="padding:5px 10px;font-size:12px;" onclick="removeExercise('ex-2','overhead press')">Remove</button>
           </div>
-          <table class="set-table">
-            <thead><tr><th>Set</th><th>Weight (kg)</th><th>Reps</th><th>Notes</th></tr></thead>
+          <table class="set-table" style="width:100%;">
+            <thead><tr><th style="width:28px;">Set</th><th>Previous</th><th>Weight (kg)</th><th>Reps</th><th>Notes</th><th style="width:34px;"></th></tr></thead>
             <tbody id="sets-2">
-              <tr class="set-row"><td><span class="set-num">1</span></td><td><input class="set-input" type="number" value="55"></td><td><input class="set-input" type="number" value="8"></td><td><input class="set-input" type="text" style="width:100px;" placeholder="—"></td></tr>
-              <tr class="set-row"><td><span class="set-num">2</span></td><td><input class="set-input" type="number" value="55"></td><td><input class="set-input" type="number" value="6"></td><td><input class="set-input" type="text" style="width:100px;" placeholder="—"></td></tr>
+              <tr class="set-row"><td><span class="set-num">1</span></td><td style="font-size:11.5px;color:var(--text-tertiary);">52.5 × 8</td><td><input class="set-input" type="number" value="55" min="0" step="0.5"></td><td><input class="set-input" type="number" value="8" min="0"></td><td><input class="set-input" type="text" style="width:84px;" placeholder="—"></td><td><button class="btn-done" onclick="toggleDone(this)"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button></td></tr>
+              <tr class="set-row"><td><span class="set-num">2</span></td><td style="font-size:11.5px;color:var(--text-tertiary);">52.5 × 7</td><td><input class="set-input" type="number" value="55" min="0" step="0.5"></td><td><input class="set-input" type="number" value="6" min="0"></td><td><input class="set-input" type="text" style="width:84px;" placeholder="—"></td><td><button class="btn-done" onclick="toggleDone(this)"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button></td></tr>
+              <tr class="set-row"><td><span class="set-num">3</span></td><td style="font-size:11.5px;color:var(--text-tertiary);">52.5 × 6</td><td><input class="set-input" type="number" value="52.5" min="0" step="0.5"></td><td><input class="set-input" type="number" value="6" min="0"></td><td><input class="set-input" type="text" style="width:84px;" placeholder="—"></td><td><button class="btn-done" onclick="toggleDone(this)"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button></td></tr>
             </tbody>
           </table>
-          <button class="btn btn-secondary" style="margin-top:10px;font-size:12px;padding:6px 12px;"
-                  onclick="addSet(2)">+ Add set</button>
+          <button class="btn btn-secondary" style="margin-top:10px;font-size:12px;padding:6px 12px;" onclick="addSet(2)">+ Add set</button>
         </div>
 
+        <!-- Dynamically added exercises -->
         <div id="exerciseList"></div>
 
-        <!-- Actions -->
-        <div style="display:flex;gap:10px;">
-          <button class="btn btn-primary" style="flex:1;"
-                  onclick="alert('Workout saved! (demo)')">Save workout</button>
-          <a href="dashboard.html" class="btn btn-secondary">Cancel</a>
+        <!-- Workout notes -->
+        <div class="card" style="padding:14px 18px;">
+          <div style="font-size:10px;color:var(--text-tertiary);letter-spacing:0.05em;margin-bottom:6px;">WORKOUT NOTES</div>
+          <textarea placeholder="How did the session go? Any notes…"
+                    style="width:100%;border:none;background:none;font-family:var(--font);
+                           font-size:13px;color:var(--text-primary);outline:none;
+                           resize:none;min-height:56px;line-height:1.6;"></textarea>
+        </div>
+
+        <!-- Save / discard -->
+        <div style="display:flex;gap:10px;padding-bottom:24px;">
+          <button class="btn btn-primary" style="flex:1;" onclick="saveWorkout()">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8.5l3.5 3.5 6.5-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Save workout
+          </button>
+          <a href="dashboard.html" class="btn btn-secondary">Discard</a>
         </div>
       </div>
 
       <!-- Right: exercise picker -->
       <div>
-        <div class="card" style="position:sticky;top:0;">
-          <div class="card-title">Add exercise</div>
-          <input type="text" class="exercise-search" id="exerciseSearch"
-                 placeholder="Search exercises…" oninput="filterExercises(this.value)">
+        <div class="card" style="position:sticky;top:0;max-height:calc(100vh - 110px);display:flex;flex-direction:column;overflow:hidden;">
+          <div class="card-title" style="margin-bottom:8px;">Add exercise</div>
 
-          <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px;">
-            <button class="pill active" onclick="filterCategory('All',this)">All</button>
-            <button class="pill" onclick="filterCategory('Chest',this)">Chest</button>
-            <button class="pill" onclick="filterCategory('Back',this)">Back</button>
-            <button class="pill" onclick="filterCategory('Legs',this)">Legs</button>
-            <button class="pill" onclick="filterCategory('Shoulders',this)">Shoulders</button>
-            <button class="pill" onclick="filterCategory('Arms',this)">Arms</button>
+          <input type="text" class="exercise-search" id="exerciseSearch"
+                 placeholder="Search 40+ exercises…" oninput="filterExercises(this.value)"
+                 style="margin-bottom:8px;">
+
+          <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px;">
+            <button class="pill active" style="font-size:11px;padding:4px 9px;" onclick="filterCategory('All',this)">All</button>
+            <button class="pill" style="font-size:11px;padding:4px 9px;" onclick="filterCategory('Chest',this)">Chest</button>
+            <button class="pill" style="font-size:11px;padding:4px 9px;" onclick="filterCategory('Back',this)">Back</button>
+            <button class="pill" style="font-size:11px;padding:4px 9px;" onclick="filterCategory('Legs',this)">Legs</button>
+            <button class="pill" style="font-size:11px;padding:4px 9px;" onclick="filterCategory('Shoulders',this)">Shoulders</button>
+            <button class="pill" style="font-size:11px;padding:4px 9px;" onclick="filterCategory('Arms',this)">Arms</button>
+            <button class="pill" style="font-size:11px;padding:4px 9px;" onclick="filterCategory('Core',this)">Core</button>
+            <button class="pill" style="font-size:11px;padding:4px 9px;" onclick="filterCategory('Cardio',this)">Cardio</button>
           </div>
 
-          <div id="exercisePicker" style="display:flex;flex-direction:column;gap:2px;max-height:360px;overflow-y:auto;">
-            <!-- Chest -->
-            <div class="exercise-pick-item selected" data-name="bench press" data-cat="Chest" onclick="togglePick(this,1,'Chest','#EEEDFE','#534AB7')">
-              <div class="ex-icon" style="background:#EEEDFE;color:#534AB7;width:28px;height:28px;font-size:11px;">B</div>
-              <div><div style="font-size:13px;font-weight:500;">Bench press</div><div style="font-size:11px;color:var(--text-tertiary);">Chest</div></div>
-            </div>
-            <div class="exercise-pick-item" data-name="incline press" data-cat="Chest" onclick="togglePick(this,3,'Chest','#EEEDFE','#534AB7')">
-              <div class="ex-icon" style="background:#EEEDFE;color:#534AB7;width:28px;height:28px;font-size:11px;">I</div>
-              <div><div style="font-size:13px;font-weight:500;">Incline press</div><div style="font-size:11px;color:var(--text-tertiary);">Chest</div></div>
-            </div>
-            <div class="exercise-pick-item" data-name="chest fly" data-cat="Chest" onclick="togglePick(this,4,'Chest','#EEEDFE','#534AB7')">
-              <div class="ex-icon" style="background:#EEEDFE;color:#534AB7;width:28px;height:28px;font-size:11px;">C</div>
-              <div><div style="font-size:13px;font-weight:500;">Chest fly</div><div style="font-size:11px;color:var(--text-tertiary);">Chest</div></div>
-            </div>
-            <!-- Shoulders -->
-            <div class="exercise-pick-item selected" data-name="overhead press" data-cat="Shoulders" onclick="togglePick(this,5,'Shoulders','#E1F5EE','#085041')">
-              <div class="ex-icon" style="background:#E1F5EE;color:#085041;width:28px;height:28px;font-size:11px;">O</div>
-              <div><div style="font-size:13px;font-weight:500;">Overhead press</div><div style="font-size:11px;color:var(--text-tertiary);">Shoulders</div></div>
-            </div>
-            <div class="exercise-pick-item" data-name="lateral raises" data-cat="Shoulders" onclick="togglePick(this,6,'Shoulders','#E1F5EE','#085041')">
-              <div class="ex-icon" style="background:#E1F5EE;color:#085041;width:28px;height:28px;font-size:11px;">L</div>
-              <div><div style="font-size:13px;font-weight:500;">Lateral raises</div><div style="font-size:11px;color:var(--text-tertiary);">Shoulders</div></div>
-            </div>
-            <!-- Arms -->
-            <div class="exercise-pick-item" data-name="tricep pushdown" data-cat="Arms" onclick="togglePick(this,7,'Arms','#FAEEDA','#633806')">
-              <div class="ex-icon" style="background:#FAEEDA;color:#633806;width:28px;height:28px;font-size:11px;">T</div>
-              <div><div style="font-size:13px;font-weight:500;">Tricep pushdown</div><div style="font-size:11px;color:var(--text-tertiary);">Arms</div></div>
-            </div>
-            <div class="exercise-pick-item" data-name="bicep curl" data-cat="Arms" onclick="togglePick(this,8,'Arms','#FAEEDA','#633806')">
-              <div class="ex-icon" style="background:#FAEEDA;color:#633806;width:28px;height:28px;font-size:11px;">B</div>
-              <div><div style="font-size:13px;font-weight:500;">Bicep curl</div><div style="font-size:11px;color:var(--text-tertiary);">Arms</div></div>
-            </div>
-            <!-- Back -->
-            <div class="exercise-pick-item" data-name="pull up" data-cat="Back" onclick="togglePick(this,9,'Back','#F1EFE8','#444441')">
-              <div class="ex-icon" style="background:#F1EFE8;color:#444441;width:28px;height:28px;font-size:11px;">P</div>
-              <div><div style="font-size:13px;font-weight:500;">Pull up</div><div style="font-size:11px;color:var(--text-tertiary);">Back</div></div>
-            </div>
-            <div class="exercise-pick-item" data-name="barbell row" data-cat="Back" onclick="togglePick(this,10,'Back','#F1EFE8','#444441')">
-              <div class="ex-icon" style="background:#F1EFE8;color:#444441;width:28px;height:28px;font-size:11px;">R</div>
-              <div><div style="font-size:13px;font-weight:500;">Barbell row</div><div style="font-size:11px;color:var(--text-tertiary);">Back</div></div>
-            </div>
-            <!-- Legs -->
-            <div class="exercise-pick-item" data-name="squat" data-cat="Legs" onclick="togglePick(this,11,'Legs','#FAECE7','#712B13')">
-              <div class="ex-icon" style="background:#FAECE7;color:#712B13;width:28px;height:28px;font-size:11px;">S</div>
-              <div><div style="font-size:13px;font-weight:500;">Squat</div><div style="font-size:11px;color:var(--text-tertiary);">Legs</div></div>
-            </div>
-            <div class="exercise-pick-item" data-name="leg press" data-cat="Legs" onclick="togglePick(this,12,'Legs','#FAECE7','#712B13')">
-              <div class="ex-icon" style="background:#FAECE7;color:#712B13;width:28px;height:28px;font-size:11px;">L</div>
-              <div><div style="font-size:13px;font-weight:500;">Leg press</div><div style="font-size:11px;color:var(--text-tertiary);">Legs</div></div>
-            </div>
+          <div id="exercisePicker" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:1px;">
+
+            <div class="sec-lbl" data-cat="Chest">Chest</div>
+            <div class="exercise-pick-item selected" data-name="bench press" data-cat="Chest" data-equip="Barbell" data-cls="cat-chest" data-id="1" onclick="togglePick(this)"><div class="ex-icon cat-chest" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">B</div><div><div style="font-size:13px;font-weight:500;">Bench press</div><div style="font-size:11px;color:var(--text-tertiary);">Barbell</div></div></div>
+            <div class="exercise-pick-item" data-name="incline bench press" data-cat="Chest" data-equip="Barbell" data-cls="cat-chest" data-id="3" onclick="togglePick(this)"><div class="ex-icon cat-chest" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">I</div><div><div style="font-size:13px;font-weight:500;">Incline bench press</div><div style="font-size:11px;color:var(--text-tertiary);">Barbell</div></div></div>
+            <div class="exercise-pick-item" data-name="decline bench press" data-cat="Chest" data-equip="Barbell" data-cls="cat-chest" data-id="31" onclick="togglePick(this)"><div class="ex-icon cat-chest" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">D</div><div><div style="font-size:13px;font-weight:500;">Decline bench press</div><div style="font-size:11px;color:var(--text-tertiary);">Barbell</div></div></div>
+            <div class="exercise-pick-item" data-name="dumbbell chest fly" data-cat="Chest" data-equip="Dumbbell" data-cls="cat-chest" data-id="4" onclick="togglePick(this)"><div class="ex-icon cat-chest" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">F</div><div><div style="font-size:13px;font-weight:500;">Dumbbell chest fly</div><div style="font-size:11px;color:var(--text-tertiary);">Dumbbell</div></div></div>
+            <div class="exercise-pick-item" data-name="dumbbell bench press" data-cat="Chest" data-equip="Dumbbell" data-cls="cat-chest" data-id="32" onclick="togglePick(this)"><div class="ex-icon cat-chest" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">D</div><div><div style="font-size:13px;font-weight:500;">Dumbbell bench press</div><div style="font-size:11px;color:var(--text-tertiary);">Dumbbell</div></div></div>
+            <div class="exercise-pick-item" data-name="cable fly" data-cat="Chest" data-equip="Cable" data-cls="cat-chest" data-id="33" onclick="togglePick(this)"><div class="ex-icon cat-chest" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">C</div><div><div style="font-size:13px;font-weight:500;">Cable fly</div><div style="font-size:11px;color:var(--text-tertiary);">Cable</div></div></div>
+            <div class="exercise-pick-item" data-name="push up" data-cat="Chest" data-equip="Bodyweight" data-cls="cat-chest" data-id="34" onclick="togglePick(this)"><div class="ex-icon cat-chest" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">P</div><div><div style="font-size:13px;font-weight:500;">Push up</div><div style="font-size:11px;color:var(--text-tertiary);">Bodyweight</div></div></div>
+
+            <div class="sec-lbl" data-cat="Back">Back</div>
+            <div class="exercise-pick-item" data-name="pull up" data-cat="Back" data-equip="Bodyweight" data-cls="cat-back" data-id="9" onclick="togglePick(this)"><div class="ex-icon cat-back" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">P</div><div><div style="font-size:13px;font-weight:500;">Pull up</div><div style="font-size:11px;color:var(--text-tertiary);">Bodyweight</div></div></div>
+            <div class="exercise-pick-item" data-name="barbell row" data-cat="Back" data-equip="Barbell" data-cls="cat-back" data-id="10" onclick="togglePick(this)"><div class="ex-icon cat-back" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">R</div><div><div style="font-size:13px;font-weight:500;">Barbell row</div><div style="font-size:11px;color:var(--text-tertiary);">Barbell</div></div></div>
+            <div class="exercise-pick-item" data-name="seated cable row" data-cat="Back" data-equip="Cable" data-cls="cat-back" data-id="35" onclick="togglePick(this)"><div class="ex-icon cat-back" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">S</div><div><div style="font-size:13px;font-weight:500;">Seated cable row</div><div style="font-size:11px;color:var(--text-tertiary);">Cable</div></div></div>
+            <div class="exercise-pick-item" data-name="lat pulldown" data-cat="Back" data-equip="Cable" data-cls="cat-back" data-id="36" onclick="togglePick(this)"><div class="ex-icon cat-back" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">L</div><div><div style="font-size:13px;font-weight:500;">Lat pulldown</div><div style="font-size:11px;color:var(--text-tertiary);">Cable</div></div></div>
+            <div class="exercise-pick-item" data-name="single arm dumbbell row" data-cat="Back" data-equip="Dumbbell" data-cls="cat-back" data-id="37" onclick="togglePick(this)"><div class="ex-icon cat-back" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">D</div><div><div style="font-size:13px;font-weight:500;">Single-arm dumbbell row</div><div style="font-size:11px;color:var(--text-tertiary);">Dumbbell</div></div></div>
+            <div class="exercise-pick-item" data-name="deadlift" data-cat="Back" data-equip="Barbell" data-cls="cat-back" data-id="38" onclick="togglePick(this)"><div class="ex-icon cat-back" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">D</div><div><div style="font-size:13px;font-weight:500;">Deadlift</div><div style="font-size:11px;color:var(--text-tertiary);">Barbell</div></div></div>
+            <div class="exercise-pick-item" data-name="face pull" data-cat="Back" data-equip="Cable" data-cls="cat-back" data-id="39" onclick="togglePick(this)"><div class="ex-icon cat-back" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">F</div><div><div style="font-size:13px;font-weight:500;">Face pull</div><div style="font-size:11px;color:var(--text-tertiary);">Cable</div></div></div>
+            <div class="exercise-pick-item" data-name="chest supported row" data-cat="Back" data-equip="Dumbbell" data-cls="cat-back" data-id="65" onclick="togglePick(this)"><div class="ex-icon cat-back" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">C</div><div><div style="font-size:13px;font-weight:500;">Chest-supported row</div><div style="font-size:11px;color:var(--text-tertiary);">Dumbbell</div></div></div>
+
+            <div class="sec-lbl" data-cat="Legs">Legs</div>
+            <div class="exercise-pick-item" data-name="barbell squat" data-cat="Legs" data-equip="Barbell" data-cls="cat-legs" data-id="11" onclick="togglePick(this)"><div class="ex-icon cat-legs" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">S</div><div><div style="font-size:13px;font-weight:500;">Barbell squat</div><div style="font-size:11px;color:var(--text-tertiary);">Barbell</div></div></div>
+            <div class="exercise-pick-item" data-name="leg press" data-cat="Legs" data-equip="Machine" data-cls="cat-legs" data-id="12" onclick="togglePick(this)"><div class="ex-icon cat-legs" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">L</div><div><div style="font-size:13px;font-weight:500;">Leg press</div><div style="font-size:11px;color:var(--text-tertiary);">Machine</div></div></div>
+            <div class="exercise-pick-item" data-name="romanian deadlift rdl" data-cat="Legs" data-equip="Barbell" data-cls="cat-legs" data-id="40" onclick="togglePick(this)"><div class="ex-icon cat-legs" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">R</div><div><div style="font-size:13px;font-weight:500;">Romanian deadlift</div><div style="font-size:11px;color:var(--text-tertiary);">Barbell</div></div></div>
+            <div class="exercise-pick-item" data-name="leg curl hamstring" data-cat="Legs" data-equip="Machine" data-cls="cat-legs" data-id="41" onclick="togglePick(this)"><div class="ex-icon cat-legs" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">L</div><div><div style="font-size:13px;font-weight:500;">Leg curl</div><div style="font-size:11px;color:var(--text-tertiary);">Machine</div></div></div>
+            <div class="exercise-pick-item" data-name="leg extension quads" data-cat="Legs" data-equip="Machine" data-cls="cat-legs" data-id="42" onclick="togglePick(this)"><div class="ex-icon cat-legs" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">L</div><div><div style="font-size:13px;font-weight:500;">Leg extension</div><div style="font-size:11px;color:var(--text-tertiary);">Machine</div></div></div>
+            <div class="exercise-pick-item" data-name="dumbbell lunge" data-cat="Legs" data-equip="Dumbbell" data-cls="cat-legs" data-id="43" onclick="togglePick(this)"><div class="ex-icon cat-legs" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">L</div><div><div style="font-size:13px;font-weight:500;">Dumbbell lunge</div><div style="font-size:11px;color:var(--text-tertiary);">Dumbbell</div></div></div>
+            <div class="exercise-pick-item" data-name="calf raise" data-cat="Legs" data-equip="Machine" data-cls="cat-legs" data-id="44" onclick="togglePick(this)"><div class="ex-icon cat-legs" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">C</div><div><div style="font-size:13px;font-weight:500;">Calf raise</div><div style="font-size:11px;color:var(--text-tertiary);">Machine</div></div></div>
+            <div class="exercise-pick-item" data-name="goblet squat" data-cat="Legs" data-equip="Dumbbell" data-cls="cat-legs" data-id="45" onclick="togglePick(this)"><div class="ex-icon cat-legs" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">G</div><div><div style="font-size:13px;font-weight:500;">Goblet squat</div><div style="font-size:11px;color:var(--text-tertiary);">Dumbbell</div></div></div>
+            <div class="exercise-pick-item" data-name="hip thrust glutes" data-cat="Legs" data-equip="Barbell" data-cls="cat-legs" data-id="46" onclick="togglePick(this)"><div class="ex-icon cat-legs" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">H</div><div><div style="font-size:13px;font-weight:500;">Hip thrust</div><div style="font-size:11px;color:var(--text-tertiary);">Barbell</div></div></div>
+            <div class="exercise-pick-item" data-name="sumo deadlift" data-cat="Legs" data-equip="Barbell" data-cls="cat-legs" data-id="66" onclick="togglePick(this)"><div class="ex-icon cat-legs" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">S</div><div><div style="font-size:13px;font-weight:500;">Sumo deadlift</div><div style="font-size:11px;color:var(--text-tertiary);">Barbell</div></div></div>
+            <div class="exercise-pick-item" data-name="step up" data-cat="Legs" data-equip="Dumbbell" data-cls="cat-legs" data-id="67" onclick="togglePick(this)"><div class="ex-icon cat-legs" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">S</div><div><div style="font-size:13px;font-weight:500;">Step up</div><div style="font-size:11px;color:var(--text-tertiary);">Dumbbell</div></div></div>
+
+            <div class="sec-lbl" data-cat="Shoulders">Shoulders</div>
+            <div class="exercise-pick-item selected" data-name="overhead press" data-cat="Shoulders" data-equip="Barbell" data-cls="cat-shoulders" data-id="5" onclick="togglePick(this)"><div class="ex-icon cat-shoulders" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">O</div><div><div style="font-size:13px;font-weight:500;">Overhead press</div><div style="font-size:11px;color:var(--text-tertiary);">Barbell</div></div></div>
+            <div class="exercise-pick-item" data-name="lateral raises side delt" data-cat="Shoulders" data-equip="Dumbbell" data-cls="cat-shoulders" data-id="6" onclick="togglePick(this)"><div class="ex-icon cat-shoulders" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">L</div><div><div style="font-size:13px;font-weight:500;">Lateral raises</div><div style="font-size:11px;color:var(--text-tertiary);">Dumbbell</div></div></div>
+            <div class="exercise-pick-item" data-name="dumbbell shoulder press" data-cat="Shoulders" data-equip="Dumbbell" data-cls="cat-shoulders" data-id="47" onclick="togglePick(this)"><div class="ex-icon cat-shoulders" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">D</div><div><div style="font-size:13px;font-weight:500;">Dumbbell shoulder press</div><div style="font-size:11px;color:var(--text-tertiary);">Dumbbell</div></div></div>
+            <div class="exercise-pick-item" data-name="rear delt fly" data-cat="Shoulders" data-equip="Dumbbell" data-cls="cat-shoulders" data-id="48" onclick="togglePick(this)"><div class="ex-icon cat-shoulders" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">R</div><div><div style="font-size:13px;font-weight:500;">Rear delt fly</div><div style="font-size:11px;color:var(--text-tertiary);">Dumbbell</div></div></div>
+            <div class="exercise-pick-item" data-name="arnold press" data-cat="Shoulders" data-equip="Dumbbell" data-cls="cat-shoulders" data-id="50" onclick="togglePick(this)"><div class="ex-icon cat-shoulders" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">A</div><div><div style="font-size:13px;font-weight:500;">Arnold press</div><div style="font-size:11px;color:var(--text-tertiary);">Dumbbell</div></div></div>
+            <div class="exercise-pick-item" data-name="upright row" data-cat="Shoulders" data-equip="Barbell" data-cls="cat-shoulders" data-id="49" onclick="togglePick(this)"><div class="ex-icon cat-shoulders" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">U</div><div><div style="font-size:13px;font-weight:500;">Upright row</div><div style="font-size:11px;color:var(--text-tertiary);">Barbell</div></div></div>
+            <div class="exercise-pick-item" data-name="cable lateral raise" data-cat="Shoulders" data-equip="Cable" data-cls="cat-shoulders" data-id="68" onclick="togglePick(this)"><div class="ex-icon cat-shoulders" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">C</div><div><div style="font-size:13px;font-weight:500;">Cable lateral raise</div><div style="font-size:11px;color:var(--text-tertiary);">Cable</div></div></div>
+
+            <div class="sec-lbl" data-cat="Arms">Arms</div>
+            <div class="exercise-pick-item" data-name="tricep pushdown" data-cat="Arms" data-equip="Cable" data-cls="cat-arms" data-id="7" onclick="togglePick(this)"><div class="ex-icon cat-arms" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">T</div><div><div style="font-size:13px;font-weight:500;">Tricep pushdown</div><div style="font-size:11px;color:var(--text-tertiary);">Cable</div></div></div>
+            <div class="exercise-pick-item" data-name="bicep curl" data-cat="Arms" data-equip="Dumbbell" data-cls="cat-arms" data-id="8" onclick="togglePick(this)"><div class="ex-icon cat-arms" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">B</div><div><div style="font-size:13px;font-weight:500;">Bicep curl</div><div style="font-size:11px;color:var(--text-tertiary);">Dumbbell</div></div></div>
+            <div class="exercise-pick-item" data-name="skull crusher tricep" data-cat="Arms" data-equip="Barbell" data-cls="cat-arms" data-id="51" onclick="togglePick(this)"><div class="ex-icon cat-arms" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">S</div><div><div style="font-size:13px;font-weight:500;">Skull crusher</div><div style="font-size:11px;color:var(--text-tertiary);">Barbell / EZ bar</div></div></div>
+            <div class="exercise-pick-item" data-name="hammer curl" data-cat="Arms" data-equip="Dumbbell" data-cls="cat-arms" data-id="52" onclick="togglePick(this)"><div class="ex-icon cat-arms" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">H</div><div><div style="font-size:13px;font-weight:500;">Hammer curl</div><div style="font-size:11px;color:var(--text-tertiary);">Dumbbell</div></div></div>
+            <div class="exercise-pick-item" data-name="barbell curl ez bar" data-cat="Arms" data-equip="Barbell" data-cls="cat-arms" data-id="53" onclick="togglePick(this)"><div class="ex-icon cat-arms" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">B</div><div><div style="font-size:13px;font-weight:500;">Barbell curl</div><div style="font-size:11px;color:var(--text-tertiary);">Barbell / EZ bar</div></div></div>
+            <div class="exercise-pick-item" data-name="tricep dip" data-cat="Arms" data-equip="Bodyweight" data-cls="cat-arms" data-id="54" onclick="togglePick(this)"><div class="ex-icon cat-arms" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">T</div><div><div style="font-size:13px;font-weight:500;">Tricep dip</div><div style="font-size:11px;color:var(--text-tertiary);">Bodyweight</div></div></div>
+            <div class="exercise-pick-item" data-name="preacher curl" data-cat="Arms" data-equip="Machine" data-cls="cat-arms" data-id="55" onclick="togglePick(this)"><div class="ex-icon cat-arms" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">P</div><div><div style="font-size:13px;font-weight:500;">Preacher curl</div><div style="font-size:11px;color:var(--text-tertiary);">Machine / EZ bar</div></div></div>
+            <div class="exercise-pick-item" data-name="overhead tricep extension" data-cat="Arms" data-equip="Dumbbell" data-cls="cat-arms" data-id="56" onclick="togglePick(this)"><div class="ex-icon cat-arms" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">O</div><div><div style="font-size:13px;font-weight:500;">Overhead tricep extension</div><div style="font-size:11px;color:var(--text-tertiary);">Dumbbell</div></div></div>
+            <div class="exercise-pick-item" data-name="concentration curl" data-cat="Arms" data-equip="Dumbbell" data-cls="cat-arms" data-id="69" onclick="togglePick(this)"><div class="ex-icon cat-arms" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">C</div><div><div style="font-size:13px;font-weight:500;">Concentration curl</div><div style="font-size:11px;color:var(--text-tertiary);">Dumbbell</div></div></div>
+
+            <div class="sec-lbl" data-cat="Core">Core</div>
+            <div class="exercise-pick-item" data-name="plank" data-cat="Core" data-equip="Bodyweight" data-cls="cat-core" data-id="57" onclick="togglePick(this)"><div class="ex-icon cat-core" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">P</div><div><div style="font-size:13px;font-weight:500;">Plank</div><div style="font-size:11px;color:var(--text-tertiary);">Bodyweight</div></div></div>
+            <div class="exercise-pick-item" data-name="cable crunch abs" data-cat="Core" data-equip="Cable" data-cls="cat-core" data-id="58" onclick="togglePick(this)"><div class="ex-icon cat-core" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">C</div><div><div style="font-size:13px;font-weight:500;">Cable crunch</div><div style="font-size:11px;color:var(--text-tertiary);">Cable</div></div></div>
+            <div class="exercise-pick-item" data-name="hanging leg raise" data-cat="Core" data-equip="Bodyweight" data-cls="cat-core" data-id="59" onclick="togglePick(this)"><div class="ex-icon cat-core" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">H</div><div><div style="font-size:13px;font-weight:500;">Hanging leg raise</div><div style="font-size:11px;color:var(--text-tertiary);">Bodyweight</div></div></div>
+            <div class="exercise-pick-item" data-name="ab crunch machine" data-cat="Core" data-equip="Machine" data-cls="cat-core" data-id="60" onclick="togglePick(this)"><div class="ex-icon cat-core" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">A</div><div><div style="font-size:13px;font-weight:500;">Ab crunch machine</div><div style="font-size:11px;color:var(--text-tertiary);">Machine</div></div></div>
+            <div class="exercise-pick-item" data-name="russian twist" data-cat="Core" data-equip="Dumbbell" data-cls="cat-core" data-id="61" onclick="togglePick(this)"><div class="ex-icon cat-core" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">R</div><div><div style="font-size:13px;font-weight:500;">Russian twist</div><div style="font-size:11px;color:var(--text-tertiary);">Dumbbell / Plate</div></div></div>
+            <div class="exercise-pick-item" data-name="dead bug" data-cat="Core" data-equip="Bodyweight" data-cls="cat-core" data-id="70" onclick="togglePick(this)"><div class="ex-icon cat-core" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">D</div><div><div style="font-size:13px;font-weight:500;">Dead bug</div><div style="font-size:11px;color:var(--text-tertiary);">Bodyweight</div></div></div>
+
+            <div class="sec-lbl" data-cat="Cardio">Cardio</div>
+            <div class="exercise-pick-item" data-name="treadmill run" data-cat="Cardio" data-equip="Machine" data-cls="cat-cardio" data-id="62" onclick="togglePick(this)"><div class="ex-icon cat-cardio" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">T</div><div><div style="font-size:13px;font-weight:500;">Treadmill</div><div style="font-size:11px;color:var(--text-tertiary);">Machine</div></div></div>
+            <div class="exercise-pick-item" data-name="rowing machine" data-cat="Cardio" data-equip="Machine" data-cls="cat-cardio" data-id="63" onclick="togglePick(this)"><div class="ex-icon cat-cardio" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">R</div><div><div style="font-size:13px;font-weight:500;">Rowing machine</div><div style="font-size:11px;color:var(--text-tertiary);">Machine</div></div></div>
+            <div class="exercise-pick-item" data-name="stationary bike cycling" data-cat="Cardio" data-equip="Machine" data-cls="cat-cardio" data-id="64" onclick="togglePick(this)"><div class="ex-icon cat-cardio" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">B</div><div><div style="font-size:13px;font-weight:500;">Stationary bike</div><div style="font-size:11px;color:var(--text-tertiary);">Machine</div></div></div>
+            <div class="exercise-pick-item" data-name="stairmaster step mill" data-cat="Cardio" data-equip="Machine" data-cls="cat-cardio" data-id="71" onclick="togglePick(this)"><div class="ex-icon cat-cardio" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">S</div><div><div style="font-size:13px;font-weight:500;">Stairmaster</div><div style="font-size:11px;color:var(--text-tertiary);">Machine</div></div></div>
+
+            <div id="noResults" style="display:none;padding:20px;text-align:center;font-size:13px;color:var(--text-tertiary);">No exercises found</div>
           </div>
         </div>
       </div>
@@ -185,73 +301,146 @@
   </main>
 </div>
 
+<!-- Rest timer -->
+<div class="rest-toast" id="restToast">
+  <div style="font-size:11px;color:rgba(255,255,255,0.45);margin-bottom:2px;">Rest timer</div>
+  <div class="rest-count" id="restCount">90</div>
+  <div style="font-size:11px;color:rgba(255,255,255,0.45);">seconds remaining</div>
+  <button onclick="dismissRest()" style="margin-top:8px;width:100%;padding:5px;border-radius:var(--radius-sm);border:0.5px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.07);color:#fff;font-family:var(--font);font-size:11px;cursor:pointer;">Dismiss</button>
+</div>
+
+<!-- Summary modal -->
+<div class="modal-backdrop" id="summaryModal">
+  <div class="modal">
+    <div class="modal-title">Workout complete!</div>
+    <div class="modal-sub" id="summaryName" style="margin-bottom:16px;"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:18px;text-align:center;">
+      <div style="background:var(--surface-2);border-radius:var(--radius-md);padding:12px;">
+        <div class="s-stat-val" id="sumDuration">—</div>
+        <div class="s-stat-lbl">Duration</div>
+      </div>
+      <div style="background:var(--surface-2);border-radius:var(--radius-md);padding:12px;">
+        <div class="s-stat-val" id="sumExercises">—</div>
+        <div class="s-stat-lbl">Exercises</div>
+      </div>
+      <div style="background:var(--surface-2);border-radius:var(--radius-md);padding:12px;">
+        <div class="s-stat-val" id="sumVolume">—</div>
+        <div class="s-stat-lbl">Volume (kg)</div>
+      </div>
+    </div>
+    <div style="font-size:11.5px;color:var(--text-tertiary);margin-bottom:8px;">Exercises logged</div>
+    <div id="sumExList" style="margin-bottom:18px;"></div>
+    <div style="display:flex;gap:10px;">
+      <a href="dashboard.html" class="btn btn-primary" style="flex:1;">Back to dashboard</a>
+      <button onclick="document.getElementById('summaryModal').classList.remove('show')" class="btn btn-secondary">Close</button>
+    </div>
+  </div>
+</div>
+
 <script src="js/main.js"></script>
 <script>
-let setCounters = {1:3, 2:2};
+let setCounters = {1:3, 2:3};
+let timerSecs = 0, timerRunning = true;
 
-function addSet(exId) {
-  setCounters[exId] = (setCounters[exId] || 0) + 1;
-  const n = setCounters[exId];
-  const row = `<tr class="set-row"><td><span class="set-num">${n}</span></td><td><input class="set-input" type="number" placeholder="0"></td><td><input class="set-input" type="number" placeholder="0"></td><td><input class="set-input" type="text" style="width:100px;" placeholder="—"></td></tr>`;
-  document.getElementById(`sets-${exId}`).insertAdjacentHTML('beforeend', row);
+setInterval(() => {
+  if (!timerRunning) return;
+  timerSecs++;
+  const m = String(Math.floor(timerSecs/60)).padStart(2,'0');
+  const s = String(timerSecs%60).padStart(2,'0');
+  document.getElementById('workoutTimer').textContent = `${m}:${s}`;
+}, 1000);
+
+function toggleTimer() {
+  timerRunning = !timerRunning;
+  document.getElementById('timerToggleBtn').textContent = timerRunning ? 'Pause' : 'Resume';
+}
+function resetTimer() { timerSecs = 0; document.getElementById('workoutTimer').textContent = '00:00'; }
+
+let restInt;
+function toggleDone(btn) {
+  const row = btn.closest('.set-row');
+  const done = !row.classList.contains('done');
+  row.classList.toggle('done', done);
+  btn.classList.toggle('done', done);
+  if (done) { clearInterval(restInt); let r=90; document.getElementById('restCount').textContent=r; document.getElementById('restToast').classList.add('show'); restInt=setInterval(()=>{ r--; document.getElementById('restCount').textContent=r; if(r<=0){clearInterval(restInt);dismissRest();}},1000); }
+}
+function dismissRest() { clearInterval(restInt); document.getElementById('restToast').classList.remove('show'); }
+
+function addSet(id) {
+  setCounters[id] = (setCounters[id]||1)+1;
+  const n = setCounters[id];
+  const tick = `<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  document.getElementById(`sets-${id}`).insertAdjacentHTML('beforeend',
+    `<tr class="set-row"><td><span class="set-num">${n}</span></td><td style="font-size:11.5px;color:var(--text-tertiary);">—</td><td><input class="set-input" type="number" placeholder="0" min="0" step="0.5"></td><td><input class="set-input" type="number" placeholder="0" min="0"></td><td><input class="set-input" type="text" style="width:84px;" placeholder="—"></td><td><button class="btn-done" onclick="toggleDone(this)">${tick}</button></td></tr>`);
 }
 
-function removeExercise(blockId, pickId) {
+function removeExercise(blockId, name) {
   document.getElementById(blockId)?.remove();
-  document.querySelectorAll('.exercise-pick-item').forEach(el => {
-    if (el.getAttribute('onclick')?.includes(`,${pickId},`)) el.classList.remove('selected');
-  });
+  document.querySelectorAll('.exercise-pick-item').forEach(el => { if(el.dataset.name===name) el.classList.remove('selected'); });
 }
 
-function togglePick(el, id, cat, bg, color) {
-  if (el.classList.contains('selected')) {
-    el.classList.remove('selected');
-    document.querySelectorAll('.exercise-block').forEach(b => {
-      if (b.querySelector('.ex-icon')?.textContent.trim() === el.querySelector('[style]').textContent.trim()
-          && b.querySelector('div > div')?.textContent.trim().startsWith(el.querySelectorAll('div')[2]?.textContent.trim().slice(0,4))) {
-        b.remove();
-      }
-    });
-    return;
-  }
+function togglePick(el) {
+  const name  = el.querySelector('div > div:first-child').textContent.trim();
+  const equip = el.querySelector('div > div:last-child').textContent.trim();
+  const cat   = el.dataset.cat, cls = el.dataset.cls, id = el.dataset.id;
+  const bid   = `ex-${id}`;
+  if (el.classList.contains('selected')) { el.classList.remove('selected'); document.getElementById(bid)?.remove(); return; }
   el.classList.add('selected');
-  const name = el.querySelectorAll('div')[2]?.textContent.trim() || 'Exercise';
-  const letter = name[0];
   setCounters[id] = 1;
-  const block = `
-    <div class="card exercise-block" id="ex-${id}">
+  const tick = `<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  document.getElementById('exerciseList').insertAdjacentHTML('beforeend', `
+    <div class="card exercise-block" id="${bid}">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
-        <div class="ex-icon" style="background:${bg};color:${color};">${letter}</div>
-        <div style="flex:1;">
-          <div style="font-size:14px;font-weight:500;">${name}</div>
-          <div style="font-size:11.5px;color:var(--text-tertiary);">${cat}</div>
-        </div>
-        <button class="btn btn-secondary" style="padding:5px 10px;font-size:12px;"
-                onclick="document.getElementById('ex-${id}').remove();document.querySelectorAll('.exercise-pick-item').forEach(e=>e.getAttribute('onclick')?.includes(',${id},')&&e.classList.remove('selected'))">Remove</button>
+        <div class="ex-icon ${cls}" style="flex-shrink:0;">${name[0]}</div>
+        <div style="flex:1;"><div style="font-size:14px;font-weight:500;">${name}</div><div style="font-size:11.5px;color:var(--text-tertiary);">${cat} · ${equip}</div></div>
+        <button class="btn btn-secondary" style="padding:5px 10px;font-size:12px;" onclick="removeExercise('${bid}','${el.dataset.name}')">Remove</button>
       </div>
-      <table class="set-table">
-        <thead><tr><th>Set</th><th>Weight (kg)</th><th>Reps</th><th>Notes</th></tr></thead>
-        <tbody id="sets-${id}">
-          <tr class="set-row"><td><span class="set-num">1</span></td><td><input class="set-input" type="number" placeholder="0"></td><td><input class="set-input" type="number" placeholder="0"></td><td><input class="set-input" type="text" style="width:100px;" placeholder="—"></td></tr>
-        </tbody>
-      </table>
+      <table class="set-table" style="width:100%;"><thead><tr><th style="width:28px;">Set</th><th>Previous</th><th>Weight (kg)</th><th>Reps</th><th>Notes</th><th style="width:34px;"></th></tr></thead>
+      <tbody id="sets-${id}">
+        <tr class="set-row"><td><span class="set-num">1</span></td><td style="font-size:11.5px;color:var(--text-tertiary);">—</td><td><input class="set-input" type="number" placeholder="0" min="0" step="0.5"></td><td><input class="set-input" type="number" placeholder="0" min="0"></td><td><input class="set-input" type="text" style="width:84px;" placeholder="—"></td><td><button class="btn-done" onclick="toggleDone(this)">${tick}</button></td></tr>
+      </tbody></table>
       <button class="btn btn-secondary" style="margin-top:10px;font-size:12px;padding:6px 12px;" onclick="addSet(${id})">+ Add set</button>
-    </div>`;
-  document.getElementById('exerciseList').insertAdjacentHTML('beforeend', block);
+    </div>`);
 }
 
 function filterExercises(q) {
-  document.querySelectorAll('.exercise-pick-item').forEach(el => {
-    el.style.display = el.dataset.name.includes(q.toLowerCase()) ? '' : 'none';
-  });
+  const lq = q.toLowerCase().trim(); let any = false;
+  document.querySelectorAll('.exercise-pick-item').forEach(el => { const m=el.dataset.name.includes(lq); el.style.display=m?'':'none'; if(m) any=true; });
+  document.querySelectorAll('.sec-lbl').forEach(lbl => { const cat=lbl.dataset.cat; const vis=[...document.querySelectorAll(`.exercise-pick-item[data-cat="${cat}"]`)].some(e=>e.style.display!=='none'); lbl.style.display=vis?'':'none'; });
+  document.getElementById('noResults').style.display = any?'none':'block';
 }
 
 function filterCategory(cat, btn) {
-  document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
-  btn.classList.add('active');
-  document.querySelectorAll('.exercise-pick-item').forEach(el => {
-    el.style.display = (cat === 'All' || el.dataset.cat === cat) ? '' : 'none';
+  document.querySelectorAll('.pill').forEach(p=>p.classList.remove('active')); btn.classList.add('active');
+  document.querySelectorAll('.exercise-pick-item').forEach(el=>{ el.style.display=(cat==='All'||el.dataset.cat===cat)?'':'none'; });
+  document.querySelectorAll('.sec-lbl').forEach(l=>{ l.style.display=(cat==='All'||l.dataset.cat===cat)?'':'none'; });
+  document.getElementById('noResults').style.display='none';
+  document.getElementById('exerciseSearch').value='';
+}
+
+function saveWorkout() {
+  timerRunning = false;
+  const name = document.getElementById('workoutName').value||'Workout';
+  const blocks = document.querySelectorAll('.exercise-block');
+  const mins = Math.floor(timerSecs/60);
+  let vol=0, lines='';
+  blocks.forEach(b => {
+    const exName = b.querySelector('div>div>div:first-child')?.textContent.trim()||'Exercise';
+    let sets=0, v=0;
+    b.querySelectorAll('.set-row').forEach(r => {
+      const w=parseFloat(r.querySelectorAll('input')[0]?.value)||0;
+      const reps=parseFloat(r.querySelectorAll('input')[1]?.value)||0;
+      v+=w*reps; if(w>0||reps>0) sets++;
+    });
+    vol+=v;
+    lines+=`<div class="summary-row"><span>${exName}</span><span style="color:var(--text-secondary);font-size:12px;">${sets} set${sets!==1?'s':''} · ${v.toLocaleString()} kg</span></div>`;
   });
+  document.getElementById('summaryName').textContent = name;
+  document.getElementById('sumDuration').textContent = `${mins}m`;
+  document.getElementById('sumExercises').textContent = blocks.length;
+  document.getElementById('sumVolume').textContent = vol.toLocaleString();
+  document.getElementById('sumExList').innerHTML = lines || `<div style="font-size:13px;color:var(--text-tertiary);">No sets logged</div>`;
+  document.getElementById('summaryModal').classList.add('show');
 }
 </script>
 </body>
