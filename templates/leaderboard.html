@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leaderboard · LiftAGILE</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-logo">Lift<span>AGILE</span></div>
+    <a href="{{ url_for('dashboard') }}" class="nav-link">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="9" y="1" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="1" y="9" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="9" y="9" width="6" height="6" rx="1.5" fill="currentColor"/></svg>
+      Dashboard
+    </a>
+    <a href="{{ url_for('log_workout') }}" class="nav-link">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 8h2m8 0h2M4 8V5.5a1.5 1.5 0 013 0v5a1.5 1.5 0 003 0V5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Log workout
+    </a>
+    <a href="{{ url_for('plans') }}" class="nav-link">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 6h6M5 9h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      My plans
+    </a>
+    <a href="{{ url_for('leaderboard') }}" class="nav-link active">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 13V8m5 5V4m5 9V7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Leaderboard
+    </a>
+    <div class="nav-spacer"></div>
+    <a href="{{ url_for('profile') }}" class="nav-user">
+      <div class="avatar" style="background:var(--accent-light);color:var(--accent-dark);">AX</div>
+      <div>
+        <div class="nav-user-name">Kawhi</div>
+        <div class="nav-user-rank">Rank #3</div>
+      </div>
+    </a>
+  </nav>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="page-header">
+      <h1 class="page-title">Leaderboard</h1>
+      <p class="page-sub">Week 24 · Resets in 3 days</p>
+    </div>
+
+    <!-- Category pills -->
+    <div class="pill-tabs">
+      <button class="pill active" onclick="switchTab(this,'vol')">Total volume</button>
+      <button class="pill" onclick="switchTab(this,'freq')">Frequency</button>
+      <button class="pill" onclick="switchTab(this,'str')">Strength score</button>
+      <button class="pill" onclick="switchTab(this,'pr')">PRs set</button>
+    </div>
+
+    <!-- Podium -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="podium">
+        <!-- 2nd -->
+        <div class="podium-place">
+          <div class="podium-avatar" style="width:38px;height:38px;font-size:13px;font-weight:600;background:#E1F5EE;color:#085041;">SM</div>
+          <div class="podium-name">Steph C.</div>
+          <div class="podium-score">21,340 kg</div>
+          <div class="podium-block" style="height:56px;background:var(--gray-200);color:var(--gray-800);">2</div>
+        </div>
+        <!-- 1st -->
+        <div class="podium-place">
+          <div style="font-size:20px;margin-bottom:2px;">🥇</div>
+          <div class="podium-avatar" style="width:46px;height:46px;font-size:15px;font-weight:600;background:#FAEEDA;color:#633806;">JK</div>
+          <div class="podium-name" style="font-size:13px;">Lebron J.</div>
+          <div class="podium-score">24,810 kg</div>
+          <div class="podium-block" style="height:72px;background:var(--amber-400);color:var(--amber-800);">1</div>
+        </div>
+        <!-- 3rd -->
+        <div class="podium-place">
+          <div class="podium-avatar" style="width:38px;height:38px;font-size:13px;font-weight:600;background:#AFA9EC;color:#26215C;">AX</div>
+          <div class="podium-name">You</div>
+          <div class="podium-score">18,420 kg</div>
+          <div class="podium-block" style="height:44px;background:var(--coral-200);color:var(--coral-800);">3</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Full table -->
+    <div class="card">
+      <table class="lb-table">
+        <thead>
+          <tr>
+            <th style="width:32px;">#</th>
+            <th style="width:36px;"></th>
+            <th>User</th>
+            <th>Workouts</th>
+            <th class="right">Volume</th>
+            <th class="right" style="width:44px;">+/−</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span style="font-size:13px;font-weight:600;color:var(--text-tertiary);">1</span></td>
+            <td><div class="avatar" style="background:#FAEEDA;color:#633806;">LJ</div></td>
+            <td>Lebron J.</td>
+            <td style="color:var(--text-tertiary);">6</td>
+            <td style="text-align:right;font-weight:500;">24,810 kg</td>
+            <td style="text-align:right;"><span class="change change-up">▲2</span></td>
+          </tr>
+          <tr>
+            <td><span style="font-size:13px;font-weight:600;color:var(--text-tertiary);">2</span></td>
+            <td><div class="avatar" style="background:#E1F5EE;color:#085041;">SC</div></td>
+            <td>Steph C.</td>
+            <td style="color:var(--text-tertiary);">5</td>
+            <td style="text-align:right;font-weight:500;">21,340 kg</td>
+            <td style="text-align:right;"><span class="change change-eq">—</span></td>
+          </tr>
+          <tr class="lb-row-you">
+            <td><span style="font-size:13px;font-weight:600;color:var(--accent);">3</span></td>
+            <td><div class="avatar" style="background:#AFA9EC;color:#26215C;">AX</div></td>
+            <td style="font-weight:500;color:var(--accent-dark);">You</td>
+            <td style="color:var(--accent);">4</td>
+            <td style="text-align:right;font-weight:500;color:var(--accent-dark);">18,420 kg</td>
+            <td style="text-align:right;"><span class="change change-up">▲1</span></td>
+          </tr>
+          <tr>
+            <td><span style="font-size:13px;font-weight:600;color:var(--text-tertiary);">4</span></td>
+            <td><div class="avatar" style="background:#FAECE7;color:#712B13;">MJ</div></td>
+            <td>Michael J.</td>
+            <td style="color:var(--text-tertiary);">5</td>
+            <td style="text-align:right;font-weight:500;">16,090 kg</td>
+            <td style="text-align:right;"><span class="change change-down">▼1</span></td>
+          </tr>
+          <tr>
+            <td><span style="font-size:13px;font-weight:600;color:var(--text-tertiary);">5</span></td>
+            <td><div class="avatar" style="background:#FBEAF0;color:#72243E;">BR</div></td>
+            <td>Bill R.</td>
+            <td style="color:var(--text-tertiary);">4</td>
+            <td style="text-align:right;font-weight:500;">14,720 kg</td>
+            <td style="text-align:right;"><span class="change change-eq">—</span></td>
+          </tr>
+          <tr>
+            <td><span style="font-size:13px;font-weight:600;color:var(--text-tertiary);">6</span></td>
+            <td><div class="avatar" style="background:#EAF3DE;color:#27500A;">SG</div></td>
+            <td>Shai G.</td>
+            <td style="color:var(--text-tertiary);">3</td>
+            <td style="text-align:right;font-weight:500;">11,850 kg</td>
+            <td style="text-align:right;"><span class="change change-down">▼2</span></td>
+          </tr>
+          <tr>
+            <td><span style="font-size:13px;font-weight:600;color:var(--text-tertiary);">7</span></td>
+            <td><div class="avatar" style="background:#EEEDFE;color:#3C3489;">VW</div></td>
+            <td>Victor W.</td>
+            <td style="color:var(--text-tertiary);">3</td>
+            <td style="text-align:right;font-weight:500;">10,200 kg</td>
+            <td style="text-align:right;"><span class="change change-up">▲3</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<script src="js/main.js"></script>
+<script>
+function switchTab(btn, tab) {
+  document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>
