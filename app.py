@@ -32,6 +32,20 @@ def register():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
+        confirm = request.form['confirm']
+
+        if len(password) < 8:
+            flash("Password must be at least 8 characters long")
+            return render_template('register.html')
+
+        if password != confirm:
+            flash("Passwords do not match")
+            return render_template('register.html')
+
+        existing_user = User.query.filter_by(username=username).first()
+        if existing_user:
+            flash("Username already exists")
+            return render_template('register.html')
 
         hashed_pw = generate_password_hash(password)
 
@@ -40,7 +54,6 @@ def register():
         db.session.commit()
 
         return redirect('/login')
-
     return render_template('register.html')
 
 # LOGIN
