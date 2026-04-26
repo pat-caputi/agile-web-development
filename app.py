@@ -15,6 +15,7 @@ db = SQLAlchemy(app)
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(100), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
 
 # ── Create DB ──
@@ -30,9 +31,18 @@ def home():
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        username = request.form['username']
+        username = request.form['username'].strip()
+        email = request.form['email'].strip()
         password = request.form['password']
         confirm = request.form['confirm']
+
+        if not username:
+            flash("Username is required")
+            return render_template('register.html')
+
+        if not email:
+            flash("Email is required")
+            return render_template('register.html')
 
         if len(password) < 8:
             flash("Password must be at least 8 characters long")
@@ -47,13 +57,24 @@ def register():
             flash("Username already exists")
             return render_template('register.html')
 
+        existing_email = User.query.filter_by(email=email).first()
+        if existing_email:
+            flash("Email already exists")
+            return render_template('register.html')
+
         hashed_pw = generate_password_hash(password)
 
-        new_user = User(username=username, password=hashed_pw)
+        new_user = User(
+            username=username,
+            email=email,
+            password=hashed_pw
+        )
+
         db.session.add(new_user)
         db.session.commit()
 
         return redirect('/login')
+
     return render_template('register.html')
 
 # LOGIN
