@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, session, flash
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
+import re
 
 # ── App setup ──
 app = Flask(__name__)
@@ -46,6 +47,14 @@ def register():
 
         if len(password) < 8:
             flash("Password must be at least 8 characters long")
+            return render_template('register.html')
+
+        if not re.search(r'[A-Z]', password):
+            flash("Password must contain at least one uppercase letter")
+            return render_template('register.html')
+
+        if not re.search(r'[0-9]', password):
+            flash("Password must contain at least one number")
             return render_template('register.html')
 
         if password != confirm:
