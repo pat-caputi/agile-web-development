@@ -34,7 +34,7 @@ def home():
 def register():
     if request.method == 'POST':
         username = request.form['username'].strip().lower()
-        email = request.form['email'].strip()
+        email = request.form['email'].strip().lower()
         password = request.form['password']
         confirm = request.form['confirm']
 
@@ -44,6 +44,10 @@ def register():
 
         if not email:
             flash("Email is required")
+            return render_template('register.html', username=username, email=email)
+        
+        if not re.match(r'^[^\s@]+@[^\s@]+\.[^\s@]+$', email):
+            flash("Please enter a valid email address")
             return render_template('register.html', username=username, email=email)
 
         if len(password) < 8:
