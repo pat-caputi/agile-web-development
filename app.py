@@ -39,37 +39,37 @@ def register():
 
         if not username:
             flash("Username is required")
-            return render_template('register.html')
+            return render_template('register.html', username=username, email=email)
 
         if not email:
             flash("Email is required")
-            return render_template('register.html')
+            return render_template('register.html', username=username, email=email)
 
         if len(password) < 8:
             flash("Password must be at least 8 characters long")
-            return render_template('register.html')
+            return render_template('register.html', username=username, email=email)
 
         if not re.search(r'[A-Z]', password):
             flash("Password must contain at least one uppercase letter")
-            return render_template('register.html')
+            return render_template('register.html', username=username, email=email)
 
         if not re.search(r'[0-9]', password):
             flash("Password must contain at least one number")
-            return render_template('register.html')
+            return render_template('register.html', username=username, email=email)
 
         if password != confirm:
             flash("Passwords do not match")
-            return render_template('register.html')
+            return render_template('register.html', username=username, email=email)
 
         existing_user = User.query.filter_by(username=username).first()
         if existing_user:
             flash("Username already exists")
-            return render_template('register.html')
+            return render_template('register.html', username=username, email=email)
 
         existing_email = User.query.filter_by(email=email).first()
         if existing_email:
             flash("Email already exists")
-            return render_template('register.html')
+            return render_template('register.html', username=username, email=email)
 
         hashed_pw = generate_password_hash(password)
 
@@ -84,7 +84,7 @@ def register():
 
         return redirect('/login')
 
-    return render_template('register.html')
+    return render_template('register.html', username="", email="")
 
 # LOGIN
 @app.route('/login', methods=['GET', 'POST'])
