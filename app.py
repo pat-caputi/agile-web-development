@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, redirect, session, flash
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
-from sqlalchemy import func
+from sqlalchemy import func, or_
 import re
 
 # ── App setup ──
@@ -91,16 +91,21 @@ def register():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        username = request.form['username'].strip().lower()
+        login_input = request.form['username'].strip().lower()
         password = request.form['password']
 
-        user = User.query.filter(db.func.lower(User.username) == username).first()
+        user = User.query.filter(
+            or_(
+                func.lower(User.username) == login_input,
+                func.lower(User.email) == login_input
+            )
+        ).first()
 
         if user and check_password_hash(user.password, password):
             session['user_id'] = user.id
             return redirect('/dashboard')
         else:
-            flash("Invalid username or password")
+            flash("Invalid username/email or password")
 
     return render_template('login.html')
 
