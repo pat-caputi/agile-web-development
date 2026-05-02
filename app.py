@@ -28,6 +28,9 @@ with app.app_context():
 @app.route('/')
 def home():
     return redirect('/login')
+@app.route('/ranks')
+def ranks():
+    return render_template('ranks.html')
 
 # REGISTER
 @app.route('/register', methods=['GET', 'POST'])
