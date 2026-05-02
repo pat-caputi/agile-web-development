@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, session, flash
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
+from sqlalchemy import func, or_
 import re
 
 # ── App setup ──
@@ -35,8 +36,8 @@ def ranks():
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        username = request.form['username'].strip()
-        email = request.form['email'].strip()
+        username = request.form['username'].strip().lower()
+        email = request.form['email'].strip().lower()
         password = request.form['password']
         confirm = request.form['confirm']
 
@@ -46,6 +47,10 @@ def register():
 
         if not email:
             flash("Email is required")
+            return render_template('register.html', username=username, email=email)
+        
+        if not re.match(r'^[^\s@]+@[^\s@]+\.[^\s@]+$', email):
+            flash("Please enter a valid email address")
             return render_template('register.html', username=username, email=email)
 
         if len(password) < 8:
@@ -93,16 +98,21 @@ def register():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        username = request.form['username']
+        login_input = request.form['username'].strip().lower()
         password = request.form['password']
 
-        user = User.query.filter_by(username=username).first()
+        user = User.query.filter(
+            or_(
+                func.lower(User.username) == login_input,
+                func.lower(User.email) == login_input
+            )
+        ).first()
 
         if user and check_password_hash(user.password, password):
             session['user_id'] = user.id
             return redirect('/dashboard')
         else:
-            flash("Invalid username or password")
+            flash("Invalid username/email or password")
 
     return render_template('login.html')
 
