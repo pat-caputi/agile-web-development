@@ -20,6 +20,7 @@
     .auth-footer { text-align:center; margin-top:18px; font-size:13px; color:var(--text-secondary); }
     .auth-footer a { color:var(--accent); text-decoration:none; font-weight:500; }
   </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
   <div class="auth-wrap">
@@ -39,9 +40,15 @@
           <label for="username">Username or Email</label>
           <input type="text" id="username" name="username" placeholder="Username or Email" required>
         </div>
-        <div class="field">
+        <div class="field password-field">
           <label for="password">Password</label>
-          <input type="password" id="password" name="password" required>
+
+          <div class="password-wrapper">
+            <input type="password" id="password" name="password" required>
+            <button type="button" class="toggle-password">
+              <i class="fa-solid fa-eye"></i>
+            </button>
+          </div>
         </div>
         <button type="submit" class="btn btn-primary btn-block" style="margin-top:6px;">
         Sign in
@@ -52,5 +59,6 @@
       Don't have an account? <a href="{{ url_for('register') }}">Create one</a>
     </div>
   </div>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>

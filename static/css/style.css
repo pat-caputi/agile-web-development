@@ -387,3 +387,39 @@ html, body {
 @media (max-width: 1024px) { .stats-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
 @media (max-width: 900px)  { .content-grid { grid-template-columns: 1fr; } .log-grid { grid-template-columns: 1fr; } }
 @media (max-width: 640px)  { .sidebar { display: none; } .main { padding: 16px; } .stats-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+
+ /* password toggle */
+.password-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-wrapper input {
+  width: 100%;
+  padding-right: 62px;
+}
+
+.toggle-password {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+}
+
+.toggle-password:hover {
+  color: var(--accent);
+}
+
+.toggle-password i {
+  transition: transform 0.2s ease;
+}
+
+.toggle-password:active i {
+  transform: scale(0.9);
+}
