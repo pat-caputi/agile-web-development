@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Ranks · LiftAGILE</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <style>
+    /* ── Rank tier colour tokens ── */
+    :root {
+      --r-unranked:  #6B6A64;
+      --r-bronze:    #CD7F32;
+      --r-silver:    #A8A9AD;
+      --r-gold:      #EF9F27;
+      --r-platinum:  #4DD0C4;
+      --r-diamond:   #8AB4F8;
+
+      --r-unranked-bg: rgba(107,106,100,0.12);
+      --r-bronze-bg:   rgba(205,127,50,0.13);
+      --r-silver-bg:   rgba(168,169,173,0.12);
+      --r-gold-bg:     rgba(239,159,39,0.13);
+      --r-platinum-bg: rgba(77,208,196,0.13);
+      --r-diamond-bg:  rgba(138,180,248,0.14);
+    }
+
+    /* ── Rank badge ── */
+    .rank-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 10px; border-radius: 6px;
+      font-size: 11.5px; font-weight: 600; white-space: nowrap;
+    }
+    .rb-unranked { background: var(--r-unranked-bg); color: var(--r-unranked); }
+    .rb-bronze   { background: var(--r-bronze-bg);   color: var(--r-bronze); }
+    .rb-silver   { background: var(--r-silver-bg);   color: var(--r-silver); }
+    .rb-gold     { background: var(--r-gold-bg);     color: var(--r-gold); }
+    .rb-platinum { background: var(--r-platinum-bg); color: var(--r-platinum); }
+    .rb-diamond  { background: var(--r-diamond-bg);  color: var(--r-diamond); }
+
+    /* ── Overall hero banner ── */
+    .rank-hero {
+      background: var(--sb-bg);
+      border-radius: var(--radius-lg);
+      padding: 22px 26px;
+      display: flex; align-items: center; gap: 20px;
+      margin-bottom: 20px; color: #fff;
+    }
+    .hero-icon  { font-size: 48px; flex-shrink: 0; line-height: 1; }
+    .hero-info  { flex: 1; min-width: 0; }
+    .hero-title { font-size: 22px; font-weight: 700; letter-spacing: -0.4px; }
+    .hero-sub   { font-size: 12px; color: rgba(255,255,255,0.45); margin-top: 3px; margin-bottom: 12px; }
+    .hero-prog-labels { display: flex; justify-content: space-between; font-size: 11px; color: rgba(255,255,255,0.4); margin-bottom: 5px; }
+    .hero-track { height: 7px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; }
+    .hero-fill  { height: 100%; border-radius: 4px; }
+    .hero-foot  { font-size: 11px; color: rgba(255,255,255,0.35); margin-top: 5px; }
+    .hero-view-btn {
+      padding: 8px 16px; border-radius: var(--radius-md);
+      border: 0.5px solid rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.08); color: #fff;
+      font-size: 12px; font-weight: 500; text-decoration: none;
+      white-space: nowrap; transition: background 0.14s;
+    }
+    .hero-view-btn:hover { background: rgba(255,255,255,0.15); }
+
+    /* ── Two-column layout ── */
+    .ranks-grid {
+      display: grid;
+      grid-template-columns: 300px minmax(0, 1fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    /* ── Body diagram card ── */
+    .diagram-card { position: sticky; top: 0; }
+
+    .body-views {
+      display: flex; gap: 8px; justify-content: center;
+      padding: 12px 8px 8px;
+    }
+
+    .body-view-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .body-view-label { font-size: 10px; color: var(--text-tertiary); letter-spacing: 0.05em; text-transform: uppercase; }
+
+    /* SVG muscle region interaction */
+    .muscle-region { cursor: pointer; transition: opacity 0.15s, filter 0.15s; }
+    .muscle-region:hover { opacity: 0.75; filter: brightness(1.2); }
+    .muscle-region.active { filter: brightness(1.3); stroke: #fff; stroke-width: 1; stroke-opacity: 0.4; }
+
+    /* Rank fill colours for SVG */
+    .fill-unranked { fill: #2C2C2A; }
+    .fill-bronze   { fill: #6B3E14; }
+    .fill-silver   { fill: #4A4B4E; }
+    .fill-gold     { fill: #7A5010; }
+    .fill-platinum { fill: #145E5A; }
+    .fill-diamond  { fill: #1E3A6A; }
+
+    /* Legend row */
+    .legend {
+      display: flex; flex-wrap: wrap; gap: 6px 12px;
+      padding: 10px 12px; border-top: 0.5px solid var(--border);
+    }
+    .legend-item { display: flex; align-items: center; gap: 5px; font-size: 10.5px; color: var(--text-secondary); }
+    .legend-dot  { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
+
+    /* ── Muscle cards (right column) ── */
+    .muscle-cards-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .muscle-card {
+      background: var(--surface);
+      border: 0.5px solid var(--border-md);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      cursor: pointer;
+      transition: border-color 0.14s, transform 0.12s;
+    }
+    .muscle-card:hover  { border-color: var(--accent); transform: translateY(-1px); }
+    .muscle-card.active { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-light); }
+
+    .mc-top  { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .mc-name { font-size: 13px; font-weight: 500; flex: 1; }
+    .mc-pts  { font-size: 11px; color: var(--text-tertiary); font-family: var(--mono); }
+
+    .mc-track { height: 5px; background: var(--gray-100); border-radius: 3px; overflow: hidden; margin-bottom: 5px; }
+    .mc-fill  { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
+    .mc-labels { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--text-tertiary); }
+
+    /* ── Detail panel ── */
+    .detail-panel {
+      background: var(--surface);
+      border: 0.5px solid var(--accent);
+      border-radius: var(--radius-lg);
+      padding: 18px;
+      margin-bottom: 14px;
+    }
+    .detail-top { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+    .detail-track { height: 7px; background: var(--gray-100); border-radius: 4px; overflow: hidden; margin-bottom: 5px; }
+    .detail-fill  { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+
+    .ex-contrib-row {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 13px; padding: 6px 0; border-bottom: 0.5px solid var(--border);
+    }
+    .ex-contrib-row:last-child { border-bottom: none; }
+
+    /* ── Tier table ── */
+    .tier-table { width: 100%; border-collapse: collapse; }
+    .tier-table th { font-size: 11px; color: var(--text-tertiary); font-weight: 400; text-align: left; padding: 0 10px 10px; }
+    .tier-table td { padding: 10px; border-top: 0.5px solid var(--border); font-size: 13px; vertical-align: middle; }
+    .tier-table tr.current td { background: var(--accent-light); }
+    .tier-table tr.current td:first-child { border-radius: 6px 0 0 6px; }
+    .tier-table tr.current td:last-child  { border-radius: 0 6px 6px 0; }
+    .tier-table tr.current td { border-top-color: transparent; }
+
+    /* ── Tooltip ── */
+    .muscle-tooltip {
+      position: fixed; z-index: 200;
+      background: var(--sb-bg); color: #fff;
+      padding: 8px 12px; border-radius: var(--radius-md);
+      font-size: 12px; pointer-events: none;
+      display: none; white-space: nowrap;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    }
+
+    @media (max-width: 900px) {
+      .ranks-grid { grid-template-columns: 1fr; }
+      .diagram-card { position: static; }
+    }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-logo">Lift<span>AGILE</span></div>
+    <a href="{{ url_for('dashboard') }}" class="nav-link">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="9" y="1" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="1" y="9" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="9" y="9" width="6" height="6" rx="1.5" fill="currentColor"/></svg>
+      Dashboard
+    </a>
+    <a href="{{ url_for('log_workout') }}" class="nav-link">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 8h2m8 0h2M4 8V5.5a1.5 1.5 0 013 0v5a1.5 1.5 0 003 0V5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Log workout
+    </a>
+    <a href="{{ url_for('plans') }}" class="nav-link">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 6h6M5 9h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      My plans
+    </a>
+    <a href="{{ url_for('leaderboard') }}" class="nav-link">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 13V8m5 5V4m5 9V7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Leaderboard
+    </a>
+    <a href="{{ url_for('ranks') }}" class="nav-link active">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2l1.8 3.6L14 6.3l-3 2.9.7 4.1L8 11.4l-3.7 1.9.7-4.1-3-2.9 4.2-.7z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+      My ranks
+    </a>
+    <div class="nav-spacer"></div>
+    <a href="{{ url_for('profile') }}" class="nav-user">
+      <div class="avatar" style="background:var(--accent-light);color:var(--accent-dark);">KL</div>
+      <div>
+        <div class="nav-user-name">Kawhi</div>
+        <div class="nav-user-rank">Rank #3</div>
+      </div>
+    </a>
+  </nav>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="page-header">
+      <h1 class="page-title">My ranks</h1>
+      <p class="page-sub">Points earned through every workout · ranks never reset</p>
+    </div>
+
+    <!-- Overall rank hero -->
+    <div class="rank-hero">
+      <div class="hero-icon">🥇</div>
+      <div class="hero-info">
+        <div class="hero-title">Gold · Overall rank</div>
+        <div class="hero-sub">Average across all 6 muscle groups · 28,450 total points</div>
+        <div class="hero-prog-labels">
+          <span>Gold · 5,000 pts</span>
+          <span>Platinum · 12,000 pts</span>
+        </div>
+        <div class="hero-track">
+          <div class="hero-fill" style="width:42%;background:var(--r-gold);"></div>
+        </div>
+        <div class="hero-foot">9,450 / 12,000 pts · 2,550 pts remaining to Platinum</div>
+      </div>
+      <a href="{{ url_for('leaderboard') }}" class="hero-view-btn">Leaderboard</a>
+    </div>
+
+    <!-- Diagram + cards grid -->
+    <div class="ranks-grid">
+
+      <!-- LEFT: body diagram -->
+      <div class="card diagram-card">
+        <div class="card-title" style="margin-bottom:2px;">Muscle map</div>
+        <div style="font-size:11.5px;color:var(--text-tertiary);margin-bottom:4px;">Click or hover a muscle group</div>
+
+        <div class="body-views">
+
+          <!-- FRONT VIEW -->
+          <div class="body-view-col">
+            <div class="body-view-label">Front</div>
+            <svg width="108" height="250" viewBox="0 0 108 250" fill="none" xmlns="http://www.w3.org/2000/svg">
+
+              <!-- Head -->
+              <ellipse cx="54" cy="20" rx="13" ry="15" fill="#222220" stroke="#383836" stroke-width="0.8"/>
+              <!-- Neck -->
+              <rect x="49" y="33" width="10" height="9" rx="2" fill="#222220" stroke="#383836" stroke-width="0.5"/>
+
+              <!-- CHEST (pectorals) -->
+              <path class="muscle-region fill-gold" id="f-chest" data-muscle="chest"
+                    d="M31 48 Q54 44 77 48 L75 70 Q54 74 33 70 Z"/>
+
+              <!-- SHOULDERS front left -->
+              <ellipse class="muscle-region fill-platinum" id="f-shl" data-muscle="shoulders"
+                       cx="24" cy="57" rx="9" ry="13"/>
+              <!-- SHOULDERS front right -->
+              <ellipse class="muscle-region fill-platinum" id="f-shr" data-muscle="shoulders"
+                       cx="84" cy="57" rx="9" ry="13"/>
+
+              <!-- BICEPS left -->
+              <path class="muscle-region fill-silver" id="f-arml" data-muscle="arms"
+                    d="M17 66 Q13 79 15 95 Q21 99 25 95 Q27 79 25 66 Z"/>
+              <!-- BICEPS right -->
+              <path class="muscle-region fill-silver" id="f-armr" data-muscle="arms"
+                    d="M91 66 Q95 79 93 95 Q87 99 83 95 Q81 79 83 66 Z"/>
+
+              <!-- Forearms + hands (neutral, no rank) -->
+              <path d="M15 96 Q12 110 14 120 Q19 122 23 120 Q25 110 25 96Z" fill="#222220" stroke="#383836" stroke-width="0.5"/>
+              <path d="M93 96 Q96 110 94 120 Q89 122 85 120 Q83 110 83 96Z" fill="#222220" stroke="#383836" stroke-width="0.5"/>
+              <ellipse cx="17" cy="127" rx="6" ry="8" fill="#222220" stroke="#383836" stroke-width="0.5"/>
+              <ellipse cx="91" cy="127" rx="6" ry="8" fill="#222220" stroke="#383836" stroke-width="0.5"/>
+
+              <!-- CORE / ABS -->
+              <path class="muscle-region fill-bronze" id="f-core" data-muscle="core"
+                    d="M35 72 Q54 76 73 72 L71 116 Q54 120 37 116 Z"/>
+              <!-- Six-pack dividers -->
+              <line x1="54" y1="76" x2="54" y2="116" stroke="#0A0A08" stroke-width="0.7" opacity="0.5"/>
+              <line x1="37" y1="88"  x2="71" y2="88"  stroke="#0A0A08" stroke-width="0.7" opacity="0.5"/>
+              <line x1="37" y1="102" x2="71" y2="102" stroke="#0A0A08" stroke-width="0.5" opacity="0.4"/>
+
+              <!-- Hip belt (neutral) -->
+              <path d="M37 116 Q54 120 71 116 L73 130 Q54 134 35 130 Z" fill="#222220" stroke="#383836" stroke-width="0.5"/>
+
+              <!-- QUADS left -->
+              <path class="muscle-region fill-gold" id="f-legl" data-muscle="legs"
+                    d="M35 132 Q31 152 33 172 Q41 176 49 172 Q51 152 49 132 Z"/>
+              <!-- QUADS right -->
+              <path class="muscle-region fill-gold" id="f-legr" data-muscle="legs"
+                    d="M59 132 Q57 152 59 172 Q67 176 73 172 Q75 152 73 132 Z"/>
+
+              <!-- Knees -->
+              <ellipse cx="41" cy="176" rx="8" ry="5.5" fill="#222220" stroke="#383836" stroke-width="0.5"/>
+              <ellipse cx="66" cy="176" rx="8" ry="5.5" fill="#222220" stroke="#383836" stroke-width="0.5"/>
+
+              <!-- Shins -->
+              <path d="M34 182 Q32 200 34 218 Q40 221 48 218 Q50 200 48 182Z" fill="#222220" stroke="#383836" stroke-width="0.5"/>
+              <path d="M58 182 Q56 200 58 218 Q66 221 72 218 Q74 200 72 182Z" fill="#222220" stroke="#383836" stroke-width="0.5"/>
+
+              <!-- Feet -->
+              <ellipse cx="41" cy="224" rx="9" ry="5" fill="#222220" stroke="#383836" stroke-width="0.5"/>
+              <ellipse cx="65" cy="224" rx="9" ry="5" fill="#222220" stroke="#383836" stroke-width="0.5"/>
+            </svg>
+          </div>
+
+          <!-- BACK VIEW -->
+          <div class="body-view-col">
+            <div class="body-view-label">Back</div>
+            <svg width="108" height="250" viewBox="0 0 108 250" fill="none" xmlns="http://www.w3.org/2000/svg">
+
+              <!-- Head -->
+              <ellipse cx="54" cy="20" rx="13" ry="15" fill="#222220" stroke="#383836" stroke-width="0.8"/>
+              <!-- Neck -->
+              <rect x="49" y="33" width="10" height="9" rx="2" fill="#222220" stroke="#383836" stroke-width="0.5"/>
+
+              <!-- TRAPS (upper back) -->
+              <path class="muscle-region fill-diamond" id="b-backtop" data-muscle="back"
+                    d="M34 46 Q54 42 74 46 L76 62 Q54 66 32 62 Z"/>
+
+              <!-- SHOULDERS back left -->
+              <ellipse class="muscle-region fill-platinum" id="b-shl" data-muscle="shoulders"
+                       cx="24" cy="55" rx="9" ry="13"/>
+              <!-- SHOULDERS back right -->
+              <ellipse class="muscle-region fill-platinum" id="b-shr" data-muscle="shoulders"
+                       cx="84" cy="55" rx="9" ry="13"/>
+
+              <!-- LATS -->
+              <path class="muscle-region fill-diamond" id="b-lats" data-muscle="back"
+                    d="M32 62 Q26 74 28 92 Q41 98 54 96 Q67 98 80 92 Q82 74 76 62 Q54 66 32 62 Z"/>
+
+              <!-- TRICEPS left -->
+              <path class="muscle-region fill-silver" id="b-arml" data-muscle="arms"
+                    d="M17 64 Q13 77 15 93 Q21 97 25 93 Q27 77 25 64 Z"/>
+              <!-- TRICEPS right -->
+              <path class="muscle-region fill-silver" id="b-armr" data-muscle="arms"
+                    d="M91 64 Q95 77 93 93 Q87 97 83 93 Q81 77 83 64 Z"/>
+
+              <!-- Forearms + hands (back, neutral) -->
+              <path d="M15 94 Q12 108 14 118 Q19 120 23 118 Q25 108 25 94Z" fill="#222220" stroke="#383836" stroke-width="0.5"/>
+              <path d="M93 94 Q96 108 94 118 Q89 120 85 118 Q83 108 83 94Z" fill="#222220" stroke="#383836" stroke-width="0.5"/>
+              <ellipse cx="17" cy="125" rx="6" ry="8" fill="#222220" stroke="#383836" stroke-width="0.5"/>
+              <ellipse cx="91" cy="125" rx="6" ry="8" fill="#222220" stroke="#383836" stroke-width="0.5"/>
+
+              <!-- Lower back (neutral) -->
+              <path d="M34 94 Q54 98 74 94 L72 116 Q54 120 36 116 Z" fill="#1E1E1C" stroke="#383836" stroke-width="0.5"/>
+
+              <!-- Glutes (neutral) -->
+              <path d="M34 116 Q54 120 74 116 L76 136 Q54 140 32 136 Z" fill="#222220" stroke="#383836" stroke-width="0.5"/>
+
+              <!-- HAMSTRINGS left -->
+              <path class="muscle-region fill-gold" id="b-legl" data-muscle="legs"
+                    d="M34 138 Q30 158 32 176 Q40 180 48 176 Q50 158 48 138 Z"/>
+              <!-- HAMSTRINGS right -->
+              <path class="muscle-region fill-gold" id="b-legr" data-muscle="legs"
+                    d="M58 138 Q56 158 58 176 Q66 180 72 176 Q74 158 72 138 Z"/>
+
+              <!-- Knees back -->
+              <ellipse cx="40" cy="180" rx="8" ry="5" fill="#222220" stroke="#383836" stroke-width="0.5"/>
+              <ellipse cx="65" cy="180" rx="8" ry="5" fill="#222220" stroke="#383836" stroke-width="0.5"/>
+
+              <!-- Calves -->
+              <path d="M33 186 Q31 204 33 220 Q40 224 48 220 Q50 204 48 186Z" fill="#222220" stroke="#383836" stroke-width="0.5"/>
+              <path d="M57 186 Q55 204 57 220 Q65 224 71 220 Q73 204 71 186Z" fill="#222220" stroke="#383836" stroke-width="0.5"/>
+
+              <!-- Feet back -->
+              <ellipse cx="40" cy="226" rx="9" ry="5" fill="#222220" stroke="#383836" stroke-width="0.5"/>
+              <ellipse cx="64" cy="226" rx="9" ry="5" fill="#222220" stroke="#383836" stroke-width="0.5"/>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Colour legend -->
+        <div class="legend">
+          <div class="legend-item"><div class="legend-dot" style="background:var(--r-unranked);"></div>Unranked</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--r-bronze);"></div>Bronze</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--r-silver);"></div>Silver</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--r-gold);"></div>Gold</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--r-platinum);"></div>Platinum</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--r-diamond);"></div>Diamond</div>
+        </div>
+      </div>
+
+      <!-- RIGHT: muscle cards + detail -->
+      <div>
+
+        <!-- Muscle rank cards -->
+        <div class="muscle-cards-grid">
+
+          <!-- Chest -->
+          <div class="muscle-card" id="card-chest" onclick="selectMuscle('chest')">
+            <div class="mc-top">
+              <div class="ex-icon" style="background:#EEEDFE;color:#534AB7;width:28px;height:28px;font-size:11px;">C</div>
+              <span class="mc-name">Chest</span>
+              <span class="rank-badge rb-gold">🥇 Gold</span>
+            </div>
+            <div class="mc-track"><div class="mc-fill" style="width:70%;background:var(--r-gold);"></div></div>
+            <div class="mc-labels"><span>8,400 pts</span><span>→ Platinum: 12,000</span></div>
+          </div>
+
+          <!-- Back -->
+          <div class="muscle-card" id="card-back" onclick="selectMuscle('back')">
+            <div class="mc-top">
+              <div class="ex-icon" style="background:#E1F5EE;color:#085041;width:28px;height:28px;font-size:11px;">B</div>
+              <span class="mc-name">Back</span>
+              <span class="rank-badge rb-diamond">💎 Diamond</span>
+            </div>
+            <div class="mc-track"><div class="mc-fill" style="width:55%;background:var(--r-diamond);"></div></div>
+            <div class="mc-labels"><span>26,200 pts</span><span>Max tier</span></div>
+          </div>
+
+          <!-- Legs -->
+          <div class="muscle-card" id="card-legs" onclick="selectMuscle('legs')">
+            <div class="mc-top">
+              <div class="ex-icon" style="background:#FAECE7;color:#712B13;width:28px;height:28px;font-size:11px;">L</div>
+              <span class="mc-name">Legs</span>
+              <span class="rank-badge rb-gold">🥇 Gold</span>
+            </div>
+            <div class="mc-track"><div class="mc-fill" style="width:30%;background:var(--r-gold);"></div></div>
+            <div class="mc-labels"><span>6,100 pts</span><span>→ Platinum: 12,000</span></div>
+          </div>
+
+          <!-- Shoulders -->
+          <div class="muscle-card" id="card-shoulders" onclick="selectMuscle('shoulders')">
+            <div class="mc-top">
+              <div class="ex-icon" style="background:#FAEEDA;color:#633806;width:28px;height:28px;font-size:11px;">S</div>
+              <span class="mc-name">Shoulders</span>
+              <span class="rank-badge rb-platinum">🔷 Platinum</span>
+            </div>
+            <div class="mc-track"><div class="mc-fill" style="width:60%;background:var(--r-platinum);"></div></div>
+            <div class="mc-labels"><span>19,400 pts</span><span>→ Diamond: 25,000</span></div>
+          </div>
+
+          <!-- Arms -->
+          <div class="muscle-card" id="card-arms" onclick="selectMuscle('arms')">
+            <div class="mc-top">
+              <div class="ex-icon" style="background:#F1EFE8;color:#444441;width:28px;height:28px;font-size:11px;">A</div>
+              <span class="mc-name">Arms</span>
+              <span class="rank-badge rb-silver">🥈 Silver</span>
+            </div>
+            <div class="mc-track"><div class="mc-fill" style="width:80%;background:var(--r-silver);"></div></div>
+            <div class="mc-labels"><span>3,600 pts</span><span>→ Gold: 5,000</span></div>
+          </div>
+
+          <!-- Core -->
+          <div class="muscle-card" id="card-core" onclick="selectMuscle('core')">
+            <div class="mc-top">
+              <div class="ex-icon" style="background:#FBEAF0;color:#72243E;width:28px;height:28px;font-size:11px;">C</div>
+              <span class="mc-name">Core</span>
+              <span class="rank-badge rb-bronze">🥉 Bronze</span>
+            </div>
+            <div class="mc-track"><div class="mc-fill" style="width:55%;background:var(--r-bronze);"></div></div>
+            <div class="mc-labels"><span>1,100 pts</span><span>→ Silver: 2,000</span></div>
+          </div>
+
+        </div>
+
+        <!-- Detail panel -->
+        <div class="detail-panel" id="detailPanel">
+          <div class="detail-top">
+            <div class="ex-icon" id="detailIcon" style="background:#E1F5EE;color:#085041;width:36px;height:36px;font-size:14px;flex-shrink:0;">B</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:15px;font-weight:600;" id="detailName">Back</div>
+              <div style="font-size:12px;color:var(--text-tertiary);" id="detailSub">Diamond · 26,200 pts</div>
+            </div>
+            <span class="rank-badge rb-diamond" id="detailBadge">💎 Diamond</span>
+          </div>
+
+          <div style="font-size:11.5px;color:var(--text-tertiary);margin-bottom:6px;">Progress to next tier</div>
+          <div class="detail-track">
+            <div class="detail-fill" id="detailBar" style="width:55%;background:var(--r-diamond);"></div>
+          </div>
+          <div style="font-size:11.5px;color:var(--text-tertiary);margin-bottom:14px;" id="detailProg">Max tier reached — keep climbing!</div>
+
+          <div style="font-size:11.5px;color:var(--text-tertiary);margin-bottom:8px;">Top contributing exercises</div>
+          <div id="detailExercises"></div>
+        </div>
+
+        <!-- All tiers reference -->
+        <div class="card">
+          <div class="card-title">Rank tiers</div>
+          <table class="tier-table">
+            <thead>
+              <tr>
+                <th>Tier</th>
+                <th>Description</th>
+                <th>Points needed</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="rank-badge rb-unranked">Unranked</span></td>
+                <td style="color:var(--text-secondary);">Just getting started</td>
+                <td style="font-family:var(--mono);color:var(--text-tertiary);">0</td>
+                <td><span class="badge badge-success">Cleared</span></td>
+              </tr>
+              <tr>
+                <td><span class="rank-badge rb-bronze">🥉 Bronze</span></td>
+                <td style="color:var(--text-secondary);">Building the habit</td>
+                <td style="font-family:var(--mono);color:var(--text-tertiary);">500</td>
+                <td><span class="badge badge-success">Cleared</span></td>
+              </tr>
+              <tr>
+                <td><span class="rank-badge rb-silver">🥈 Silver</span></td>
+                <td style="color:var(--text-secondary);">Consistent trainer</td>
+                <td style="font-family:var(--mono);color:var(--text-tertiary);">2,000</td>
+                <td><span class="badge badge-success">Cleared</span></td>
+              </tr>
+              <tr class="current">
+                <td><span class="rank-badge rb-gold">🥇 Gold</span></td>
+                <td style="color:var(--text-secondary);">Dedicated lifter</td>
+                <td style="font-family:var(--mono);color:var(--text-tertiary);">5,000</td>
+                <td><span class="badge badge-accent">Current overall</span></td>
+              </tr>
+              <tr>
+                <td><span class="rank-badge rb-platinum">🔷 Platinum</span></td>
+                <td style="color:var(--text-secondary);">Elite athlete</td>
+                <td style="font-family:var(--mono);color:var(--text-tertiary);">12,000</td>
+                <td><span class="badge badge-warning">In progress</span></td>
+              </tr>
+              <tr>
+                <td><span class="rank-badge rb-diamond">💎 Diamond</span></td>
+                <td style="color:var(--text-secondary);">World-class lifter</td>
+                <td style="font-family:var(--mono);color:var(--text-tertiary);">25,000</td>
+                <td><span class="badge" style="background:var(--r-diamond-bg);color:var(--r-diamond);">1 group reached</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Tooltip -->
+<div class="muscle-tooltip" id="muscleTooltip"></div>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+// ── Static muscle data (replace with Jinja2 vars once Flask is wired) ──
+const MUSCLE_DATA = {
+  chest: {
+    name: 'Chest',
+    icon: 'C', iconBg: '#EEEDFE', iconColor: '#534AB7',
+    badgeClass: 'rb-gold', badgeLabel: '🥇 Gold',
+    barColor: 'var(--r-gold)',
+    pts: 8400, nextPts: 12000, nextName: 'Platinum', pct: 70,
+    exercises: [
+      { name: 'Bench press',       pts: 4200 },
+      { name: 'Incline bench press', pts: 2600 },
+      { name: 'Cable fly',         pts: 1600 },
+    ]
+  },
+  back: {
+    name: 'Back',
+    icon: 'B', iconBg: '#E1F5EE', iconColor: '#085041',
+    badgeClass: 'rb-diamond', badgeLabel: '💎 Diamond',
+    barColor: 'var(--r-diamond)',
+    pts: 26200, nextPts: null, nextName: null, pct: 55,
+    exercises: [
+      { name: 'Deadlift',    pts: 9840 },
+      { name: 'Pull up',     pts: 7200 },
+      { name: 'Barbell row', pts: 5940 },
+    ]
+  },
+  legs: {
+    name: 'Legs',
+    icon: 'L', iconBg: '#FAECE7', iconColor: '#712B13',
+    badgeClass: 'rb-gold', badgeLabel: '🥇 Gold',
+    barColor: 'var(--r-gold)',
+    pts: 6100, nextPts: 12000, nextName: 'Platinum', pct: 30,
+    exercises: [
+      { name: 'Barbell squat',   pts: 2800 },
+      { name: 'Leg press',       pts: 1900 },
+      { name: 'Romanian deadlift', pts: 1400 },
+    ]
+  },
+  shoulders: {
+    name: 'Shoulders',
+    icon: 'S', iconBg: '#FAEEDA', iconColor: '#633806',
+    badgeClass: 'rb-platinum', badgeLabel: '🔷 Platinum',
+    barColor: 'var(--r-platinum)',
+    pts: 19400, nextPts: 25000, nextName: 'Diamond', pct: 60,
+    exercises: [
+      { name: 'Overhead press', pts: 8800 },
+      { name: 'Lateral raises', pts: 6200 },
+      { name: 'Arnold press',   pts: 4400 },
+    ]
+  },
+  arms: {
+    name: 'Arms',
+    icon: 'A', iconBg: '#F1EFE8', iconColor: '#444441',
+    badgeClass: 'rb-silver', badgeLabel: '🥈 Silver',
+    barColor: 'var(--r-silver)',
+    pts: 3600, nextPts: 5000, nextName: 'Gold', pct: 80,
+    exercises: [
+      { name: 'Bicep curl',      pts: 1400 },
+      { name: 'Tricep pushdown', pts: 1200 },
+      { name: 'Hammer curl',     pts:  900 },
+    ]
+  },
+  core: {
+    name: 'Core',
+    icon: 'C', iconBg: '#FBEAF0', iconColor: '#72243E',
+    badgeClass: 'rb-bronze', badgeLabel: '🥉 Bronze',
+    barColor: 'var(--r-bronze)',
+    pts: 1100, nextPts: 2000, nextName: 'Silver', pct: 55,
+    exercises: [
+      { name: 'Cable crunch',       pts: 520 },
+      { name: 'Plank',              pts: 380 },
+      { name: 'Hanging leg raise',  pts: 200 },
+    ]
+  },
+};
+
+// ── SVG region IDs grouped by muscle ──
+const MUSCLE_REGIONS = {
+  chest:     ['f-chest'],
+  back:      ['b-backtop', 'b-lats'],
+  legs:      ['f-legl', 'f-legr', 'b-legl', 'b-legr'],
+  shoulders: ['f-shl', 'f-shr', 'b-shl', 'b-shr'],
+  arms:      ['f-arml', 'f-armr', 'b-arml', 'b-armr'],
+  core:      ['f-core'],
+};
+
+let activeMuscle = null;
+
+function selectMuscle(key) {
+  if (!MUSCLE_DATA[key]) return;
+  activeMuscle = key;
+  const d = MUSCLE_DATA[key];
+
+  // Highlight card
+  document.querySelectorAll('.muscle-card').forEach(c => c.classList.remove('active'));
+  document.getElementById(`card-${key}`)?.classList.add('active');
+
+  // Highlight SVG regions
+  document.querySelectorAll('.muscle-region').forEach(r => r.classList.remove('active'));
+  (MUSCLE_REGIONS[key] || []).forEach(id => {
+    document.getElementById(id)?.classList.add('active');
+  });
+
+  // Update icon
+  const icon = document.getElementById('detailIcon');
+  icon.textContent   = d.icon;
+  icon.style.background = d.iconBg;
+  icon.style.color      = d.iconColor;
+
+  document.getElementById('detailName').textContent = d.name;
+  document.getElementById('detailSub').textContent  = `${d.badgeLabel.replace(/^[^ ]+ /, '')} · ${d.pts.toLocaleString()} pts`;
+
+  const badge = document.getElementById('detailBadge');
+  badge.className   = `rank-badge ${d.badgeClass}`;
+  badge.textContent = d.badgeLabel;
+
+  const bar = document.getElementById('detailBar');
+  bar.style.width      = d.pct + '%';
+  bar.style.background = d.barColor;
+
+  document.getElementById('detailProg').textContent = d.nextName
+    ? `${(d.nextPts - d.pts).toLocaleString()} pts to ${d.nextName}`
+    : 'Max tier reached — keep climbing!';
+
+  document.getElementById('detailExercises').innerHTML = d.exercises.map(e => `
+    <div class="ex-contrib-row">
+      <span>${e.name}</span>
+      <span style="font-family:var(--mono);font-size:12px;color:var(--text-secondary);">${e.pts.toLocaleString()} pts</span>
+    </div>`).join('');
+}
+
+// ── SVG tooltip + click ──
+const tooltip = document.getElementById('muscleTooltip');
+
+document.querySelectorAll('.muscle-region').forEach(el => {
+  const muscle = el.dataset.muscle;
+
+  el.addEventListener('click', () => selectMuscle(muscle));
+
+  el.addEventListener('mousemove', e => {
+    const d = MUSCLE_DATA[muscle];
+    if (!d) return;
+    tooltip.style.display = 'block';
+    tooltip.style.left    = (e.clientX + 14) + 'px';
+    tooltip.style.top     = (e.clientY - 10) + 'px';
+    tooltip.innerHTML = `<strong>${d.name}</strong> &nbsp;${d.badgeLabel}<br>
+      <span style="color:rgba(255,255,255,0.5);font-size:11px;">${d.pts.toLocaleString()} pts</span>`;
+  });
+
+  el.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+});
+
+// Default selection on load
+selectMuscle('back');
+</script>
+</body>
+</html>
