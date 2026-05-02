@@ -119,7 +119,10 @@ def login():
 # DASHBOARD
 @app.route('/dashboard')
 def dashboard():
-    return render_template('dashboard.html')
+    if 'user_id' not in session:
+        return redirect('/login')
+    user = User.query.get(session['user_id'])
+    return render_template('dashboard.html', user=user)
 
 # LOGOUT
 @app.route('/logout')
@@ -141,7 +144,11 @@ def plans():
 
 @app.route('/profile')
 def profile():
-    return render_template('profile.html')
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    user = db.session.get(User, session['user_id'])
+    return render_template('profile.html', user=user)
 
 # ── Run app ──
 if __name__ == "__main__":

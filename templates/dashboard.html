@@ -37,9 +37,9 @@
     </a>
     <div class="nav-spacer"></div>
     <a href="{{ url_for('profile') }}" class="nav-user">
-      <div class="avatar" style="background:var(--accent-light);color:var(--accent-dark);">KL</div>
+      <div class="avatar" style="background:var(--accent-light);color:var(--accent-dark);">{{ (user.username.split()[0][0] + (user.username.split()[1][0] if user.username.split()|length > 1 else '')).upper() }}</div>
       <div>
-        <div class="nav-user-name">Kawhi</div>
+        <div class="nav-user-name">{{ user.username.title() }}</div>
         <div class="nav-user-rank">Rank #3</div>
       </div>
     </a>
@@ -48,7 +48,7 @@
   <!-- Main -->
   <main class="main">
     <div class="page-header">
-      <h1 class="page-title">Good morning, Kawhi</h1>
+      <h1 class="page-title">Good morning, {{ user.username.title() }}</h1>
       <p class="page-sub">Thursday, 12 June · Week 24 · 4 workouts this week</p>
     </div>
 
@@ -153,7 +153,7 @@
             </div>
             <div class="rank-item you">
               <span class="rank-num">3</span>
-              <div class="avatar" style="background:#AFA9EC;color:#26215C;">KL</div>
+              <div class="avatar" style="background:#AFA9EC;color:#26215C;">{{ (user.username.split()[0][0] + (user.username.split()[1][0] if user.username.split()|length > 1 else '')).upper() }}</div>
               <span class="rank-name">You</span>
               <span class="rank-score">18,420 kg</span>
             </div>
