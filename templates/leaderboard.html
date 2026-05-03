@@ -28,7 +28,7 @@
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 13V8m5 5V4m5 9V7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
       Leaderboard
     </a>
-    <a href="{{ url_for('ranks') }}" class="nav-link {% if request.endpoint == 'ranks' %}active{% endif %}">
+    <a href="{{ url_for('ranks') }}" class="nav-link">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
         <path d="M8 2l1.8 3.6L14 6.3l-3 2.9.7 4.1L8 11.4l-3.7 1.9.7-4.1-3-2.9 4.2-.7z"
               stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
@@ -36,140 +36,232 @@
       My ranks
     </a>
     <div class="nav-spacer"></div>
-    <a href="{{ url_for('profile') }}" class="nav-user">
-      <div class="avatar" style="background:var(--accent-light);color:var(--accent-dark);">KL</div>
-      <div>
-        <div class="nav-user-name">Kawhi</div>
-        <div class="nav-user-rank">Rank #3</div>
-      </div>
-    </a>
+    {% if me %}
+      {% set p = avatar_palette(me.id) %}
+      <a href="{{ url_for('profile') }}" class="nav-user">
+        <div class="avatar" style="background:{{ p.bg }};color:{{ p.fg }};">{{ initials(me.username) }}</div>
+        <div>
+          <div class="nav-user-name">{{ me.username }}</div>
+          <div class="nav-user-rank">
+            {% set my_row = rows|selectattr('user.id','equalto',me.id)|list|first %}
+            {% if my_row %}Rank #{{ my_row.rank }}{% else %}New lifter{% endif %}
+          </div>
+        </div>
+      </a>
+    {% endif %}
   </nav>
 
   <!-- Main -->
   <main class="main">
     <div class="page-header">
       <h1 class="page-title">Leaderboard</h1>
-      <p class="page-sub">Week 24 · Resets in 3 days</p>
+      <p class="page-sub">This week · {{ rows|length }} {{ 'lifter' if rows|length == 1 else 'lifters' }} ranked</p>
     </div>
 
-    <!-- Category pills -->
-    <div class="pill-tabs">
-      <button class="pill active" onclick="switchTab(this,'vol')">Total volume</button>
-      <button class="pill" onclick="switchTab(this,'freq')">Frequency</button>
-      <button class="pill" onclick="switchTab(this,'str')">Strength score</button>
-      <button class="pill" onclick="switchTab(this,'pr')">PRs set</button>
+    <!-- Category pills (links so non-JS users still get filtering) -->
+    <div class="pill-tabs" id="metricTabs">
+      <a href="?metric=volume"    data-metric="volume"    class="pill {{ 'active' if metric == 'volume' }}">Total volume</a>
+      <a href="?metric=frequency" data-metric="frequency" class="pill {{ 'active' if metric == 'frequency' }}">Frequency</a>
+      <a href="?metric=strength"  data-metric="strength"  class="pill {{ 'active' if metric == 'strength' }}">Strength score</a>
+      <a href="?metric=prs"       data-metric="prs"       class="pill {{ 'active' if metric == 'prs' }}">PRs set</a>
     </div>
 
-    <!-- Podium -->
-    <div class="card" style="margin-bottom:16px;">
-      <div class="podium">
-        <!-- 2nd -->
-        <div class="podium-place">
-          <div class="podium-avatar" style="width:38px;height:38px;font-size:13px;font-weight:600;background:#E1F5EE;color:#085041;">SM</div>
-          <div class="podium-name">Steph C.</div>
-          <div class="podium-score">21,340 kg</div>
-          <div class="podium-block" style="height:56px;background:var(--gray-200);color:var(--gray-800);">2</div>
-        </div>
-        <!-- 1st -->
-        <div class="podium-place">
-          <div style="font-size:20px;margin-bottom:2px;">🥇</div>
-          <div class="podium-avatar" style="width:46px;height:46px;font-size:15px;font-weight:600;background:#FAEEDA;color:#633806;">JK</div>
-          <div class="podium-name" style="font-size:13px;">Lebron J.</div>
-          <div class="podium-score">24,810 kg</div>
-          <div class="podium-block" style="height:72px;background:var(--amber-400);color:var(--amber-800);">1</div>
-        </div>
-        <!-- 3rd -->
-        <div class="podium-place">
-          <div class="podium-avatar" style="width:38px;height:38px;font-size:13px;font-weight:600;background:#AFA9EC;color:#26215C;">AX</div>
-          <div class="podium-name">You</div>
-          <div class="podium-score">18,420 kg</div>
-          <div class="podium-block" style="height:44px;background:var(--coral-200);color:var(--coral-800);">3</div>
+    {% if rows|length == 0 or rows|map(attribute='score')|sum == 0 %}
+      <!-- Empty state: no data to rank yet -->
+      <div class="card" style="text-align:center;padding:48px 24px;">
+        <div style="font-size:32px;margin-bottom:8px;">🏋️</div>
+        <div style="font-size:15px;font-weight:500;margin-bottom:4px;">No scores yet this week</div>
+        <p style="font-size:13px;color:var(--text-tertiary);max-width:320px;margin:0 auto 18px;">
+          Be the first on the board — log a workout and your stats will show up here.
+        </p>
+        <a href="{{ url_for('log_workout') }}" class="btn btn-primary">Log a workout</a>
+      </div>
+    {% else %}
+
+      <!-- Podium (top 3 by selected metric) -->
+      <div class="card" id="podiumCard" style="margin-bottom:16px;">
+        <div class="podium" id="podium">
+          {# Order on the podium: 2nd, 1st, 3rd visually #}
+          {% set top = rows[:3] %}
+          {% if top|length >= 2 %}
+            {% set u2 = top[1].user %}
+            {% set p2 = avatar_palette(u2.id) %}
+            <div class="podium-place">
+              <div class="podium-avatar" style="width:38px;height:38px;font-size:13px;background:{{ p2.bg }};color:{{ p2.fg }};">{{ initials(u2.username) }}</div>
+              <div class="podium-name">{{ u2.username if u2.id != me.id else 'You' }}</div>
+              <div class="podium-score">{{ '{:,}'.format(top[1].score) }} {{ metric_unit }}</div>
+              <div class="podium-block" style="height:56px;background:var(--gray-200);color:var(--gray-600);">2</div>
+            </div>
+          {% endif %}
+          {% if top|length >= 1 %}
+            {% set u1 = top[0].user %}
+            {% set p1 = avatar_palette(u1.id) %}
+            <div class="podium-place">
+              <div style="font-size:20px;margin-bottom:2px;">🥇</div>
+              <div class="podium-avatar" style="width:46px;height:46px;font-size:15px;background:{{ p1.bg }};color:{{ p1.fg }};">{{ initials(u1.username) }}</div>
+              <div class="podium-name" style="font-size:13px;">{{ u1.username if u1.id != me.id else 'You' }}</div>
+              <div class="podium-score">{{ '{:,}'.format(top[0].score) }} {{ metric_unit }}</div>
+              <div class="podium-block" style="height:72px;background:var(--amber-400);color:var(--amber-800);">1</div>
+            </div>
+          {% endif %}
+          {% if top|length >= 3 %}
+            {% set u3 = top[2].user %}
+            {% set p3 = avatar_palette(u3.id) %}
+            <div class="podium-place">
+              <div class="podium-avatar" style="width:38px;height:38px;font-size:13px;background:{{ p3.bg }};color:{{ p3.fg }};">{{ initials(u3.username) }}</div>
+              <div class="podium-name">{{ u3.username if u3.id != me.id else 'You' }}</div>
+              <div class="podium-score">{{ '{:,}'.format(top[2].score) }} {{ metric_unit }}</div>
+              <div class="podium-block" style="height:44px;background:var(--coral-200);color:var(--coral-800);">3</div>
+            </div>
+          {% endif %}
         </div>
       </div>
-    </div>
 
-    <!-- Full table -->
-    <div class="card">
-      <table class="lb-table">
-        <thead>
-          <tr>
-            <th style="width:32px;">#</th>
-            <th style="width:36px;"></th>
-            <th>User</th>
-            <th>Workouts</th>
-            <th class="right">Volume</th>
-            <th class="right" style="width:44px;">+/−</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><span style="font-size:13px;font-weight:600;color:var(--text-tertiary);">1</span></td>
-            <td><div class="avatar" style="background:#FAEEDA;color:#633806;">LJ</div></td>
-            <td>Lebron J.</td>
-            <td style="color:var(--text-tertiary);">6</td>
-            <td style="text-align:right;font-weight:500;">24,810 kg</td>
-            <td style="text-align:right;"><span class="change change-up">▲2</span></td>
-          </tr>
-          <tr>
-            <td><span style="font-size:13px;font-weight:600;color:var(--text-tertiary);">2</span></td>
-            <td><div class="avatar" style="background:#E1F5EE;color:#085041;">SC</div></td>
-            <td>Steph C.</td>
-            <td style="color:var(--text-tertiary);">5</td>
-            <td style="text-align:right;font-weight:500;">21,340 kg</td>
-            <td style="text-align:right;"><span class="change change-eq">—</span></td>
-          </tr>
-          <tr class="lb-row-you">
-            <td><span style="font-size:13px;font-weight:600;color:var(--accent);">3</span></td>
-            <td><div class="avatar" style="background:#AFA9EC;color:#26215C;">AX</div></td>
-            <td style="font-weight:500;color:var(--accent-dark);">You</td>
-            <td style="color:var(--accent);">4</td>
-            <td style="text-align:right;font-weight:500;color:var(--accent-dark);">18,420 kg</td>
-            <td style="text-align:right;"><span class="change change-up">▲1</span></td>
-          </tr>
-          <tr>
-            <td><span style="font-size:13px;font-weight:600;color:var(--text-tertiary);">4</span></td>
-            <td><div class="avatar" style="background:#FAECE7;color:#712B13;">MJ</div></td>
-            <td>Michael J.</td>
-            <td style="color:var(--text-tertiary);">5</td>
-            <td style="text-align:right;font-weight:500;">16,090 kg</td>
-            <td style="text-align:right;"><span class="change change-down">▼1</span></td>
-          </tr>
-          <tr>
-            <td><span style="font-size:13px;font-weight:600;color:var(--text-tertiary);">5</span></td>
-            <td><div class="avatar" style="background:#FBEAF0;color:#72243E;">BR</div></td>
-            <td>Bill R.</td>
-            <td style="color:var(--text-tertiary);">4</td>
-            <td style="text-align:right;font-weight:500;">14,720 kg</td>
-            <td style="text-align:right;"><span class="change change-eq">—</span></td>
-          </tr>
-          <tr>
-            <td><span style="font-size:13px;font-weight:600;color:var(--text-tertiary);">6</span></td>
-            <td><div class="avatar" style="background:#EAF3DE;color:#27500A;">SG</div></td>
-            <td>Shai G.</td>
-            <td style="color:var(--text-tertiary);">3</td>
-            <td style="text-align:right;font-weight:500;">11,850 kg</td>
-            <td style="text-align:right;"><span class="change change-down">▼2</span></td>
-          </tr>
-          <tr>
-            <td><span style="font-size:13px;font-weight:600;color:var(--text-tertiary);">7</span></td>
-            <td><div class="avatar" style="background:#EEEDFE;color:#3C3489;">VW</div></td>
-            <td>Victor W.</td>
-            <td style="color:var(--text-tertiary);">3</td>
-            <td style="text-align:right;font-weight:500;">10,200 kg</td>
-            <td style="text-align:right;"><span class="change change-up">▲3</span></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+      <!-- Full table -->
+      <div class="card">
+        <table class="lb-table">
+          <thead>
+            <tr>
+              <th style="width:32px;">#</th>
+              <th style="width:36px;"></th>
+              <th>User</th>
+              <th>Workouts</th>
+              <th class="right">{{ metric_label }}</th>
+              <th class="right" style="width:44px;">+/−</th>
+            </tr>
+          </thead>
+          <tbody id="lbBody">
+            {% for r in rows %}
+              {% set p = avatar_palette(r.user.id) %}
+              <tr {% if r.user.id == me.id %}class="lb-row-you"{% endif %}>
+                <td><span style="font-size:13px;font-weight:600;color:{{ 'var(--accent)' if r.user.id == me.id else 'var(--text-tertiary)' }};">{{ r.rank }}</span></td>
+                <td><div class="avatar" style="background:{{ p.bg }};color:{{ p.fg }};">{{ initials(r.user.username) }}</div></td>
+                <td {% if r.user.id == me.id %}style="font-weight:500;color:var(--accent-dark);"{% endif %}>
+                  {{ 'You' if r.user.id == me.id else r.user.username }}
+                </td>
+                <td style="color:{{ 'var(--accent)' if r.user.id == me.id else 'var(--text-tertiary)' }};">{{ r.workouts }}</td>
+                <td style="text-align:right;font-weight:500;{% if r.user.id == me.id %}color:var(--accent-dark);{% endif %}">{{ '{:,}'.format(r.score) }} {{ metric_unit }}</td>
+                <td style="text-align:right;">
+                  {% if r.change > 0 %}
+                    <span class="change change-up">▲{{ r.change }}</span>
+                  {% elif r.change < 0 %}
+                    <span class="change change-down">▼{{ -r.change }}</span>
+                  {% else %}
+                    <span class="change change-eq">—</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
   </main>
 </div>
 
-<script src="js/main.js"></script>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
 <script>
-function switchTab(btn, tab) {
-  document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
-  btn.classList.add('active');
-}
+// --- AJAX tab switching ---------------------------------------------------
+// We progressively enhance the pills: clicking refetches /api/leaderboard
+// and re-renders the body. If JS is off, the <a href="?metric=..."> still
+// works as a normal page reload.
+(function () {
+  const tabs = document.getElementById('metricTabs');
+  if (!tabs) return;
+
+  function fmt(n) { return n.toLocaleString(); }
+
+  function renderRows(payload) {
+    const body = document.getElementById('lbBody');
+    if (!body) return;
+
+    body.innerHTML = payload.rows.map(r => {
+      const youCell = r.is_me
+        ? 'style="font-weight:500;color:var(--accent-dark);"'
+        : '';
+      const numCol = r.is_me ? 'var(--accent)' : 'var(--text-tertiary)';
+      const valCol = r.is_me ? 'color:var(--accent-dark);' : '';
+      let change;
+      if (r.change > 0)      change = `<span class="change change-up">▲${r.change}</span>`;
+      else if (r.change < 0) change = `<span class="change change-down">▼${-r.change}</span>`;
+      else                   change = `<span class="change change-eq">—</span>`;
+
+      return `
+        <tr ${r.is_me ? 'class="lb-row-you"' : ''}>
+          <td><span style="font-size:13px;font-weight:600;color:${numCol};">${r.rank}</span></td>
+          <td><div class="avatar" style="background:${r.palette.bg};color:${r.palette.fg};">${r.initials}</div></td>
+          <td ${youCell}>${r.is_me ? 'You' : escapeHtml(r.username)}</td>
+          <td style="color:${numCol};">${r.workouts}</td>
+          <td style="text-align:right;font-weight:500;${valCol}">${fmt(r.score)} ${payload.unit}</td>
+          <td style="text-align:right;">${change}</td>
+        </tr>`;
+    }).join('');
+
+    // Update the column header label so it matches the active metric.
+    const header = document.querySelector('.lb-table thead th:nth-child(5)');
+    if (header) header.textContent = payload.label;
+
+    renderPodium(payload);
+  }
+
+  function renderPodium(payload) {
+    const podium = document.getElementById('podium');
+    if (!podium) return;
+    const top = payload.rows.slice(0, 3);
+    const cell = (r, size, fontSize, blockH, blockBg, blockFg, label, medal) => {
+      const name = r.is_me ? 'You' : escapeHtml(r.username);
+      return `
+        <div class="podium-place">
+          ${medal ? `<div style="font-size:20px;margin-bottom:2px;">${medal}</div>` : ''}
+          <div class="podium-avatar" style="width:${size}px;height:${size}px;font-size:${fontSize}px;background:${r.palette.bg};color:${r.palette.fg};">${r.initials}</div>
+          <div class="podium-name"${size === 46 ? ' style="font-size:13px;"' : ''}>${name}</div>
+          <div class="podium-score">${fmt(r.score)} ${payload.unit}</div>
+          <div class="podium-block" style="height:${blockH}px;background:${blockBg};color:${blockFg};">${label}</div>
+        </div>`;
+    };
+    let html = '';
+    if (top[1]) html += cell(top[1], 38, 13, 56, 'var(--gray-200)', 'var(--gray-600)', '2', '');
+    if (top[0]) html += cell(top[0], 46, 15, 72, 'var(--amber-400)', 'var(--amber-800)', '1', '🥇');
+    if (top[2]) html += cell(top[2], 38, 13, 44, 'var(--coral-200)', 'var(--coral-800)', '3', '');
+    podium.innerHTML = html;
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
+
+  tabs.addEventListener('click', (ev) => {
+    const pill = ev.target.closest('.pill');
+    if (!pill) return;
+    ev.preventDefault();
+
+    // Optimistic UI: highlight clicked pill immediately.
+    tabs.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+    pill.classList.add('active');
+
+    const metric = pill.dataset.metric;
+
+    fetch(`/api/leaderboard?metric=${encodeURIComponent(metric)}`, {
+      headers: {'Accept': 'application/json'},
+      credentials: 'same-origin'
+    })
+      .then(r => {
+        if (!r.ok) throw new Error('Network error');
+        return r.json();
+      })
+      .then(payload => {
+        renderRows(payload);
+        // Update the URL so refresh / share keeps the same tab.
+        history.replaceState(null, '', `?metric=${metric}`);
+      })
+      .catch(() => {
+        // Fallback: hard-navigate so the user still gets a working page.
+        window.location.href = `?metric=${metric}`;
+      });
+  });
+})();
 </script>
 </body>
 </html>
