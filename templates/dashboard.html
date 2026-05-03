@@ -124,7 +124,7 @@
   <!-- Main -->
   <main class="main">
     <div class="page-header">
-      <h1 class="page-title">Good morning, {{ user.username.title() }}</h1>
+      <h1 class="page-title">{{ greeting }}, {{ user.username.title() }}</h1>
       <p class="page-sub">{{ today.strftime("%A, %d %B") }} · Week {{ today.strftime("%U") }} · 4 workouts this week</p>
     </div>
 

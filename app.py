@@ -122,9 +122,19 @@ def login():
 def dashboard():
     if 'user_id' not in session:
         return redirect('/login')
-    user = User.query.get(session['user_id'])
-    today = datetime.now()
-    return render_template('dashboard.html', user=user, today=today)
+
+    user = db.session.get(User, session['user_id'])
+
+    now = datetime.now()
+    hour = now.hour
+
+    if hour < 12:
+        greeting = "Good morning ☀️ "
+    elif hour < 18:
+        greeting = "Good afternoon 🌤️ "
+    else:
+        greeting = "Good evening 🌙 "
+    return render_template('dashboard.html', user=user, greeting=greeting, today=now)
 
 # LOGOUT
 @app.route('/logout')
