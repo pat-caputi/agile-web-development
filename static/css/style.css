@@ -683,28 +683,99 @@ html, body {
 /* ══════════════════════════════════════════
    RESPONSIVE
 ══════════════════════════════════════════ */
-@media (max-width: 1024px) { .stats-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
-@media (max-width: 900px)  { .content-grid { grid-template-columns: 1fr; } .log-grid { grid-template-columns: 1fr; } }
-@media (max-width: 640px)  {
-  .sidebar { width: var(--sidebar-w-collapsed) !important; }
+@media (max-width: 1024px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0,1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .content-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .log-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .sidebar {
+    width: var(--sidebar-w-collapsed) !important;
+  }
+
   .sidebar-logo-text,
   .nav-link-text,
   .theme-toggle-text,
-  .nav-user-info { opacity: 0 !important; width: 0 !important; pointer-events: none !important; }
-  .nav-link, .theme-toggle { justify-content: center; }
-  .nav-user { justify-content: center; padding: 9px; }
-  .main { padding: 16px; }
-  .stats-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .nav-user-info {
+    opacity: 0 !important;
+    width: 0 !important;
+    pointer-events: none !important;
+  }
+
+  .nav-link,
+  .theme-toggle {
+    justify-content: center;
+  }
+
+  .nav-user {
+    justify-content: center;
+    padding: 9px;
+  }
+
+  .main {
+    padding: 16px;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0,1fr));
+  }
 }
 
 /* Toggle sits just below the logo, centred when collapsed */
 .sidebar-toggle {
-  align-self: flex-end;   /* push to right when expanded */
+  align-self: flex-end;
   margin-bottom: 8px;
   margin-right: 2px;
 }
 
 .sidebar.collapsed .sidebar-toggle {
-  align-self: center;     /* centre it when only icons show */
+  align-self: center;
   margin-right: 0;
+}
+
+/* password toggle */
+.password-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-wrapper input {
+  width: 100%;
+  padding-right: 62px;
+}
+
+.toggle-password {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+}
+
+.toggle-password:hover {
+  color: var(--accent);
+}
+
+.toggle-password i {
+  transition: transform 0.2s ease;
+}
+
+.toggle-password:active i {
+  transform: scale(0.9);
 }

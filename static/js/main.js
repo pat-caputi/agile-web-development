@@ -85,13 +85,31 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
 
-  // ── 4. FLASH MESSAGE AUTO-DISMISS ────────────
+ // ── 4. FLASH MESSAGE AUTO-DISMISS ────────────
   document.querySelectorAll('.flash').forEach(el => {
     setTimeout(() => {
       el.style.transition = 'opacity 0.4s';
-      el.style.opacity    = '0';
+      el.style.opacity = '0';
       setTimeout(() => el.remove(), 400);
     }, 3500);
+  });
+
+  // ── 5. PASSWORD TOGGLE ───────────────────────
+  document.querySelectorAll('.toggle-password').forEach(button => {
+    button.addEventListener('click', () => {
+      const input = button.previousElementSibling;
+      const icon = button.querySelector('i');
+
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+      } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+      }
+    });
   });
 
 });

@@ -84,34 +84,37 @@
     </a>
   
     <div class="nav-spacer"></div>
-  
-    <!-- Dark mode toggle -->
-    <button class="theme-toggle" id="themeToggleBtn" data-label="Dark mode">
-      <!-- Sun icon (shown in dark mode — click to go light) -->
-      <svg id="themeIconDark" width="16" height="16" viewBox="0 0 16 16" fill="none"
-           style="display:none;">
-        <circle cx="8" cy="8" r="3.5" stroke="currentColor" stroke-width="1.5"/>
-        <path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3.1 3.1l1 1M11.9 11.9l1 1M3.1 12.9l1-1M11.9 4.1l1-1"
-              stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-      </svg>
-      <!-- Moon icon (shown in light mode — click to go dark) -->
-      <svg id="themeIconLight" width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <path d="M13.5 9.5A5.5 5.5 0 016.5 2.5a5.5 5.5 0 100 11 5.5 5.5 0 007-4z"
-              stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-      </svg>
-      <span class="theme-toggle-text" id="themeToggleLabel">Dark mode</span>
-    </button>
-  
-    <!-- User profile chip -->
-    <a href="{{ url_for('profile') }}" class="nav-user" data-label="Profile">
-      <div class="avatar" style="background:var(--accent-light);color:var(--accent-dark);">
-        KL
-      </div>
-      <div class="nav-user-info">
-        <div class="nav-user-name">Kawhi</div>
-        <div class="nav-user-rank">Rank #3</div>
-      </div>
-    </a>
+
+<!-- Dark mode toggle -->
+<button class="theme-toggle" id="themeToggleBtn" data-label="Dark mode">
+  <!-- Sun icon -->
+  <svg id="themeIconDark" width="16" height="16" viewBox="0 0 16 16" fill="none"
+       style="display:none;">
+    <circle cx="8" cy="8" r="3.5" stroke="currentColor" stroke-width="1.5"/>
+    <path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3.1 3.1l1 1M11.9 11.9l1 1M3.1 12.9l1-1M11.9 4.1l1-1"
+          stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+  </svg>
+
+  <!-- Moon icon -->
+  <svg id="themeIconLight" width="16" height="16" viewBox="0 0 16 16" fill="none">
+    <path d="M13.5 9.5A5.5 5.5 0 016.5 2.5a5.5 5.5 0 100 11 5.5 5.5 0 007-4z"
+          stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+  </svg>
+
+  <span class="theme-toggle-text" id="themeToggleLabel">Dark mode</span>
+</button>
+
+<!-- User profile chip -->
+<a href="{{ url_for('profile') }}" class="nav-user" data-label="Profile">
+  <div class="avatar" style="background:var(--accent-light);color:var(--accent-dark);">
+    {{ (user.username.split()[0][0] + (user.username.split()[1][0] if user.username.split()|length > 1 else '')).upper() }}
+  </div>
+
+  <div class="nav-user-info">
+    <div class="nav-user-name">{{ user.username.title() }}</div>
+    <div class="nav-user-rank">Rank #3</div>
+  </div>
+</a>
   
   </nav>
   
@@ -121,8 +124,8 @@
   <!-- Main -->
   <main class="main">
     <div class="page-header">
-      <h1 class="page-title">Good morning, Kawhi</h1>
-      <p class="page-sub">Thursday, 12 June · Week 24 · 4 workouts this week</p>
+      <h1 class="page-title">Good morning, {{ user.username.title() }}</h1>
+      <p class="page-sub">{{ today.strftime("%A, %d %B") }} · Week {{ today.strftime("%U") }} · 4 workouts this week</p>
     </div>
 
     <!-- Stat cards -->
@@ -226,7 +229,7 @@
             </div>
             <div class="rank-item you">
               <span class="rank-num">3</span>
-              <div class="avatar" style="background:#AFA9EC;color:#26215C;">KL</div>
+              <div class="avatar" style="background:#AFA9EC;color:#26215C;">{{ (user.username.split()[0][0] + (user.username.split()[1][0] if user.username.split()|length > 1 else '')).upper() }}</div>
               <span class="rank-name">You</span>
               <span class="rank-score">18,420 kg</span>
             </div>
