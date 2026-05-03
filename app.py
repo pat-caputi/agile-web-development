@@ -21,6 +21,11 @@ class User(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
 
+class Workout(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    date = db.Column(db.DateTime, default=datetime.utcnow)
+
 # ── Create DB ──
 with app.app_context():
     db.create_all()
@@ -123,12 +128,14 @@ def dashboard():
     if 'user_id' not in session:
         return redirect('/login')
 
-    user = User.query.get(session['user_id'])
+    user = db.session.get(User, session['user_id'])
     today = datetime.now()
 
     # Upgrade using fake data first
     weekly_volume = 18420
-    workouts_count = 4
+    workouts_count = Workout.query.filter_by(
+        user_id=session['user_id']
+    ).count()
     streak = 12
     rank = 3
 
@@ -148,10 +155,31 @@ def logout():
     session.clear()
     return redirect('/login')
 
-@app.route('/log_workout')
+@app.route('/log_workout', methods=['GET', 'POST'])
 def log_workout():
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    if request.method == 'POST':
+        workout = Workout(user_id=session['user_id'])
+        db.session.add(workout)
+        db.session.commit()
+
+        return redirect('/dashboard')
+
     today = datetime.now()
     return render_template('log_workout.html', today=today)
+
+@app.route('/test_add_workout')
+def test_add_workout():
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    workout = Workout(user_id=session['user_id'])
+    db.session.add(workout)
+    db.session.commit()
+
+    return redirect('/dashboard')
 
 @app.route('/leaderboard')
 def leaderboard():
