@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, session, flash
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import func, or_
+from datetime import datetime
 import re
 
 # ── App setup ──
@@ -119,7 +120,11 @@ def login():
 # DASHBOARD
 @app.route('/dashboard')
 def dashboard():
-    return render_template('dashboard.html')
+    if 'user_id' not in session:
+        return redirect('/login')
+    user = User.query.get(session['user_id'])
+    today = datetime.now()
+    return render_template('dashboard.html', user=user, today=today)
 
 # LOGOUT
 @app.route('/logout')
@@ -129,7 +134,8 @@ def logout():
 
 @app.route('/log_workout')
 def log_workout():
-    return render_template('log_workout.html')
+    today = datetime.now()
+    return render_template('log_workout.html', today=today)
 
 @app.route('/leaderboard')
 def leaderboard():
@@ -141,7 +147,11 @@ def plans():
 
 @app.route('/profile')
 def profile():
-    return render_template('profile.html')
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    user = db.session.get(User, session['user_id'])
+    return render_template('profile.html', user=user)
 
 # ── Run app ──
 if __name__ == "__main__":
