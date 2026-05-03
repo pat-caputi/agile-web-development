@@ -122,9 +122,25 @@ def login():
 def dashboard():
     if 'user_id' not in session:
         return redirect('/login')
+
     user = User.query.get(session['user_id'])
     today = datetime.now()
-    return render_template('dashboard.html', user=user, today=today)
+
+    # Upgrade using fake data first
+    weekly_volume = 18420
+    workouts_count = 4
+    streak = 12
+    rank = 3
+
+    return render_template(
+        'dashboard.html',
+        user=user,
+        today=today,
+        weekly_volume=weekly_volume,
+        workouts_count=workouts_count,
+        streak=streak,
+        rank=rank
+    )
 
 # LOGOUT
 @app.route('/logout')
