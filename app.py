@@ -143,12 +143,15 @@ def dashboard():
     start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
 
     # All sessions this week
-    weekly_workouts = Workout.query.filter(
-        Workout.user_id == session['user_id'],
-        Workout.date >= start_of_week
-    ).all()
-
-    workouts_count = len(weekly_workouts)  # ✅ 真正“训练次数”
+    workouts_count = (
+        db.session.query(func.count(func.distinct(Workout.id)))
+        .join(WorkoutSet, WorkoutSet.workout_id == Workout.id)
+        .filter(
+            Workout.user_id == session['user_id'],
+            Workout.date >= start_of_week
+        )
+        .scalar()
+    )
 
     # All sets this week (via join)
     weekly_sets = db.session.query(WorkoutSet).join(Workout).filter(
@@ -157,6 +160,26 @@ def dashboard():
     ).all()
 
     weekly_volume = sum(ws.weight * ws.reps for ws in weekly_sets)
+    
+    leaderboard_data = (
+        db.session.query(
+            User.id,
+            func.sum(WorkoutSet.weight * WorkoutSet.reps).label('weekly_volume')
+        )
+        .join(Workout, Workout.user_id == User.id)
+        .join(WorkoutSet, WorkoutSet.workout_id == Workout.id)
+        .filter(Workout.date >= start_of_week)
+        .group_by(User.id)
+        .order_by(func.sum(WorkoutSet.weight * WorkoutSet.reps).desc())
+        .all()
+    )
+
+    rank = None
+
+    for index, item in enumerate(leaderboard_data, start=1):
+        if item.id == session['user_id']:
+            rank = index
+            break
 
     return render_template(
         'dashboard.html',
@@ -165,7 +188,7 @@ def dashboard():
         weekly_volume=weekly_volume,
         workouts_count=workouts_count,
         streak=12,
-        rank=3
+        rank=rank
     )
 
 # LOGOUT
@@ -218,7 +241,33 @@ def test_add_workout():
 
 @app.route('/leaderboard')
 def leaderboard():
-    return render_template('leaderboard.html')
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    today = datetime.utcnow()
+    start_of_week = today - timedelta(days=today.weekday())
+    start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    leaderboard_data = (
+        db.session.query(
+            User.id,
+            User.username,
+            func.count(func.distinct(Workout.id)).label('workouts_count'),
+            func.sum(WorkoutSet.weight * WorkoutSet.reps).label('weekly_volume')
+        )
+        .join(Workout, Workout.user_id == User.id)
+        .join(WorkoutSet, WorkoutSet.workout_id == Workout.id)
+        .filter(Workout.date >= start_of_week)
+        .group_by(User.id, User.username)
+        .order_by(func.sum(WorkoutSet.weight * WorkoutSet.reps).desc())
+        .all()
+    )
+
+    return render_template(
+        'leaderboard.html',
+        leaderboard_data=leaderboard_data,
+        current_user_id=session['user_id']
+    )
 
 @app.route('/plans')
 def plans():

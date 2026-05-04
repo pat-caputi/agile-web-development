@@ -173,64 +173,42 @@
             <th class="right" style="width:44px;">+/−</th>
           </tr>
         </thead>
+
         <tbody>
-          <tr>
-            <td><span style="font-size:13px;font-weight:600;color:var(--text-tertiary);">1</span></td>
-            <td><div class="avatar" style="background:#FAEEDA;color:#633806;">LJ</div></td>
-            <td>Lebron J.</td>
-            <td style="color:var(--text-tertiary);">6</td>
-            <td style="text-align:right;font-weight:500;">24,810 kg</td>
-            <td style="text-align:right;"><span class="change change-up">▲2</span></td>
-          </tr>
-          <tr>
-            <td><span style="font-size:13px;font-weight:600;color:var(--text-tertiary);">2</span></td>
-            <td><div class="avatar" style="background:#E1F5EE;color:#085041;">SC</div></td>
-            <td>Steph C.</td>
-            <td style="color:var(--text-tertiary);">5</td>
-            <td style="text-align:right;font-weight:500;">21,340 kg</td>
-            <td style="text-align:right;"><span class="change change-eq">—</span></td>
-          </tr>
-          <tr class="lb-row-you">
-            <td><span style="font-size:13px;font-weight:600;color:var(--accent);">3</span></td>
-            <td><div class="avatar" style="background:#AFA9EC;color:#26215C;">AX</div></td>
-            <td style="font-weight:500;color:var(--accent-dark);">You</td>
-            <td style="color:var(--accent);">4</td>
-            <td style="text-align:right;font-weight:500;color:var(--accent-dark);">18,420 kg</td>
-            <td style="text-align:right;"><span class="change change-up">▲1</span></td>
-          </tr>
-          <tr>
-            <td><span style="font-size:13px;font-weight:600;color:var(--text-tertiary);">4</span></td>
-            <td><div class="avatar" style="background:#FAECE7;color:#712B13;">MJ</div></td>
-            <td>Michael J.</td>
-            <td style="color:var(--text-tertiary);">5</td>
-            <td style="text-align:right;font-weight:500;">16,090 kg</td>
-            <td style="text-align:right;"><span class="change change-down">▼1</span></td>
-          </tr>
-          <tr>
-            <td><span style="font-size:13px;font-weight:600;color:var(--text-tertiary);">5</span></td>
-            <td><div class="avatar" style="background:#FBEAF0;color:#72243E;">BR</div></td>
-            <td>Bill R.</td>
-            <td style="color:var(--text-tertiary);">4</td>
-            <td style="text-align:right;font-weight:500;">14,720 kg</td>
-            <td style="text-align:right;"><span class="change change-eq">—</span></td>
-          </tr>
-          <tr>
-            <td><span style="font-size:13px;font-weight:600;color:var(--text-tertiary);">6</span></td>
-            <td><div class="avatar" style="background:#EAF3DE;color:#27500A;">SG</div></td>
-            <td>Shai G.</td>
-            <td style="color:var(--text-tertiary);">3</td>
-            <td style="text-align:right;font-weight:500;">11,850 kg</td>
-            <td style="text-align:right;"><span class="change change-down">▼2</span></td>
-          </tr>
-          <tr>
-            <td><span style="font-size:13px;font-weight:600;color:var(--text-tertiary);">7</span></td>
-            <td><div class="avatar" style="background:#EEEDFE;color:#3C3489;">VW</div></td>
-            <td>Victor W.</td>
-            <td style="color:var(--text-tertiary);">3</td>
-            <td style="text-align:right;font-weight:500;">10,200 kg</td>
-            <td style="text-align:right;"><span class="change change-up">▲3</span></td>
-          </tr>
-        </tbody>
+            {% for user in leaderboard_data %}
+            <tr class="{% if user.id == current_user_id %}lb-row-you{% endif %}"style="{% if user.id == current_user_id %}background:#eae6ff;{% endif %}">
+              <td>
+                <span style="font-size:13px;font-weight:600;color:var(--text-tertiary);">
+                  {{ loop.index }}
+                </span>
+              </td>
+
+              <td>
+                <div class="avatar" style="background:#ddd;color:#333;">
+                  {{ user.username[:2]|upper }}
+                </div>
+              </td>
+
+              <td>{{ user.username }}</td>
+
+              <td style="color:var(--text-tertiary);">
+                {{ user.workouts_count }}
+              </td>
+
+              <td style="text-align:right;font-weight:500;">
+                {{ user.weekly_volume|int }} kg
+              </td>
+
+              <td style="text-align:right;">
+                —
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="6">No data this week</td>
+            </tr>
+            {% endfor %}
+          </tbody>
       </table>
     </div>
   </main>
