@@ -4,6 +4,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import func, or_
 from datetime import datetime, timedelta
 import re
+import json
 
 # ── App setup ──
 app = Flask(__name__)
@@ -24,6 +25,9 @@ class User(db.Model):
 class Workout(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    exercise = db.Column(db.String(100), nullable=False)
+    weight = db.Column(db.Float, nullable=False)
+    reps = db.Column(db.Integer, nullable=False)
     date = db.Column(db.DateTime, default=datetime.utcnow)
 
 # ── Create DB ──
@@ -134,11 +138,17 @@ def dashboard():
     start_of_week = today - timedelta(days=today.weekday())
     start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
 
-    weekly_volume = 18420
-    workouts_count = Workout.query.filter(
+    weekly_workouts = Workout.query.filter(
         Workout.user_id == session['user_id'],
         Workout.date >= start_of_week
-    ).count()
+    ).all()
+
+    workouts_count = len(weekly_workouts)
+
+    weekly_volume = sum(
+        workout.weight * workout.reps
+        for workout in weekly_workouts
+    )
     streak = 12
     rank = 3
 
@@ -164,8 +174,18 @@ def log_workout():
         return redirect('/login')
 
     if request.method == 'POST':
-        workout = Workout(user_id=session['user_id'])
-        db.session.add(workout)
+        workout_data = request.form.get('workout_data', '[]')
+        sets = json.loads(workout_data)
+
+        for item in sets:
+            workout = Workout(
+                user_id=session['user_id'],
+                exercise=item['exercise'],
+                weight=float(item['weight']),
+                reps=int(item['reps'])
+            )
+            db.session.add(workout)
+
         db.session.commit()
 
         flash("Workout saved successfully!")
