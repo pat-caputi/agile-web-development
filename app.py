@@ -132,6 +132,8 @@ def dashboard():
     today = datetime.utcnow()
 
     start_of_week = today - timedelta(days=today.weekday())
+    start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
+
     weekly_volume = 18420
     workouts_count = Workout.query.filter(
         Workout.user_id == session['user_id'],
