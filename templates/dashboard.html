@@ -123,6 +123,13 @@
 
   <!-- Main -->
   <main class="main">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div style="margin-bottom:15px;padding:10px;background:#d4edda;color:#155724;border-radius:6px;">
+          {{ messages[0] }}
+        </div>
+      {% endif %}
+    {% endwith %}
     <div class="page-header">
       <h1 class="page-title">Good morning, {{ user.username.title() }}</h1>
       <p class="page-sub">{{ today.strftime("%A, %d %B") }} · Week {{ today.strftime("%U") }} · {{ workouts_count }} workouts this week</p>

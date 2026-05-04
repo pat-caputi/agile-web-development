@@ -129,12 +129,13 @@ def dashboard():
         return redirect('/login')
 
     user = db.session.get(User, session['user_id'])
-    today = datetime.now()
+    today = datetime.utcnow()
 
-    # Upgrade using fake data first
+    start_of_week = today - timedelta(days=today.weekday())
     weekly_volume = 18420
-    workouts_count = Workout.query.filter_by(
-        user_id=session['user_id']
+    workouts_count = Workout.query.filter(
+        Workout.user_id == session['user_id'],
+        Workout.date >= start_of_week
     ).count()
     streak = 12
     rank = 3
@@ -165,6 +166,7 @@ def log_workout():
         db.session.add(workout)
         db.session.commit()
 
+        flash("Workout saved successfully!")
         return redirect('/dashboard')
 
     today = datetime.now()
