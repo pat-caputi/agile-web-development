@@ -25,10 +25,14 @@ class User(db.Model):
 class Workout(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    date = db.Column(db.DateTime, default=datetime.utcnow)
+
+class WorkoutSet(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    workout_id = db.Column(db.Integer, db.ForeignKey('workout.id'), nullable=False)
     exercise = db.Column(db.String(100), nullable=False)
     weight = db.Column(db.Float, nullable=False)
     reps = db.Column(db.Integer, nullable=False)
-    date = db.Column(db.DateTime, default=datetime.utcnow)
 
 # ── Create DB ──
 with app.app_context():
@@ -138,19 +142,21 @@ def dashboard():
     start_of_week = today - timedelta(days=today.weekday())
     start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
 
+    # All sessions this week
     weekly_workouts = Workout.query.filter(
         Workout.user_id == session['user_id'],
         Workout.date >= start_of_week
     ).all()
 
-    workouts_count = len(weekly_workouts)
+    workouts_count = len(weekly_workouts)  # ✅ 真正“训练次数”
 
-    weekly_volume = sum(
-        workout.weight * workout.reps
-        for workout in weekly_workouts
-    )
-    streak = 12
-    rank = 3
+    # All sets this week (via join)
+    weekly_sets = db.session.query(WorkoutSet).join(Workout).filter(
+        Workout.user_id == session['user_id'],
+        Workout.date >= start_of_week
+    ).all()
+
+    weekly_volume = sum(ws.weight * ws.reps for ws in weekly_sets)
 
     return render_template(
         'dashboard.html',
@@ -158,8 +164,8 @@ def dashboard():
         today=today,
         weekly_volume=weekly_volume,
         workouts_count=workouts_count,
-        streak=streak,
-        rank=rank
+        streak=12,
+        rank=3
     )
 
 # LOGOUT
@@ -174,24 +180,29 @@ def log_workout():
         return redirect('/login')
 
     if request.method == 'POST':
-        workout_data = request.form.get('workout_data', '[]')
-        sets = json.loads(workout_data)
+        raw = request.form.get('workout_data', '[]')
+        sets = json.loads(raw)
 
+        # First, create a training session.
+        workout = Workout(user_id=session['user_id'])
+        db.session.add(workout)
+        db.session.flush()  # 拿到 workout.id
+
+        # Save all sets again
         for item in sets:
-            workout = Workout(
-                user_id=session['user_id'],
+            ws = WorkoutSet(
+                workout_id=workout.id,
                 exercise=item['exercise'],
                 weight=float(item['weight']),
                 reps=int(item['reps'])
             )
-            db.session.add(workout)
+            db.session.add(ws)
 
         db.session.commit()
-
         flash("Workout saved successfully!")
         return redirect('/dashboard')
 
-    today = datetime.now()
+    today = datetime.utcnow()
     return render_template('log_workout.html', today=today)
 
 @app.route('/test_add_workout')

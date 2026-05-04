@@ -437,6 +437,10 @@ function collectWorkoutData() {
     const exerciseName = block.querySelector('div[style*="font-size:14px"]')?.textContent.trim();
 
     block.querySelectorAll('.set-row').forEach(row => {
+
+      // Only save sets that are marked as done
+      if (!row.classList.contains('done')) return;
+
       const inputs = row.querySelectorAll('input');
 
       const weight = parseFloat(inputs[0]?.value) || 0;
