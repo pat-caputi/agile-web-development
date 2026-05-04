@@ -137,6 +137,11 @@ def dashboard():
         return redirect('/login')
 
     user = db.session.get(User, session['user_id'])
+
+    if user is None:
+        session.clear()
+        return redirect('/login')
+
     today = datetime.utcnow()
 
     start_of_week = today - timedelta(days=today.weekday())
@@ -243,7 +248,12 @@ def test_add_workout():
 def leaderboard():
     if 'user_id' not in session:
         return redirect('/login')
+    
+    user = db.session.get(User, session['user_id'])
 
+    if user is None:
+        session.clear()
+        return redirect('/login')
     today = datetime.utcnow()
     start_of_week = today - timedelta(days=today.weekday())
     start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
