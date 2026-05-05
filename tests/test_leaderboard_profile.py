@@ -117,9 +117,22 @@ class LeaderboardTests(LiftAGILETestBase):
     def test_leaderboard_frequency_metric_counts_workouts_in_week(self):
         a = _make_user("alice")
         b = _make_user("bob")
+        # Anchor the test to a stable mid-week reference point so the 3 consecutive
+        # workouts always fall within the same Monday-Sunday week regardless of when
+        # the test runs. We pick the latest weekday (Wed-Sun) within the current week
+        # so today, today-1, today-2 all sit safely inside it.
+        today = datetime.utcnow()
+        # Days from this week's Monday: 0=Mon, 1=Tue, ... 6=Sun
+        days_into_week = today.weekday()
+        # If we're early in the week (Mon/Tue), use this week's Wednesday.
+        # Otherwise, use today (which gives plenty of headroom).
+        if days_into_week < 2:
+            anchor = today + timedelta(days=(2 - days_into_week))
+        else:
+            anchor = today
         for i in range(3):
-            _add_workout(a, datetime.utcnow() - timedelta(days=i), [("Bench press", 50, 5)])
-        _add_workout(b, datetime.utcnow(), [("Bench press", 50, 5)])
+            _add_workout(a, anchor - timedelta(days=i), [("Bench press", 50, 5)])
+        _add_workout(b, anchor, [("Bench press", 50, 5)])
         rows = compute_leaderboard("frequency")
         self.assertEqual(rows[0]["user"].username, "alice")
         self.assertEqual(rows[0]["score"], 3)

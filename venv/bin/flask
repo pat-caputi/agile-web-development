@@ -1,0 +1,8 @@
+#!/bin/sh
+'''exec' "/Users/waynemataruse/Desktop/University/University of Western Australia/Level 3/CITS3403-CITS5505 - Agile Web Development /Group Project/code/Agile-Web-Development/venv/bin/python3.12" "$0" "$@"
+' '''
+import sys
+from flask.cli import main
+if __name__ == '__main__':
+    sys.argv[0] = sys.argv[0].removesuffix('.exe')
+    sys.exit(main())

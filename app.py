@@ -5,6 +5,7 @@ from sqlalchemy import func, or_
 from datetime import datetime, timedelta
 from functools import wraps
 from collections import defaultdict
+import json
 import re
 
 # ── App setup ──
@@ -339,8 +340,30 @@ def login():
 
 
 @app.route('/dashboard')
+@login_required
 def dashboard():
-    return render_template('dashboard.html')
+    user = get_current_user()
+    today = datetime.utcnow()
+
+    # Weekly stats from the database (replaces hardcoded mockup numbers).
+    workouts_count = _workout_count(user, week_offset=0)
+    weekly_volume = _user_metric(user, 'volume', week_offset=0)
+
+    # Where do I sit on the volume leaderboard right now?
+    lb = compute_leaderboard('volume')
+    my_row = next((r for r in lb if r["user"].id == user.id), None)
+    rank = my_row["rank"] if my_row else None
+
+    return render_template(
+        'dashboard.html',
+        user=user,
+        today=today,
+        workouts_count=workouts_count,
+        weekly_volume=weekly_volume,
+        streak=current_streak(user),
+        rank=rank,
+        total_users=len(lb),
+    )
 
 
 @app.route('/logout')
@@ -349,9 +372,47 @@ def logout():
     return redirect('/login')
 
 
-@app.route('/log_workout')
+@app.route('/log_workout', methods=['GET', 'POST'])
+@login_required
 def log_workout():
-    return render_template('log_workout.html')
+    user = get_current_user()
+
+    if request.method == 'POST':
+        # Frontend (templates/log_workout.html) submits a hidden field
+        # 'workout_data' containing a JSON list of completed sets:
+        #   [{"exercise": "Bench press", "weight": 80, "reps": 8}, ...]
+        try:
+            sets = json.loads(request.form.get('workout_data', '[]'))
+        except (ValueError, TypeError):
+            sets = []
+
+        if not sets:
+            flash("No sets to save — add at least one completed set first.")
+            return redirect(url_for('log_workout'))
+
+        # Create the parent Workout session and attach all the sets.
+        workout = Workout(user_id=user.id, name="Workout")
+        db.session.add(workout)
+        db.session.flush()  # populates workout.id before we use it
+
+        for item in sets:
+            try:
+                ws = WorkoutSet(
+                    workout_id=workout.id,
+                    exercise=str(item.get('exercise', '')).strip()[:80] or 'Exercise',
+                    weight=float(item.get('weight') or 0),
+                    reps=int(item.get('reps') or 0),
+                )
+                db.session.add(ws)
+            except (ValueError, TypeError):
+                # Skip malformed rows rather than crashing the whole save.
+                continue
+
+        db.session.commit()
+        flash("Workout saved successfully!")
+        return redirect(url_for('dashboard'))
+
+    return render_template('log_workout.html', today=datetime.utcnow())
 
 
 @app.route('/plans')
