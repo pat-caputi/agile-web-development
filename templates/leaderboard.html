@@ -135,28 +135,44 @@
     <!-- Podium -->
     <div class="card" style="margin-bottom:16px;">
       <div class="podium">
-        <!-- 2nd -->
-        <div class="podium-place">
-          <div class="podium-avatar" style="width:38px;height:38px;font-size:13px;font-weight:600;background:#E1F5EE;color:#085041;">SM</div>
-          <div class="podium-name">Steph C.</div>
-          <div class="podium-score">21,340 kg</div>
-          <div class="podium-block" style="height:56px;background:var(--gray-200);color:var(--gray-800);">2</div>
+
+        {% for user in leaderboard_data[:3] %}
+        <div class="podium-place {% if user.id == current_user_id %}lb-row-you{% endif %}">
+          {% if loop.index == 1 %}
+            <div style="font-size:20px;margin-bottom:2px;">🥇</div>
+          {% elif loop.index == 2 %}
+            <div style="font-size:20px;margin-bottom:2px;">🥈</div>
+          {% elif loop.index == 3 %}
+            <div style="font-size:20px;margin-bottom:2px;">🥉</div>
+          {% endif %}
+
+          <div class="podium-avatar"
+               style="width:46px;height:46px;font-size:15px;font-weight:600;background:#FAEEDA;color:#633806;">
+            {{ user.username[:2]|upper }}
+          </div>
+
+          <div class="podium-name">
+            {% if user.id == current_user_id %}
+              You
+            {% else %}
+              {{ user.username }}
+            {% endif %}
+          </div>
+
+          <div class="podium-score">
+            {{ user.weekly_volume|int }} kg
+          </div>
+
+          <div class="podium-block"
+               style="height:72px;background:var(--amber-400);color:var(--amber-800);">
+            {{ loop.index }}
+          </div>
         </div>
-        <!-- 1st -->
+        {% else %}
         <div class="podium-place">
-          <div style="font-size:20px;margin-bottom:2px;">🥇</div>
-          <div class="podium-avatar" style="width:46px;height:46px;font-size:15px;font-weight:600;background:#FAEEDA;color:#633806;">JK</div>
-          <div class="podium-name" style="font-size:13px;">Lebron J.</div>
-          <div class="podium-score">24,810 kg</div>
-          <div class="podium-block" style="height:72px;background:var(--amber-400);color:var(--amber-800);">1</div>
+          <div class="podium-name">No leaderboard data this week.</div>
         </div>
-        <!-- 3rd -->
-        <div class="podium-place">
-          <div class="podium-avatar" style="width:38px;height:38px;font-size:13px;font-weight:600;background:#AFA9EC;color:#26215C;">AX</div>
-          <div class="podium-name">You</div>
-          <div class="podium-score">18,420 kg</div>
-          <div class="podium-block" style="height:44px;background:var(--coral-200);color:var(--coral-800);">3</div>
-        </div>
+        {% endfor %}
       </div>
     </div>
 
