@@ -123,31 +123,38 @@
 
   <!-- Main -->
   <main class="main">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div style="margin-bottom:15px;padding:10px;background:#d4edda;color:#155724;border-radius:6px;">
+          {{ messages[0] }}
+        </div>
+      {% endif %}
+    {% endwith %}
     <div class="page-header">
       <h1 class="page-title">Good morning, {{ user.username.title() }}</h1>
-      <p class="page-sub">{{ today.strftime("%A, %d %B") }} · Week {{ today.strftime("%U") }} · 4 workouts this week</p>
+      <p class="page-sub">{{ today.strftime("%A, %d %B") }} · Week {{ today.strftime("%U") }} · {{ workouts_count }} workouts this week</p>
     </div>
 
     <!-- Stat cards -->
     <div class="stats-grid">
       <div class="stat-card">
         <div class="stat-label">Weekly volume</div>
-        <div class="stat-value">18,420<span class="stat-unit"> kg</span></div>
+        <div class="stat-value">{{ weekly_volume }}<span class="stat-unit"> kg</span></div>
         <div class="stat-meta"><span class="badge badge-success">+12% vs last week</span></div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Workouts logged</div>
-        <div class="stat-value">4</div>
+        <div class="stat-value">{{ workouts_count }}</div>
         <div class="stat-meta">Goal: 5 / week</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Current streak</div>
-        <div class="stat-value">12<span class="stat-unit"> days</span></div>
+        <div class="stat-value">{{ streak }}<span class="stat-unit"> days</span></div>
         <div class="stat-meta"><span class="badge badge-pr">Personal best</span></div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Leaderboard rank</div>
-        <div class="stat-value">#3</div>
+        <div class="stat-value">#{{ rank }}</div>
         <div class="stat-meta">of 24 users</div>
       </div>
     </div>

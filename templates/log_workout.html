@@ -281,10 +281,16 @@
 
         <!-- Save / discard -->
         <div style="display:flex;gap:10px;padding-bottom:24px;">
-          <button class="btn btn-primary" style="flex:1;" onclick="saveWorkout()">
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8.5l3.5 3.5 6.5-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            Save workout
-          </button>
+          <form method="POST" style="flex:1;" onsubmit="collectWorkoutData()">
+
+            <input type="hidden" name="workout_data" id="workoutData">
+
+            <button type="submit" class="btn btn-primary" style="width:100%;">
+              Save workout
+            </button>
+
+          </form>
+
           <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Discard</a>
         </div>
       </div>
@@ -424,6 +430,34 @@
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 <script>
 let setCounters = {1:3, 2:3};
+function collectWorkoutData() {
+  const data = [];
+
+  document.querySelectorAll('.exercise-block').forEach(block => {
+    const exerciseName = block.querySelector('div[style*="font-size:14px"]')?.textContent.trim();
+
+    block.querySelectorAll('.set-row').forEach(row => {
+
+      // Only save sets that are marked as done
+      if (!row.classList.contains('done')) return;
+
+      const inputs = row.querySelectorAll('input');
+
+      const weight = parseFloat(inputs[0]?.value) || 0;
+      const reps = parseInt(inputs[1]?.value) || 0;
+
+      if (exerciseName && weight > 0 && reps > 0) {
+        data.push({
+          exercise: exerciseName,
+          weight: weight,
+          reps: reps
+        });
+      }
+    });
+  });
+
+  document.getElementById('workoutData').value = JSON.stringify(data);
+}
 let timerSecs = 0, timerRunning = true;
 
 setInterval(() => {
