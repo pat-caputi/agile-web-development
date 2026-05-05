@@ -270,11 +270,11 @@
     <!-- User profile chip -->
     <a href="{{ url_for('profile') }}" class="nav-user" data-label="Profile">
       <div class="avatar" style="background:var(--accent-light);color:var(--accent-dark);">
-        KL
+        {{ user.username[0] | upper }}
       </div>
       <div class="nav-user-info">
-        <div class="nav-user-name">Kawhi</div>
-        <div class="nav-user-rank">Rank #3</div>
+        <div class="nav-user-name">{{ user.username.title() }}</div>
+        <div class="nav-user-rank">Rank #{{ rank if rank else 'N/A' }}</div>
       </div>
     </a>
   
