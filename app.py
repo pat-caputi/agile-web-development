@@ -336,7 +336,25 @@ def profile():
         return redirect('/login')
 
     user = db.session.get(User, session['user_id'])
-    return render_template('profile.html', user=user)
+
+    if user is None:
+        session.clear()
+        return redirect('/login')
+
+    workouts_count = (
+        db.session.query(func.count(Workout.id))
+        .filter(Workout.user_id == session['user_id'])
+        .scalar()
+    )
+
+    rank = get_user_rank(session['user_id'])
+
+    return render_template(
+        'profile.html',
+        user=user,
+        workouts_count=workouts_count,
+        rank=rank
+    )
 
 # ── Run app ──
 if __name__ == "__main__":
