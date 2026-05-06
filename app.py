@@ -2,8 +2,9 @@ from flask import Flask, render_template, request, redirect, session, flash
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import func, or_
-from datetime import datetime
+from datetime import datetime, timedelta
 import re
+import json
 
 # ── App setup ──
 app = Flask(__name__)
@@ -20,6 +21,18 @@ class User(db.Model):
     username = db.Column(db.String(100), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
+
+class Workout(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    date = db.Column(db.DateTime, default=datetime.utcnow)
+
+class WorkoutSet(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    workout_id = db.Column(db.Integer, db.ForeignKey('workout.id'), nullable=False)
+    exercise = db.Column(db.String(100), nullable=False)
+    weight = db.Column(db.Float, nullable=False)
+    reps = db.Column(db.Integer, nullable=False)
 
 # ── Create DB ──
 with app.app_context():
@@ -125,16 +138,63 @@ def dashboard():
 
     user = db.session.get(User, session['user_id'])
 
-    now = datetime.now()
-    hour = now.hour
+    if user is None:
+        session.clear()
+        return redirect('/login')
 
-    if hour < 12:
-        greeting = "Good morning ☀️ "
-    elif hour < 18:
-        greeting = "Good afternoon 🌤️ "
-    else:
-        greeting = "Good evening 🌙 "
-    return render_template('dashboard.html', user=user, greeting=greeting, today=now)
+    today = datetime.utcnow()
+
+    start_of_week = today - timedelta(days=today.weekday())
+    start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    # All sessions this week
+    workouts_count = (
+        db.session.query(func.count(func.distinct(Workout.id)))
+        .join(WorkoutSet, WorkoutSet.workout_id == Workout.id)
+        .filter(
+            Workout.user_id == session['user_id'],
+            Workout.date >= start_of_week
+        )
+        .scalar()
+    )
+
+    # All sets this week (via join)
+    weekly_sets = db.session.query(WorkoutSet).join(Workout).filter(
+        Workout.user_id == session['user_id'],
+        Workout.date >= start_of_week
+    ).all()
+
+    weekly_volume = sum(ws.weight * ws.reps for ws in weekly_sets)
+    
+    leaderboard_data = (
+        db.session.query(
+            User.id,
+            func.sum(WorkoutSet.weight * WorkoutSet.reps).label('weekly_volume')
+        )
+        .join(Workout, Workout.user_id == User.id)
+        .join(WorkoutSet, WorkoutSet.workout_id == Workout.id)
+        .filter(Workout.date >= start_of_week)
+        .group_by(User.id)
+        .order_by(func.sum(WorkoutSet.weight * WorkoutSet.reps).desc())
+        .all()
+    )
+
+    rank = None
+
+    for index, item in enumerate(leaderboard_data, start=1):
+        if item.id == session['user_id']:
+            rank = index
+            break
+
+    return render_template(
+        'dashboard.html',
+        user=user,
+        today=today,
+        weekly_volume=weekly_volume,
+        workouts_count=workouts_count,
+        streak=12,
+        rank=rank
+    )
 
 # LOGOUT
 @app.route('/logout')
@@ -142,14 +202,82 @@ def logout():
     session.clear()
     return redirect('/login')
 
-@app.route('/log_workout')
+@app.route('/log_workout', methods=['GET', 'POST'])
 def log_workout():
-    today = datetime.now()
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    if request.method == 'POST':
+        raw = request.form.get('workout_data', '[]')
+        sets = json.loads(raw)
+
+        # First, create a training session.
+        workout = Workout(user_id=session['user_id'])
+        db.session.add(workout)
+        db.session.flush()  # 拿到 workout.id
+
+        # Save all sets again
+        for item in sets:
+            ws = WorkoutSet(
+                workout_id=workout.id,
+                exercise=item['exercise'],
+                weight=float(item['weight']),
+                reps=int(item['reps'])
+            )
+            db.session.add(ws)
+
+        db.session.commit()
+        flash("Workout saved successfully!")
+        return redirect('/dashboard')
+
+    today = datetime.utcnow()
     return render_template('log_workout.html', today=today)
+
+@app.route('/test_add_workout')
+def test_add_workout():
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    workout = Workout(user_id=session['user_id'])
+    db.session.add(workout)
+    db.session.commit()
+
+    return redirect('/dashboard')
 
 @app.route('/leaderboard')
 def leaderboard():
-    return render_template('leaderboard.html')
+    if 'user_id' not in session:
+        return redirect('/login')
+    
+    user = db.session.get(User, session['user_id'])
+
+    if user is None:
+        session.clear()
+        return redirect('/login')
+    today = datetime.utcnow()
+    start_of_week = today - timedelta(days=today.weekday())
+    start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    leaderboard_data = (
+        db.session.query(
+            User.id,
+            User.username,
+            func.count(func.distinct(Workout.id)).label('workouts_count'),
+            func.sum(WorkoutSet.weight * WorkoutSet.reps).label('weekly_volume')
+        )
+        .join(Workout, Workout.user_id == User.id)
+        .join(WorkoutSet, WorkoutSet.workout_id == Workout.id)
+        .filter(Workout.date >= start_of_week)
+        .group_by(User.id, User.username)
+        .order_by(func.sum(WorkoutSet.weight * WorkoutSet.reps).desc())
+        .all()
+    )
+
+    return render_template(
+        'leaderboard.html',
+        leaderboard_data=leaderboard_data,
+        current_user_id=session['user_id']
+    )
 
 @app.route('/plans')
 def plans():
