@@ -38,13 +38,56 @@ class WorkoutSet(db.Model):
 with app.app_context():
     db.create_all()
 
+def get_user_rank(user_id):
+    today = datetime.utcnow()
+    start_of_week = today - timedelta(days=today.weekday())
+    start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    leaderboard_data = (
+        db.session.query(
+            User.id,
+            func.sum(WorkoutSet.weight * WorkoutSet.reps).label('weekly_volume')
+        )
+        .join(Workout, Workout.user_id == User.id)
+        .join(WorkoutSet, WorkoutSet.workout_id == Workout.id)
+        .filter(Workout.date >= start_of_week)
+        .group_by(User.id)
+        .order_by(func.sum(WorkoutSet.weight * WorkoutSet.reps).desc())
+        .all()
+    )
+
+    for index, item in enumerate(leaderboard_data, start=1):
+        if item.id == user_id:
+            return index
+
+    return None
+
 # ── Routes ──
 @app.route('/')
 def home():
     return redirect('/login')
 @app.route('/ranks')
 def ranks():
-    return render_template('ranks.html')
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    user = db.session.get(User, session['user_id'])
+
+    if user is None:
+        session.clear()
+        return redirect('/login')
+
+    today = datetime.utcnow()
+    start_of_week = today - timedelta(days=today.weekday())
+    start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    rank = get_user_rank(session['user_id'])
+
+    return render_template(
+        'ranks.html',
+        user=user,
+        rank=rank
+    )
 
 # REGISTER
 @app.route('/register', methods=['GET', 'POST'])
@@ -166,25 +209,7 @@ def dashboard():
 
     weekly_volume = sum(ws.weight * ws.reps for ws in weekly_sets)
     
-    leaderboard_data = (
-        db.session.query(
-            User.id,
-            func.sum(WorkoutSet.weight * WorkoutSet.reps).label('weekly_volume')
-        )
-        .join(Workout, Workout.user_id == User.id)
-        .join(WorkoutSet, WorkoutSet.workout_id == Workout.id)
-        .filter(Workout.date >= start_of_week)
-        .group_by(User.id)
-        .order_by(func.sum(WorkoutSet.weight * WorkoutSet.reps).desc())
-        .all()
-    )
-
-    rank = None
-
-    for index, item in enumerate(leaderboard_data, start=1):
-        if item.id == session['user_id']:
-            rank = index
-            break
+    rank = get_user_rank(session['user_id'])
 
     return render_template(
         'dashboard.html',
@@ -231,7 +256,14 @@ def log_workout():
         return redirect('/dashboard')
 
     today = datetime.utcnow()
-    return render_template('log_workout.html', today=today)
+    user = db.session.get(User, session['user_id'])
+
+    return render_template(
+        'log_workout.html',
+        today=today,
+        user=user,
+        rank=get_user_rank(session['user_id'])
+    )
 
 @app.route('/test_add_workout')
 def test_add_workout():
@@ -276,12 +308,27 @@ def leaderboard():
     return render_template(
         'leaderboard.html',
         leaderboard_data=leaderboard_data,
-        current_user_id=session['user_id']
+        current_user_id=session['user_id'],
+        user=user,
+        rank=get_user_rank(session['user_id'])
     )
 
 @app.route('/plans')
 def plans():
-    return render_template('plans.html')
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    user = db.session.get(User, session['user_id'])
+
+    if user is None:
+        session.clear()
+        return redirect('/login')
+
+    return render_template(
+        'plans.html',
+        user=user,
+        rank=get_user_rank(session['user_id'])
+    )
 
 @app.route('/profile')
 def profile():
