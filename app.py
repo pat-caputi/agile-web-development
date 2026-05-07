@@ -221,6 +221,7 @@ def dashboard():
         rank=rank
     )
 
+
 # LOGOUT
 @app.route('/logout')
 def logout():
@@ -329,6 +330,11 @@ def plans():
         user=user,
         rank=get_user_rank(session['user_id'])
     )
+
+@app.route('/calendar')
+def calendar():
+    return render_template('calendar.html')
+
 
 @app.route('/profile')
 def profile():

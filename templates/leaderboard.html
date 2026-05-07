@@ -83,7 +83,17 @@
       <span class="nav-link-text">My ranks</span>
     </a>
   
+    <a href="{{ url_for('calendar') }}" class="nav-link {% if request.endpoint == 'calendar' %}active{% endif %}" data-label="Calendar">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <rect x="2" y="3" width="12" height="11" rx="2" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M5 1v3M11 1v3M2 7h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="nav-link-text">Calendar</span>
+    </a>
+
     <div class="nav-spacer"></div>
+
+    
   
     <!-- Dark mode toggle -->
     <button class="theme-toggle" id="themeToggleBtn" data-label="Dark mode">
