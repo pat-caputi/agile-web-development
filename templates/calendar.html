@@ -279,11 +279,14 @@
       <span class="theme-toggle-text" id="themeToggleLabel">Dark mode</span>
     </button>
 
+    <!-- User profile chip -->
     <a href="{{ url_for('profile') }}" class="nav-user" data-label="Profile">
-      <div class="avatar" style="background:var(--accent-light);color:var(--accent-dark);">KL</div>
+      <div class="avatar" style="background:var(--accent-light);color:var(--accent-dark);">
+        {{ user.username[0] | upper }}
+      </div>
       <div class="nav-user-info">
-        <div class="nav-user-name">Kawhi</div>
-        <div class="nav-user-rank">Rank #3</div>
+        <div class="nav-user-name">{{ user.username.title() }}</div>
+        <div class="nav-user-rank">Rank #{{ rank if rank else 'N/A' }}</div>
       </div>
     </a>
   </nav>
@@ -455,15 +458,8 @@ const PLANS = {
 
 // ── State ──
 // schedule: { 'YYYY-MM-DD': planKey }
-const schedule = {
-  // Pre-populate with some demo data
-  [fmtDate(offsetDate(new Date(), -6))]: 'push',
-  [fmtDate(offsetDate(new Date(), -4))]: 'pull',
-  [fmtDate(offsetDate(new Date(), -2))]: 'legs',
-  [fmtDate(offsetDate(new Date(),  1))]: 'push',
-  [fmtDate(offsetDate(new Date(),  3))]: 'pull',
-  [fmtDate(offsetDate(new Date(),  5))]: 'legs',
-};
+const schedule = {{ schedule_data | tojson }};
+
 
 let viewYear  = new Date().getFullYear();
 let viewMonth = new Date().getMonth(); // 0-indexed

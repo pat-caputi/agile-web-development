@@ -121,7 +121,7 @@
 
   <div class="nav-user-info">
     <div class="nav-user-name">{{ user.username.title() }}</div>
-    <div class="nav-user-rank">Rank #{{ rank }}</div>
+    <div class="nav-user-rank">Rank #{{ rank if rank else 'N/A' }}</div>
   </div>
 </a>
   
