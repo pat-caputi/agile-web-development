@@ -341,8 +341,36 @@ def plans():
         rank=get_user_rank(session['user_id'])
     )
 
+<<<<<<< Frontend-teaks
+@app.route('/calendar')
+def calendar():
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    schedule_data = {
+        "2026-05-07": "push",
+        "2026-05-08": "legs",
+        "2026-05-10": "pull"
+    }
+
+    user = db.session.get(User, session['user_id'])
+
+    if user is None:
+        session.clear()
+        return redirect('/login')
+
+    return render_template(
+        'calendar.html',
+        schedule_data=schedule_data,
+        user=user,
+        rank=get_user_rank(session['user_id'])
+    )
+
+
+=======
 
 # PROFILE
+>>>>>>> main
 @app.route('/profile')
 def profile():
     if 'user_id' not in session:
