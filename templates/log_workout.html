@@ -176,11 +176,19 @@
   
     <!-- User profile chip -->
     <a href="{{ url_for('profile') }}" class="nav-user" data-label="Profile">
-      <div class="avatar" style="background:var(--accent-light);color:var(--accent-dark);">
-        KL
-      </div>
+      {% if nav_user and nav_user.profile_photo %}
+        <img
+          class="avatar nav-user-avatar"
+          src="{{ url_for('static', filename=nav_user.profile_photo) }}"
+          alt="{{ nav_user.username }} profile photo"
+        >
+      {% else %}
+        <div class="avatar nav-user-avatar">
+          {{ (nav_user.username.split()[0][0] + (nav_user.username.split()[1][0] if nav_user.username.split()|length > 1 else '')).upper() if nav_user else '?' }}
+        </div>
+      {% endif %}
       <div class="nav-user-info">
-        <div class="nav-user-name">Kawhi</div>
+        <div class="nav-user-name">{{ nav_user.username.title() if nav_user else 'Guest' }}</div>
         <div class="nav-user-rank">Rank #3</div>
       </div>
     </a>
