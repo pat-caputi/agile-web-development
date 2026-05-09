@@ -1,13 +1,25 @@
-from flask import Flask, render_template, request, redirect, session, flash
+from flask import Flask, render_template, request, redirect, session, jsonify, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import func, or_
 from datetime import datetime, timedelta
 import re
 import json
+import os
+from uuid import uuid4
+from werkzeug.utils import secure_filename
 
 # ── App setup ──
 app = Flask(__name__)
+PROFILE_UPLOAD_FOLDER = os.path.join(app.root_path, "static", "uploads", "profile_pictures")
+ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
+
+app.config["PROFILE_UPLOAD_FOLDER"] = PROFILE_UPLOAD_FOLDER
+os.makedirs(PROFILE_UPLOAD_FOLDER, exist_ok=True)
+
+
+def allowed_image_file(filename):
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_IMAGE_EXTENSIONS
 app.secret_key = "your_secret_key"
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
@@ -21,6 +33,8 @@ class User(db.Model):
     username = db.Column(db.String(100), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
+    bio = db.Column(db.String(280), default="")
+    profile_photo = db.Column(db.String(255), default="")
 
 class Workout(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -38,6 +52,13 @@ class WorkoutSet(db.Model):
 with app.app_context():
     db.create_all()
 
+@app.context_processor
+def inject_logged_in_user():
+    if 'user_id' in session:
+        user = User.query.get(session['user_id'])
+        return {"nav_user": user}
+    return {"nav_user": None}
+
 # ── Routes ──
 @app.route('/')
 def home():
@@ -45,6 +66,12 @@ def home():
 @app.route('/ranks')
 def ranks():
     return render_template('ranks.html')
+
+@app.route('/plans')
+def plans():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    return render_template('plans.html')
 
 # REGISTER
 @app.route('/register', methods=['GET', 'POST'])
@@ -279,16 +306,38 @@ def leaderboard():
         current_user_id=session['user_id']
     )
 
-@app.route('/plans')
-def plans():
-    return render_template('plans.html')
-
-@app.route('/profile')
+@app.route('/profile', methods=['GET', 'POST'])
 def profile():
     if 'user_id' not in session:
-        return redirect('/login')
+        return redirect(url_for('login'))
 
-    user = db.session.get(User, session['user_id'])
+    user = User.query.get(session['user_id'])
+
+    if request.method == 'POST':
+        # Save bio
+        user.bio = request.form.get('bio', '').strip()[:280]
+
+        # Save profile photo if uploaded
+        photo = request.files.get('profile_photo')
+
+        if photo and photo.filename:
+            if not allowed_image_file(photo.filename):
+                flash("Please upload a valid image file: png, jpg, jpeg, gif, or webp.")
+                return redirect(url_for('profile'))
+
+            original_filename = secure_filename(photo.filename)
+            extension = original_filename.rsplit(".", 1)[1].lower()
+            unique_filename = f"user_{user.id}_{uuid4().hex}.{extension}"
+
+            save_path = os.path.join(app.config["PROFILE_UPLOAD_FOLDER"], unique_filename)
+            photo.save(save_path)
+
+            user.profile_photo = f"uploads/profile_pictures/{unique_filename}"
+
+        db.session.commit()
+        flash('Profile updated successfully.')
+        return redirect(url_for('profile'))
+
     return render_template('profile.html', user=user)
 
 # ── Run app ──

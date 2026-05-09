@@ -15,3 +15,6 @@ instance/users.db
 .idea/
 
 *.log
+
+static/uploads/profile_pictures/*
+!static/uploads/profile_pictures/.gitkeep
