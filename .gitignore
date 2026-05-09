@@ -1,1 +1,17 @@
+venv/
+.venv/
+ENV/
+
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+.env
+instance/*.db
 instance/users.db
+
+.DS_Store
+.vscode/
+.idea/
+
+*.log
