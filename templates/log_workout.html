@@ -495,8 +495,8 @@
     <div style="font-size:11.5px;color:var(--text-tertiary);margin-bottom:8px;">Exercises logged</div>
     <div id="sumExList" style="margin-bottom:18px;"></div>
     <div style="display:flex;gap:10px;">
-      <a href="{{ url_for('dashboard') }}" class="btn btn-primary" style="flex:1;">Back to dashboard</a>
-      <button onclick="document.getElementById('summaryModal').classList.remove('show')" class="btn btn-secondary">Close</button>
+      <button onclick="submitWorkout()" class="btn btn-primary" style="flex:1;">Save & finish</button>
+      <button onclick="document.getElementById('summaryModal').classList.remove('show')" class="btn btn-secondary">Cancel</button>
     </div>
   </div>
 </div>
@@ -599,8 +599,8 @@ function removeExercise(blockId, name) {
 
 // ── EXERCISE PICKER ──
 function togglePick(el) {
-  const name  = el.querySelector('div > div:first-child').textContent.trim();
-  const equip = el.querySelector('div > div:last-child').textContent.trim();
+  const name  = el.querySelector('div:last-child > div:first-child')?.textContent.trim() || el.dataset.name;
+  const equip = el.querySelector('div:last-child > div:last-child')?.textContent.trim() || '';
   const cat   = el.dataset.cat, cls = el.dataset.cls, id = el.dataset.id;
   const bid   = `ex-${id}`;
   if (el.classList.contains('selected')) { el.classList.remove('selected'); document.getElementById(bid)?.remove(); updateProgress(); return; }
@@ -638,18 +638,22 @@ function filterCategory(cat, btn) {
   document.getElementById('exerciseSearch').value = '';
 }
 
+let _workoutSets = [];
+
 function saveWorkout() {
   timerRunning = false;
   const name   = document.getElementById('workoutName').value || 'Workout';
   const blocks = document.querySelectorAll('.exercise-block');
   const mins   = Math.floor(timerSecs / 60);
+  _workoutSets = [];
   let vol = 0, lines = '';
   blocks.forEach(b => {
-    const exName = b.querySelector('div>div>div:first-child')?.textContent.trim() || 'Exercise';
+    const exName = b.dataset.exname || 'Exercise';
     let sets = 0, v = 0;
     b.querySelectorAll('.set-row').forEach(r => {
       const w    = parseFloat(r.querySelectorAll('input')[0]?.value) || 0;
-      const reps = parseFloat(r.querySelectorAll('input')[1]?.value) || 0;
+      const reps = parseInt(r.querySelectorAll('input')[1]?.value)   || 0;
+      if (w > 0 && reps > 0) { _workoutSets.push({exercise: exName, weight: w, reps: reps}); }
       v += w * reps; if (w > 0 || reps > 0) sets++;
     });
     vol += v;
@@ -661,6 +665,20 @@ function saveWorkout() {
   document.getElementById('sumVolume').textContent      = vol.toLocaleString();
   document.getElementById('sumExList').innerHTML        = lines || `<div style="font-size:13px;color:var(--text-tertiary);">No sets logged</div>`;
   document.getElementById('summaryModal').classList.add('show');
+}
+
+function submitWorkout() {
+  if (_workoutSets.length === 0) { alert('No sets logged yet.'); return; }
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = '';
+  const input = document.createElement('input');
+  input.type = 'hidden';
+  input.name = 'workout_data';
+  input.value = JSON.stringify(_workoutSets);
+  form.appendChild(input);
+  document.body.appendChild(form);
+  form.submit();
 }
 
 // Init progress on load
