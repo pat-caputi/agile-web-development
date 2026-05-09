@@ -111,24 +111,23 @@
 
 <!-- User profile chip -->
 <a href="{{ url_for('profile') }}"
-   class="nav-user nav-user-active"
+   class="nav-user {% if request.endpoint == 'profile' %}nav-user-active{% endif %}"
    data-label="Profile">
 
-  {% if user.profile_photo %}
-    <img
-      class="avatar nav-user-avatar"
-      src="{{ url_for('static', filename=user.profile_photo) }}"
-      alt="{{ user.username }} profile photo"
-    >
-  {% else %}
-    <div class="avatar nav-user-avatar">
-      {{ (user.username.split()[0][0] + (user.username.split()[1][0] if user.username.split()|length > 1 else '')).upper() }}
-    </div>
-  {% endif %}
+  {% include "_sidebar_avatar.html" %}
 
   <div class="nav-user-info">
-    <div class="nav-user-name">{{ user.username.title() }}</div>
-    <div class="nav-user-rank">Rank #{{ rank if rank else 'N/A' }}</div>
+    <div class="nav-user-name">
+      {{ nav_user.username.title() if nav_user else "Profile" }}
+    </div>
+
+    <div class="nav-user-rank">
+      {% if rank is defined and rank %}
+        Rank #{{ rank }}
+      {% else %}
+        View profile
+      {% endif %}
+    </div>
   </div>
 </a>
   
@@ -148,63 +147,93 @@
 
       <!-- Left: profile card -->
       <div style="display:flex;flex-direction:column;gap:14px;">
-        <div class="card" style="text-align:center;padding:28px 20px;">
-          {% if user.profile_photo %}
-            <img
-              class="avatar avatar-lg profile-photo-lg"
-              src="{{ url_for('static', filename=user.profile_photo) }}"
-              alt="{{ user.username }} profile photo"
-            >
-          {% else %}
-            <div class="avatar avatar-lg profile-photo-lg">
-              {{ (user.username.split()[0][0] + (user.username.split()[1][0] if user.username.split()|length > 1 else '')).upper() }}
-            </div>
-          {% endif %}
-          <div style="font-size:18px;font-weight:600;letter-spacing:-0.3px;">{{ user.username.title() }}</div>
-          <div style="font-size:13px;color:var(--text-secondary);margin-top:4px;">{{ user.email }}</div>
-          <div style="font-size:13px;color:var(--text-tertiary);margin-top:6px;line-height:1.5;">
-            {{ user.bio if user.bio else "No bio added yet." }}
-          </div>
-          <form method="POST" action="{{ url_for('profile') }}" enctype="multipart/form-data" style="margin-top:16px;text-align:left;">
-            <label for="bio" style="display:block;font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;">
-              Edit bio
+        <div class="card profile-overview-card">
+          <form
+            method="POST"
+            action="{{ url_for('profile') }}"
+            enctype="multipart/form-data"
+            id="profileUpdateForm"
+          >
+
+            <!-- Profile photo -->
+            <label for="profile_photo" class="profile-photo-edit-wrapper">
+              {% if user.profile_photo %}
+                <img
+                  class="profile-photo-xl"
+                  src="{{ url_for('static', filename=user.profile_photo) }}"
+                  alt="{{ user.username }} profile photo"
+                >
+              {% else %}
+                <div class="profile-photo-xl profile-photo-placeholder">
+                  {{ (user.username.split()[0][0] + (user.username.split()[1][0] if user.username.split()|length > 1 else '')).upper() }}
+                </div>
+              {% endif %}
+
+              <span class="profile-photo-overlay">
+                ✎
+              </span>
             </label>
-            <textarea
-              id="bio"
-              name="bio"
-              maxlength="280"
-              rows="3"
-              placeholder="Tell others about your training style..."
-              style="width:100%;resize:vertical;border:0.5px solid var(--border);border-radius:var(--radius-md);padding:10px 12px;background:var(--surface-2);color:var(--text-primary);font-family:inherit;font-size:13px;line-height:1.5;"
-            >{{ user.bio or "" }}</textarea>
-            <label for="profile_photo" style="display:block;font-size:12px;font-weight:600;color:var(--text-secondary);margin-top:12px;margin-bottom:6px;">
-              Profile photo
-            </label>
+
             <input
               id="profile_photo"
               name="profile_photo"
               type="file"
               accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
-              style="width:100%;font-size:12px;color:var(--text-secondary);"
-            />
-            <button type="submit" class="btn btn-primary btn-block" style="margin-top:10px;">
-              Save bio
+              class="profile-photo-input"
+            >
+
+            <div class="profile-photo-hint" id="photoFileName"></div>
+
+            <!-- User info -->
+            <h2 class="profile-name">{{ user.username.title() }}</h2>
+            <p class="profile-email">{{ user.email }}</p>
+
+            <!-- Bio display -->
+            <p class="profile-bio" id="bioDisplay">
+              {{ user.bio if user.bio else "No bio added yet." }}
+            </p>
+
+            <!-- Edit bio button -->
+            <button type="button" class="profile-edit-link" id="editBioBtn">
+              Edit bio
             </button>
+
+            <!-- Hidden bio editor -->
+            <div class="bio-editor" id="bioEditor">
+              <label for="bio">Bio</label>
+
+              <textarea
+                id="bio"
+                name="bio"
+                maxlength="280"
+                rows="3"
+                placeholder="Tell others about your training style..."
+              >{{ user.bio or "" }}</textarea>
+            </div>
+
+            <!-- Hidden update button -->
+            <button type="submit" class="btn btn-primary btn-block profile-update-btn" id="profileUpdateBtn">
+              Update profile
+            </button>
+
+            <!-- Stats -->
+            <div class="profile-stats">
+              <div>
+                <strong>{{ workouts_count if workouts_count is defined else 0 }}</strong>
+                <span>Workouts</span>
+              </div>
+
+              <div>
+                <strong>{% if rank %}#{{ rank }}{% else %}-{% endif %}</strong>
+                <span>Rank</span>
+              </div>
+
+              <div>
+                <strong>12</strong>
+                <span>Day streak</span>
+              </div>
+            </div>
           </form>
-          <div style="margin-top:16px;padding-top:16px;border-top:0.5px solid var(--border);display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
-            <div>
-              <div style="font-size:18px;font-weight:600;">{{ workouts_count }}</div>
-              <div style="font-size:11px;color:var(--text-tertiary);">Workouts</div>
-            </div>
-            <div>
-              <div style="font-size:18px;font-weight:600;">#{{ rank if rank else 'N/A' }}</div>
-              <div style="font-size:11px;color:var(--text-tertiary);">Rank</div>
-            </div>
-            <div>
-              <div style="font-size:18px;font-weight:600;">12</div>
-              <div style="font-size:11px;color:var(--text-tertiary);">Day streak</div>
-            </div>
-          </div>
         </div>
 
         <div class="card">
@@ -297,6 +326,36 @@
 
   </main>
 </div>
+<script>
+  const editBioBtn = document.getElementById("editBioBtn");
+  const bioEditor = document.getElementById("bioEditor");
+  const bioTextarea = document.getElementById("bio");
+  const profilePhotoInput = document.getElementById("profile_photo");
+  const profileUpdateBtn = document.getElementById("profileUpdateBtn");
+  const photoFileName = document.getElementById("photoFileName");
+
+  function showUpdateButton() {
+    profileUpdateBtn.classList.add("is-visible");
+  }
+
+  editBioBtn.addEventListener("click", () => {
+    bioEditor.classList.add("is-open");
+    editBioBtn.style.display = "none";
+    showUpdateButton();
+    bioTextarea.focus();
+  });
+
+  bioTextarea.addEventListener("input", () => {
+    showUpdateButton();
+  });
+
+  profilePhotoInput.addEventListener("change", () => {
+    if (profilePhotoInput.files.length > 0) {
+      photoFileName.textContent = profilePhotoInput.files[0].name;
+      showUpdateButton();
+    }
+  });
+</script>
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>

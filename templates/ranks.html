@@ -275,13 +275,24 @@
     </button>
   
     <!-- User profile chip -->
-    <a href="{{ url_for('profile') }}" class="nav-user" data-label="Profile">
-      <div class="avatar" style="background:var(--accent-light);color:var(--accent-dark);">
-        {{ user.username[0] | upper }}
-      </div>
+    <a href="{{ url_for('profile') }}"
+       class="nav-user {% if request.endpoint == 'profile' %}nav-user-active{% endif %}"
+       data-label="Profile">
+
+      {% include "_sidebar_avatar.html" %}
+
       <div class="nav-user-info">
-        <div class="nav-user-name">{{ user.username.title() }}</div>
-        <div class="nav-user-rank">Rank #{{ rank if rank else 'N/A' }}</div>
+        <div class="nav-user-name">
+          {{ nav_user.username.title() if nav_user else "Profile" }}
+        </div>
+
+        <div class="nav-user-rank">
+          {% if rank is defined and rank %}
+            Rank #{{ rank }}
+          {% else %}
+            View profile
+          {% endif %}
+        </div>
       </div>
     </a>
   

@@ -210,11 +210,30 @@ def get_current_user():
     return db.session.get(User, session['user_id'])
 
 
+def initials(name):
+    parts = (name or "").strip().split()
+
+    if not parts:
+        return "U"
+
+    if len(parts) == 1:
+        return parts[0][:2].upper()
+
+    return (parts[0][0] + parts[1][0]).upper()
+
+
 @app.context_processor
 def inject_logged_in_user():
     if "user_id" in session:
-        return {"nav_user": db.session.get(User, session["user_id"])}
-    return {"nav_user": None}
+        return {
+            "nav_user": db.session.get(User, session["user_id"]),
+            "initials": initials,
+        }
+
+    return {
+        "nav_user": None,
+        "initials": initials,
+    }
 
 
 def get_user_rank(user_id):
@@ -488,13 +507,14 @@ def leaderboard():
         db.session.query(
             User.id,
             User.username,
+            User.profile_photo,
             func.count(func.distinct(Workout.id)).label('workouts_count'),
             func.sum(WorkoutSet.weight * WorkoutSet.reps).label('weekly_volume')
         )
         .join(Workout, Workout.user_id == User.id)
         .join(WorkoutSet, WorkoutSet.workout_id == Workout.id)
         .filter(Workout.date >= start_of_week)
-        .group_by(User.id, User.username)
+        .group_by(User.id, User.username, User.profile_photo)
         .order_by(func.sum(WorkoutSet.weight * WorkoutSet.reps).desc())
         .all()
     )
