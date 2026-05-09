@@ -247,6 +247,13 @@
       </svg>
       <span class="nav-link-text">My ranks</span>
     </a>
+    <a href="{{ url_for('calendar') }}" class="nav-link {% if request.endpoint == 'calendar' %}active{% endif %}" data-label="Calendar">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <rect x="2" y="3" width="12" height="11" rx="2" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M5 1v3M11 1v3M2 7h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="nav-link-text">Calendar</span>
+    </a>
   
     <div class="nav-spacer"></div>
   
@@ -269,20 +276,12 @@
   
     <!-- User profile chip -->
     <a href="{{ url_for('profile') }}" class="nav-user" data-label="Profile">
-      {% if nav_user and nav_user.profile_photo %}
-        <img
-          class="avatar nav-user-avatar"
-          src="{{ url_for('static', filename=nav_user.profile_photo) }}"
-          alt="{{ nav_user.username }} profile photo"
-        >
-      {% else %}
-        <div class="avatar nav-user-avatar">
-          {{ (nav_user.username.split()[0][0] + (nav_user.username.split()[1][0] if nav_user.username.split()|length > 1 else '')).upper() if nav_user else '?' }}
-        </div>
-      {% endif %}
+      <div class="avatar" style="background:var(--accent-light);color:var(--accent-dark);">
+        {{ user.username[0] | upper }}
+      </div>
       <div class="nav-user-info">
-        <div class="nav-user-name">{{ nav_user.username.title() if nav_user else 'Guest' }}</div>
-        <div class="nav-user-rank">Rank #3</div>
+        <div class="nav-user-name">{{ user.username.title() }}</div>
+        <div class="nav-user-rank">Rank #{{ rank if rank else 'N/A' }}</div>
       </div>
     </a>
   
@@ -300,18 +299,25 @@
 
     <!-- Overall rank hero -->
     <div class="rank-hero">
-      <div class="hero-icon">🥇</div>
+      <div class="hero-icon">{{ overall_tier.icon }}</div>
       <div class="hero-info">
-        <div class="hero-title">Gold · Overall rank</div>
-        <div class="hero-sub">Average across all 6 muscle groups · 28,450 total points</div>
+        <div class="hero-title">{{ overall_tier.name }} · Overall rank</div>
+        <div class="hero-sub">Average across all 6 muscle groups · {{ overall_tier.total_points | int }} total points</div>
+        {% if overall_tier.next_name %}
         <div class="hero-prog-labels">
-          <span>Gold · 5,000 pts</span>
-          <span>Platinum · 12,000 pts</span>
+          <span>{{ overall_tier.name }} · {{ overall_tier.current_threshold | int }} pts</span>
+          <span>{{ overall_tier.next_name }} · {{ overall_tier.next_threshold | int }} pts</span>
         </div>
         <div class="hero-track">
-          <div class="hero-fill" style="width:42%;background:var(--r-gold);"></div>
+          <div class="hero-fill" style="width:{{ overall_tier.pct }}%;background:var(--r-{{ overall_tier.name | lower }});"></div>
         </div>
-        <div class="hero-foot">9,450 / 12,000 pts · 2,550 pts remaining to Platinum</div>
+        <div class="hero-foot">{{ overall_tier.points }} / {{ overall_tier.next_threshold | int }} pts · {{ (overall_tier.next_threshold - overall_tier.points) | int }} pts remaining to {{ overall_tier.next_name }}</div>
+        {% else %}
+        <div class="hero-track">
+          <div class="hero-fill" style="width:100%;background:var(--r-{{ overall_tier.name | lower }});"></div>
+        </div>
+        <div class="hero-foot">Max tier reached · {{ overall_tier.points | int }} pts</div>
+        {% endif %}
       </div>
       <a href="{{ url_for('leaderboard') }}" class="hero-view-btn">Leaderboard</a>
     </div>
@@ -475,71 +481,27 @@
         <!-- Muscle rank cards -->
         <div class="muscle-cards-grid">
 
-          <!-- Chest -->
-          <div class="muscle-card" id="card-chest" onclick="selectMuscle('chest')">
+          {% for g in muscle_groups %}
+          {% set d = muscle_data[g] %}
+          <div class="muscle-card" id="card-{{ g }}" onclick="selectMuscle('{{ g }}')">
             <div class="mc-top">
-              <div class="ex-icon" style="background:#EEEDFE;color:#534AB7;width:28px;height:28px;font-size:11px;">C</div>
-              <span class="mc-name">Chest</span>
-              <span class="rank-badge rb-gold">🥇 Gold</span>
+              <div class="ex-icon" style="background:{{ d.icon_bg }};color:{{ d.icon_color }};width:28px;height:28px;font-size:11px;">{{ d.letter }}</div>
+              <span class="mc-name">{{ d.label }}</span>
+              <span class="rank-badge {{ d.css }}">{{ d.tier_icon }} {{ d.tier_name }}</span>
             </div>
-            <div class="mc-track"><div class="mc-fill" style="width:70%;background:var(--r-gold);"></div></div>
-            <div class="mc-labels"><span>8,400 pts</span><span>→ Platinum: 12,000</span></div>
-          </div>
-
-          <!-- Back -->
-          <div class="muscle-card" id="card-back" onclick="selectMuscle('back')">
-            <div class="mc-top">
-              <div class="ex-icon" style="background:#E1F5EE;color:#085041;width:28px;height:28px;font-size:11px;">B</div>
-              <span class="mc-name">Back</span>
-              <span class="rank-badge rb-diamond">💎 Diamond</span>
+            <div class="mc-track">
+              <div class="mc-fill" style="width:{{ d.pct }}%;background:var(--r-{{ d.tier_name | lower }});"></div>
             </div>
-            <div class="mc-track"><div class="mc-fill" style="width:55%;background:var(--r-diamond);"></div></div>
-            <div class="mc-labels"><span>26,200 pts</span><span>Max tier</span></div>
-          </div>
-
-          <!-- Legs -->
-          <div class="muscle-card" id="card-legs" onclick="selectMuscle('legs')">
-            <div class="mc-top">
-              <div class="ex-icon" style="background:#FAECE7;color:#712B13;width:28px;height:28px;font-size:11px;">L</div>
-              <span class="mc-name">Legs</span>
-              <span class="rank-badge rb-gold">🥇 Gold</span>
+            <div class="mc-labels">
+              <span>{{ d.points | int }} pts</span>
+              {% if d.next_name %}
+              <span>→ {{ d.next_name }}: {{ d.next_threshold | int }}</span>
+              {% else %}
+              <span>Max tier</span>
+              {% endif %}
             </div>
-            <div class="mc-track"><div class="mc-fill" style="width:30%;background:var(--r-gold);"></div></div>
-            <div class="mc-labels"><span>6,100 pts</span><span>→ Platinum: 12,000</span></div>
           </div>
-
-          <!-- Shoulders -->
-          <div class="muscle-card" id="card-shoulders" onclick="selectMuscle('shoulders')">
-            <div class="mc-top">
-              <div class="ex-icon" style="background:#FAEEDA;color:#633806;width:28px;height:28px;font-size:11px;">S</div>
-              <span class="mc-name">Shoulders</span>
-              <span class="rank-badge rb-platinum">🔷 Platinum</span>
-            </div>
-            <div class="mc-track"><div class="mc-fill" style="width:60%;background:var(--r-platinum);"></div></div>
-            <div class="mc-labels"><span>19,400 pts</span><span>→ Diamond: 25,000</span></div>
-          </div>
-
-          <!-- Arms -->
-          <div class="muscle-card" id="card-arms" onclick="selectMuscle('arms')">
-            <div class="mc-top">
-              <div class="ex-icon" style="background:#F1EFE8;color:#444441;width:28px;height:28px;font-size:11px;">A</div>
-              <span class="mc-name">Arms</span>
-              <span class="rank-badge rb-silver">🥈 Silver</span>
-            </div>
-            <div class="mc-track"><div class="mc-fill" style="width:80%;background:var(--r-silver);"></div></div>
-            <div class="mc-labels"><span>3,600 pts</span><span>→ Gold: 5,000</span></div>
-          </div>
-
-          <!-- Core -->
-          <div class="muscle-card" id="card-core" onclick="selectMuscle('core')">
-            <div class="mc-top">
-              <div class="ex-icon" style="background:#FBEAF0;color:#72243E;width:28px;height:28px;font-size:11px;">C</div>
-              <span class="mc-name">Core</span>
-              <span class="rank-badge rb-bronze">🥉 Bronze</span>
-            </div>
-            <div class="mc-track"><div class="mc-fill" style="width:55%;background:var(--r-bronze);"></div></div>
-            <div class="mc-labels"><span>1,100 pts</span><span>→ Silver: 2,000</span></div>
-          </div>
+          {% endfor %}
 
         </div>
 
@@ -576,43 +538,33 @@
                 <th>Status</th>
               </tr>
             </thead>
+            {% set tiers = [
+              ('Unranked', '—',  'rb-unranked', 0,     'Just getting started'),
+              ('Bronze',   '🥉', 'rb-bronze',   500,   'Building the habit'),
+              ('Silver',   '🥈', 'rb-silver',   2000,  'Consistent trainer'),
+              ('Gold',     '🥇', 'rb-gold',     5000,  'Dedicated lifter'),
+              ('Platinum', '🔷', 'rb-platinum', 12000, 'Elite athlete'),
+              ('Diamond',  '💎', 'rb-diamond',  25000, 'World-class lifter'),
+            ] %}
             <tbody>
-              <tr>
-                <td><span class="rank-badge rb-unranked">Unranked</span></td>
-                <td style="color:var(--text-secondary);">Just getting started</td>
-                <td style="font-family:var(--mono);color:var(--text-tertiary);">0</td>
-                <td><span class="badge badge-success">Cleared</span></td>
+              {% for t_name, t_icon, t_css, t_pts, t_desc in tiers %}
+              {% set is_current = (t_name == overall_tier.name) %}
+              {% set is_cleared = (overall_tier.points >= t_pts and not is_current) %}
+              <tr {% if is_current %}class="current"{% endif %}>
+                <td><span class="rank-badge {{ t_css }}">{{ t_icon }} {{ t_name }}</span></td>
+                <td style="color:var(--text-secondary);">{{ t_desc }}</td>
+                <td style="font-family:var(--mono);color:var(--text-tertiary);">{{ '{:,}'.format(t_pts) }}</td>
+                <td>
+                  {% if is_current %}
+                    <span class="badge badge-accent">Current overall</span>
+                  {% elif is_cleared %}
+                    <span class="badge badge-success">Cleared</span>
+                  {% else %}
+                    <span class="badge badge-warning">Locked</span>
+                  {% endif %}
+                </td>
               </tr>
-              <tr>
-                <td><span class="rank-badge rb-bronze">🥉 Bronze</span></td>
-                <td style="color:var(--text-secondary);">Building the habit</td>
-                <td style="font-family:var(--mono);color:var(--text-tertiary);">500</td>
-                <td><span class="badge badge-success">Cleared</span></td>
-              </tr>
-              <tr>
-                <td><span class="rank-badge rb-silver">🥈 Silver</span></td>
-                <td style="color:var(--text-secondary);">Consistent trainer</td>
-                <td style="font-family:var(--mono);color:var(--text-tertiary);">2,000</td>
-                <td><span class="badge badge-success">Cleared</span></td>
-              </tr>
-              <tr class="current">
-                <td><span class="rank-badge rb-gold">🥇 Gold</span></td>
-                <td style="color:var(--text-secondary);">Dedicated lifter</td>
-                <td style="font-family:var(--mono);color:var(--text-tertiary);">5,000</td>
-                <td><span class="badge badge-accent">Current overall</span></td>
-              </tr>
-              <tr>
-                <td><span class="rank-badge rb-platinum">🔷 Platinum</span></td>
-                <td style="color:var(--text-secondary);">Elite athlete</td>
-                <td style="font-family:var(--mono);color:var(--text-tertiary);">12,000</td>
-                <td><span class="badge badge-warning">In progress</span></td>
-              </tr>
-              <tr>
-                <td><span class="rank-badge rb-diamond">💎 Diamond</span></td>
-                <td style="color:var(--text-secondary);">World-class lifter</td>
-                <td style="font-family:var(--mono);color:var(--text-tertiary);">25,000</td>
-                <td><span class="badge" style="background:var(--r-diamond-bg);color:var(--r-diamond);">1 group reached</span></td>
-              </tr>
+              {% endfor %}
             </tbody>
           </table>
         </div>
@@ -627,80 +579,24 @@
 
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 <script>
-// ── Static muscle data (replace with Jinja2 vars once Flask is wired) ──
+// ── Muscle data injected from Flask ──
 const MUSCLE_DATA = {
-  chest: {
-    name: 'Chest',
-    icon: 'C', iconBg: '#EEEDFE', iconColor: '#534AB7',
-    badgeClass: 'rb-gold', badgeLabel: '🥇 Gold',
-    barColor: 'var(--r-gold)',
-    pts: 8400, nextPts: 12000, nextName: 'Platinum', pct: 70,
-    exercises: [
-      { name: 'Bench press',       pts: 4200 },
-      { name: 'Incline bench press', pts: 2600 },
-      { name: 'Cable fly',         pts: 1600 },
-    ]
+{% for g in muscle_groups %}{% set d = muscle_data[g] %}
+  {{ g }}: {
+    name: {{ d.label | tojson }},
+    icon: {{ d.letter | tojson }},
+    iconBg: {{ d.icon_bg | tojson }},
+    iconColor: {{ d.icon_color | tojson }},
+    badgeClass: {{ d.css | tojson }},
+    badgeLabel: {{ (d.tier_icon ~ ' ' ~ d.tier_name) | tojson }},
+    barColor: 'var(--r-{{ d.tier_name | lower }})',
+    pts: {{ d.points }},
+    nextPts: {{ d.next_threshold if d.next_threshold is not none else 'null' }},
+    nextName: {{ d.next_name | tojson if d.next_name else 'null' }},
+    pct: {{ d.pct }},
+    exercises: {{ d.exercises | tojson }},
   },
-  back: {
-    name: 'Back',
-    icon: 'B', iconBg: '#E1F5EE', iconColor: '#085041',
-    badgeClass: 'rb-diamond', badgeLabel: '💎 Diamond',
-    barColor: 'var(--r-diamond)',
-    pts: 26200, nextPts: null, nextName: null, pct: 55,
-    exercises: [
-      { name: 'Deadlift',    pts: 9840 },
-      { name: 'Pull up',     pts: 7200 },
-      { name: 'Barbell row', pts: 5940 },
-    ]
-  },
-  legs: {
-    name: 'Legs',
-    icon: 'L', iconBg: '#FAECE7', iconColor: '#712B13',
-    badgeClass: 'rb-gold', badgeLabel: '🥇 Gold',
-    barColor: 'var(--r-gold)',
-    pts: 6100, nextPts: 12000, nextName: 'Platinum', pct: 30,
-    exercises: [
-      { name: 'Barbell squat',   pts: 2800 },
-      { name: 'Leg press',       pts: 1900 },
-      { name: 'Romanian deadlift', pts: 1400 },
-    ]
-  },
-  shoulders: {
-    name: 'Shoulders',
-    icon: 'S', iconBg: '#FAEEDA', iconColor: '#633806',
-    badgeClass: 'rb-platinum', badgeLabel: '🔷 Platinum',
-    barColor: 'var(--r-platinum)',
-    pts: 19400, nextPts: 25000, nextName: 'Diamond', pct: 60,
-    exercises: [
-      { name: 'Overhead press', pts: 8800 },
-      { name: 'Lateral raises', pts: 6200 },
-      { name: 'Arnold press',   pts: 4400 },
-    ]
-  },
-  arms: {
-    name: 'Arms',
-    icon: 'A', iconBg: '#F1EFE8', iconColor: '#444441',
-    badgeClass: 'rb-silver', badgeLabel: '🥈 Silver',
-    barColor: 'var(--r-silver)',
-    pts: 3600, nextPts: 5000, nextName: 'Gold', pct: 80,
-    exercises: [
-      { name: 'Bicep curl',      pts: 1400 },
-      { name: 'Tricep pushdown', pts: 1200 },
-      { name: 'Hammer curl',     pts:  900 },
-    ]
-  },
-  core: {
-    name: 'Core',
-    icon: 'C', iconBg: '#FBEAF0', iconColor: '#72243E',
-    badgeClass: 'rb-bronze', badgeLabel: '🥉 Bronze',
-    barColor: 'var(--r-bronze)',
-    pts: 1100, nextPts: 2000, nextName: 'Silver', pct: 55,
-    exercises: [
-      { name: 'Cable crunch',       pts: 520 },
-      { name: 'Plank',              pts: 380 },
-      { name: 'Hanging leg raise',  pts: 200 },
-    ]
-  },
+{% endfor %}
 };
 
 // ── SVG region IDs grouped by muscle ──
@@ -779,8 +675,21 @@ document.querySelectorAll('.muscle-region').forEach(el => {
   el.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
 });
 
-// Default selection on load
-selectMuscle('back');
+// Apply tier fill colours to SVG body diagram
+const ALL_FILL_CLASSES = ['fill-unranked','fill-bronze','fill-silver','fill-gold','fill-platinum','fill-diamond'];
+Object.entries(MUSCLE_DATA).forEach(([muscle, d]) => {
+  const fillClass = d.badgeClass.replace('rb-', 'fill-');
+  (MUSCLE_REGIONS[muscle] || []).forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    ALL_FILL_CLASSES.forEach(fc => el.classList.remove(fc));
+    el.classList.add(fillClass);
+  });
+});
+
+// Default selection on load — pick the group with most points, fall back to 'back'
+const defaultGroup = Object.entries(MUSCLE_DATA).sort((a, b) => b[1].pts - a[1].pts)[0]?.[0] || 'back';
+selectMuscle(defaultGroup);
 </script>
 </body>
 </html>

@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calendar · LiftAGILE</title>
+  <script>
+    document.documentElement.setAttribute(
+      'data-theme',
+      localStorage.getItem('liftlab-theme') || 'light'
+    );
+  </script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <style>
+    /* ── Calendar grid ── */
+    .cal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .cal-nav-btn {
+      width: 34px; height: 34px;
+      border-radius: var(--radius-md);
+      border: 0.5px solid var(--border-md);
+      background: var(--surface);
+      color: var(--text-secondary);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: background 0.14s, color 0.14s;
+      flex-shrink: 0;
+    }
+    .cal-nav-btn:hover { background: var(--surface-2); color: var(--text-primary); }
+
+    .cal-month-label {
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: -0.3px;
+    }
+
+    .cal-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 4px;
+    }
+
+    .cal-day-label {
+      text-align: center;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-tertiary);
+      letter-spacing: 0.04em;
+      padding: 4px 0 8px;
+      text-transform: uppercase;
+    }
+
+    .cal-cell {
+      min-height: 88px;
+      background: var(--surface);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 8px;
+      cursor: pointer;
+      transition: border-color 0.14s, background 0.14s;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .cal-cell:hover { border-color: var(--accent); }
+
+    .cal-cell.other-month { opacity: 0.35; pointer-events: none; }
+
+    .cal-cell.today {
+      border-color: var(--accent);
+      background: var(--accent-light);
+    }
+
+    .cal-cell.has-workout { border-color: var(--success-text); }
+
+    .cal-cell.selected {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-light);
+    }
+
+    .cal-date {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      line-height: 1;
+    }
+
+    .cal-cell.today .cal-date { color: var(--accent); }
+
+    .cal-workout-chip {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .chip-push     { background: rgba(83,74,183,0.15);  color: var(--accent); }
+    .chip-pull     { background: rgba(8,80,65,0.15);    color: var(--teal-800); }
+    .chip-legs     { background: rgba(113,43,19,0.15);  color: var(--coral-800); }
+    .chip-upper    { background: rgba(99,56,6,0.15);    color: var(--amber-800); }
+    .chip-full     { background: rgba(39,80,10,0.15);   color: #27500A; }
+    .chip-rest     { background: var(--gray-100);        color: var(--gray-600); }
+    .chip-planned  { border: 0.5px dashed var(--border-md); background: none; color: var(--text-tertiary); }
+
+    .cal-dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .cal-add-hint {
+      font-size: 10px;
+      color: var(--text-tertiary);
+      margin-top: auto;
+      opacity: 0;
+      transition: opacity 0.14s;
+    }
+    .cal-cell:hover .cal-add-hint { opacity: 1; }
+
+    /* ── Side panel ── */
+    .cal-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 280px;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .side-panel { position: sticky; top: 0; }
+
+    .plan-pick-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      border: 0.5px solid var(--border);
+      background: var(--surface-2);
+      transition: border-color 0.14s, background 0.14s;
+      margin-bottom: 6px;
+    }
+    .plan-pick-item:hover   { border-color: var(--accent); background: var(--surface); }
+    .plan-pick-item.active  { border-color: var(--accent); background: var(--accent-light); }
+
+    .plan-pick-dot {
+      width: 10px; height: 10px;
+      border-radius: 3px; flex-shrink: 0;
+    }
+
+    /* ── Upcoming workouts list ── */
+    .upcoming-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 0.5px solid var(--border);
+    }
+    .upcoming-item:last-child { border-bottom: none; }
+
+    .upcoming-date-badge {
+      text-align: center;
+      min-width: 38px;
+      flex-shrink: 0;
+    }
+    .upcoming-date-day   { font-size: 18px; font-weight: 600; line-height: 1; }
+    .upcoming-date-month { font-size: 10px; color: var(--text-tertiary); text-transform: uppercase; }
+
+    /* ── Modal ── */
+    .modal-backdrop {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45); z-index: 100;
+      align-items: center; justify-content: center;
+    }
+    .modal-backdrop.show { display: flex; }
+
+    .modal {
+      background: var(--surface);
+      border-radius: var(--radius-xl);
+      padding: 26px;
+      width: 100%; max-width: 400px;
+      border: 0.5px solid var(--border-md);
+    }
+
+    .modal-title { font-size: 17px; font-weight: 600; letter-spacing: -0.3px; margin-bottom: 4px; }
+    .modal-date  { font-size: 13px; color: var(--text-secondary); margin-bottom: 18px; }
+
+    .modal-plan-option {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px;
+      border-radius: var(--radius-md);
+      border: 0.5px solid var(--border-md);
+      background: var(--surface-2);
+      cursor: pointer;
+      margin-bottom: 8px;
+      transition: border-color 0.14s;
+      font-size: 13px; font-weight: 500;
+    }
+    .modal-plan-option:hover    { border-color: var(--accent); }
+    .modal-plan-option.selected { border-color: var(--accent); background: var(--accent-light); }
+
+    .modal-plan-dot {
+      width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0;
+    }
+
+    /* Week row highlight */
+    .cal-week-row {
+      display: contents; /* participates in grid */
+    }
+
+    @media (max-width: 900px) {
+      .cal-layout { grid-template-columns: 1fr; }
+      .side-panel { position: static; }
+    }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-icon">L</div>
+      <span class="sidebar-logo-text">Lift<span>AGILE</span></span>
+    </div>
+    <button class="sidebar-toggle" id="sidebarCollapseBtn" title="Collapse sidebar">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+        <path d="M9 11L5 7l4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+
+    <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}" data-label="Dashboard">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="9" y="1" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="1" y="9" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="9" y="9" width="6" height="6" rx="1.5" fill="currentColor"/></svg>
+      <span class="nav-link-text">Dashboard</span>
+    </a>
+    <a href="{{ url_for('log_workout') }}" class="nav-link {% if request.endpoint == 'log_workout' %}active{% endif %}" data-label="Log workout">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 8h2m8 0h2M4 8V5.5a1.5 1.5 0 013 0v5a1.5 1.5 0 003 0V5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <span class="nav-link-text">Log workout</span>
+    </a>
+    <a href="{{ url_for('plans') }}" class="nav-link {% if request.endpoint == 'plans' %}active{% endif %}" data-label="My plans">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 6h6M5 9h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <span class="nav-link-text">My plans</span>
+    </a>
+    <a href="{{ url_for('leaderboard') }}" class="nav-link {% if request.endpoint == 'leaderboard' %}active{% endif %}" data-label="Leaderboard">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 13V8m5 5V4m5 9V7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <span class="nav-link-text">Leaderboard</span>
+    </a>
+    <a href="{{ url_for('ranks') }}" class="nav-link {% if request.endpoint == 'ranks' %}active{% endif %}" data-label="My ranks">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2l1.8 3.6L14 6.3l-3 2.9.7 4.1L8 11.4l-3.7 1.9.7-4.1-3-2.9 4.2-.7z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+      <span class="nav-link-text">My ranks</span>
+    </a>
+    <a href="{{ url_for('calendar') }}" class="nav-link {% if request.endpoint == 'calendar' %}active{% endif %}" data-label="Calendar">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="11" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 1v3M11 1v3M2 7h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <span class="nav-link-text">Calendar</span>
+    </a>
+
+    <div class="nav-spacer"></div>
+
+    <button class="theme-toggle" id="themeToggleBtn" data-label="Dark mode">
+      <svg id="themeIconDark" width="16" height="16" viewBox="0 0 16 16" fill="none" style="display:none;">
+        <circle cx="8" cy="8" r="3.5" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3.1 3.1l1 1M11.9 11.9l1 1M3.1 12.9l1-1M11.9 4.1l1-1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+      <svg id="themeIconLight" width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M13.5 9.5A5.5 5.5 0 016.5 2.5a5.5 5.5 0 100 11 5.5 5.5 0 007-4z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="theme-toggle-text" id="themeToggleLabel">Dark mode</span>
+    </button>
+
+    <!-- User profile chip -->
+    <a href="{{ url_for('profile') }}" class="nav-user" data-label="Profile">
+      <div class="avatar" style="background:var(--accent-light);color:var(--accent-dark);">
+        {{ user.username[0] | upper }}
+      </div>
+      <div class="nav-user-info">
+        <div class="nav-user-name">{{ user.username.title() }}</div>
+        <div class="nav-user-rank">Rank #{{ rank if rank else 'N/A' }}</div>
+      </div>
+    </a>
+  </nav>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;">
+      <div>
+        <h1 class="page-title">Calendar</h1>
+        <p class="page-sub">Schedule and track your workout week</p>
+      </div>
+      <button class="btn btn-primary" onclick="openModal(null)">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        Schedule workout
+      </button>
+    </div>
+
+    <div class="cal-layout">
+
+      <!-- Calendar -->
+      <div>
+        <!-- Month navigation -->
+        <div class="cal-header">
+          <button class="cal-nav-btn" onclick="changeMonth(-1)">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 11L5 7l4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <div class="cal-month-label" id="calMonthLabel"></div>
+          <button class="cal-nav-btn" onclick="changeMonth(1)">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 3l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+
+        <!-- Day labels -->
+        <div class="cal-grid" id="calDayLabels">
+          <div class="cal-day-label">Mon</div>
+          <div class="cal-day-label">Tue</div>
+          <div class="cal-day-label">Wed</div>
+          <div class="cal-day-label">Thu</div>
+          <div class="cal-day-label">Fri</div>
+          <div class="cal-day-label">Sat</div>
+          <div class="cal-day-label">Sun</div>
+        </div>
+
+        <!-- Calendar cells rendered by JS -->
+        <div class="cal-grid" id="calGrid" style="margin-top:4px;"></div>
+      </div>
+
+      <!-- Side panel -->
+      <div class="side-panel" style="display:flex;flex-direction:column;gap:14px;">
+
+        <!-- Plan picker -->
+        <div class="card">
+          <div class="card-title">Your plans</div>
+          <p style="font-size:12px;color:var(--text-tertiary);margin-bottom:12px;">Click a plan then click a day to schedule it</p>
+
+          <div class="plan-pick-item active" id="plan-push" onclick="selectPlan('push')" data-color="#534AB7">
+            <div class="plan-pick-dot" style="background:#534AB7;"></div>
+            <div>
+              <div style="font-size:13px;font-weight:500;">Push day</div>
+              <div style="font-size:11px;color:var(--text-tertiary);">Chest · Shoulders · Triceps</div>
+            </div>
+          </div>
+          <div class="plan-pick-item" id="plan-pull" onclick="selectPlan('pull')" data-color="#085041">
+            <div class="plan-pick-dot" style="background:#085041;"></div>
+            <div>
+              <div style="font-size:13px;font-weight:500;">Pull day</div>
+              <div style="font-size:11px;color:var(--text-tertiary);">Back · Biceps</div>
+            </div>
+          </div>
+          <div class="plan-pick-item" id="plan-legs" onclick="selectPlan('legs')" data-color="#712B13">
+            <div class="plan-pick-dot" style="background:#712B13;"></div>
+            <div>
+              <div style="font-size:13px;font-weight:500;">Leg day</div>
+              <div style="font-size:11px;color:var(--text-tertiary);">Quads · Hamstrings · Glutes</div>
+            </div>
+          </div>
+          <div class="plan-pick-item" id="plan-upper" onclick="selectPlan('upper')" data-color="#633806">
+            <div class="plan-pick-dot" style="background:#633806;"></div>
+            <div>
+              <div style="font-size:13px;font-weight:500;">Upper body</div>
+              <div style="font-size:11px;color:var(--text-tertiary);">Chest · Back · Shoulders</div>
+            </div>
+          </div>
+          <div class="plan-pick-item" id="plan-full" onclick="selectPlan('full')" data-color="#27500A">
+            <div class="plan-pick-dot" style="background:#27500A;"></div>
+            <div>
+              <div style="font-size:13px;font-weight:500;">Full body</div>
+              <div style="font-size:11px;color:var(--text-tertiary);">All muscle groups</div>
+            </div>
+          </div>
+          <div class="plan-pick-item" id="plan-rest" onclick="selectPlan('rest')" data-color="#888780">
+            <div class="plan-pick-dot" style="background:var(--gray-400);"></div>
+            <div>
+              <div style="font-size:13px;font-weight:500;">Rest day</div>
+              <div style="font-size:11px;color:var(--text-tertiary);">Recovery</div>
+            </div>
+          </div>
+
+          <button class="btn btn-secondary btn-block" style="margin-top:10px;font-size:12px;"
+                  onclick="selectedPlan=null;document.querySelectorAll('.plan-pick-item').forEach(e=>e.classList.remove('active'))">
+            Deselect
+          </button>
+        </div>
+
+        <!-- Upcoming scheduled workouts -->
+        <div class="card">
+          <div class="card-title">Upcoming</div>
+          <div id="upcomingList"></div>
+        </div>
+
+        <!-- This week summary -->
+        <div class="card">
+          <div class="card-title">This week</div>
+          <div id="weekSummary" style="display:flex;flex-direction:column;gap:8px;"></div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Schedule modal -->
+<div class="modal-backdrop" id="scheduleModal">
+  <div class="modal">
+    <div class="modal-title">Schedule workout</div>
+    <div class="modal-date" id="modalDateLabel"></div>
+
+    <div id="modalPlanList">
+      <div class="modal-plan-option" onclick="modalSelectPlan('push')" data-plan="push">
+        <div class="modal-plan-dot" style="background:#534AB7;"></div>Push day
+      </div>
+      <div class="modal-plan-option" onclick="modalSelectPlan('pull')" data-plan="pull">
+        <div class="modal-plan-dot" style="background:#085041;"></div>Pull day
+      </div>
+      <div class="modal-plan-option" onclick="modalSelectPlan('legs')" data-plan="legs">
+        <div class="modal-plan-dot" style="background:#712B13;"></div>Leg day
+      </div>
+      <div class="modal-plan-option" onclick="modalSelectPlan('upper')" data-plan="upper">
+        <div class="modal-plan-dot" style="background:#633806;"></div>Upper body
+      </div>
+      <div class="modal-plan-option" onclick="modalSelectPlan('full')" data-plan="full">
+        <div class="modal-plan-dot" style="background:#27500A;"></div>Full body
+      </div>
+      <div class="modal-plan-option" onclick="modalSelectPlan('rest')" data-plan="rest">
+        <div class="modal-plan-dot" style="background:var(--gray-400);"></div>Rest day
+      </div>
+    </div>
+
+    <div style="margin-top:6px;padding-top:14px;border-top:0.5px solid var(--border);display:flex;gap:8px;">
+      <button class="btn btn-primary" style="flex:1;" id="modalSaveBtn" onclick="saveModalSchedule()">Save</button>
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-secondary" style="color:var(--danger-text);" id="modalRemoveBtn"
+              onclick="removeSchedule()" style="display:none;">Remove</button>
+    </div>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+// ── Plan definitions ──
+const PLANS = {
+  push:  { label: 'Push day',   chipClass: 'chip-push',  color: '#534AB7', dot: '#534AB7' },
+  pull:  { label: 'Pull day',   chipClass: 'chip-pull',  color: '#085041', dot: '#085041' },
+  legs:  { label: 'Leg day',    chipClass: 'chip-legs',  color: '#712B13', dot: '#712B13' },
+  upper: { label: 'Upper body', chipClass: 'chip-upper', color: '#633806', dot: '#633806' },
+  full:  { label: 'Full body',  chipClass: 'chip-full',  color: '#27500A', dot: '#27500A' },
+  rest:  { label: 'Rest day',   chipClass: 'chip-rest',  color: '#888780', dot: '#888780' },
+};
+
+// ── State ──
+// schedule: { 'YYYY-MM-DD': planKey }
+const schedule = {{ schedule_data | tojson }};
+
+
+let viewYear  = new Date().getFullYear();
+let viewMonth = new Date().getMonth(); // 0-indexed
+let selectedPlan = 'push';
+let modalDateKey = null;
+let modalSelectedPlan = null;
+
+// ── Date helpers ──
+function fmtDate(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function offsetDate(d, days) {
+  const r = new Date(d);
+  r.setDate(r.getDate() + days);
+  return r;
+}
+
+function friendlyDate(dateKey) {
+  const [y, m, d] = dateKey.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  return date.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
+const MONTH_NAMES = ['January','February','March','April','May','June',
+                     'July','August','September','October','November','December'];
+const DAY_ABBR = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+// ── Render calendar ──
+function renderCalendar() {
+  document.getElementById('calMonthLabel').textContent =
+    `${MONTH_NAMES[viewMonth]} ${viewYear}`;
+
+  const grid = document.getElementById('calGrid');
+  grid.innerHTML = '';
+
+  const today = fmtDate(new Date());
+
+  // First day of month; adjust so Monday = 0
+  const firstDay = new Date(viewYear, viewMonth, 1);
+  let startDow = firstDay.getDay(); // 0=Sun
+  startDow = startDow === 0 ? 6 : startDow - 1; // convert to Mon=0
+
+  const daysInMonth  = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const daysInPrev   = new Date(viewYear, viewMonth, 0).getDate();
+  const totalCells   = Math.ceil((startDow + daysInMonth) / 7) * 7;
+
+  for (let i = 0; i < totalCells; i++) {
+    let day, month, year, isOther = false;
+
+    if (i < startDow) {
+      // Previous month
+      day   = daysInPrev - startDow + i + 1;
+      month = viewMonth === 0 ? 11 : viewMonth - 1;
+      year  = viewMonth === 0 ? viewYear - 1 : viewYear;
+      isOther = true;
+    } else if (i >= startDow + daysInMonth) {
+      // Next month
+      day   = i - startDow - daysInMonth + 1;
+      month = viewMonth === 11 ? 0 : viewMonth + 1;
+      year  = viewMonth === 11 ? viewYear + 1 : viewYear;
+      isOther = true;
+    } else {
+      day   = i - startDow + 1;
+      month = viewMonth;
+      year  = viewYear;
+    }
+
+    const dateKey = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    const isToday = dateKey === today;
+    const planKey = schedule[dateKey];
+
+    const cell = document.createElement('div');
+    cell.className = 'cal-cell' +
+      (isOther    ? ' other-month' : '') +
+      (isToday    ? ' today'       : '') +
+      (planKey    ? ' has-workout' : '');
+    cell.dataset.datekey = dateKey;
+
+    cell.innerHTML = `
+      <span class="cal-date">${day}</span>
+      ${planKey ? `
+        <div class="cal-workout-chip ${PLANS[planKey].chipClass}">
+          <div class="cal-dot" style="background:${PLANS[planKey].dot};"></div>
+          ${PLANS[planKey].label}
+        </div>` : ''}
+      <span class="cal-add-hint">+ Add</span>
+    `;
+
+    cell.addEventListener('click', () => handleCellClick(dateKey));
+    grid.appendChild(cell);
+  }
+
+  renderUpcoming();
+  renderWeekSummary();
+}
+
+// ── Cell click — either quick-assign if plan selected, or open modal ──
+function handleCellClick(dateKey) {
+  if (selectedPlan) {
+    schedule[dateKey] = selectedPlan;
+    renderCalendar();
+  } else {
+    openModal(dateKey);
+  }
+}
+
+// ── Month navigation ──
+function changeMonth(dir) {
+  viewMonth += dir;
+  if (viewMonth > 11) { viewMonth = 0;  viewYear++; }
+  if (viewMonth < 0)  { viewMonth = 11; viewYear--; }
+  renderCalendar();
+}
+
+// ── Plan selector (side panel) ──
+function selectPlan(key) {
+  selectedPlan = key;
+  document.querySelectorAll('.plan-pick-item').forEach(el => el.classList.remove('active'));
+  document.getElementById(`plan-${key}`)?.classList.add('active');
+}
+
+// ── Modal ──
+function openModal(dateKey) {
+  modalDateKey = dateKey;
+  modalSelectedPlan = dateKey ? (schedule[dateKey] || null) : null;
+
+  document.getElementById('modalDateLabel').textContent =
+    dateKey ? friendlyDate(dateKey) : 'Pick a date';
+
+  // Reset selections
+  document.querySelectorAll('.modal-plan-option').forEach(el => el.classList.remove('selected'));
+  if (modalSelectedPlan) {
+    document.querySelector(`.modal-plan-option[data-plan="${modalSelectedPlan}"]`)
+      ?.classList.add('selected');
+  }
+
+  const removeBtn = document.getElementById('modalRemoveBtn');
+  removeBtn.style.display = (dateKey && schedule[dateKey]) ? 'inline-flex' : 'none';
+
+  document.getElementById('scheduleModal').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('scheduleModal').classList.remove('show');
+  modalDateKey = null;
+  modalSelectedPlan = null;
+}
+
+function modalSelectPlan(key) {
+  modalSelectedPlan = key;
+  document.querySelectorAll('.modal-plan-option').forEach(el => el.classList.remove('selected'));
+  document.querySelector(`.modal-plan-option[data-plan="${key}"]`)?.classList.add('selected');
+}
+
+function saveModalSchedule() {
+  if (!modalDateKey || !modalSelectedPlan) return;
+  schedule[modalDateKey] = modalSelectedPlan;
+  closeModal();
+  renderCalendar();
+}
+
+function removeSchedule() {
+  if (modalDateKey) delete schedule[modalDateKey];
+  closeModal();
+  renderCalendar();
+}
+
+// Click outside modal to close
+document.getElementById('scheduleModal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+// ── Upcoming workouts list ──
+function renderUpcoming() {
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  const upcoming = Object.entries(schedule)
+    .filter(([k]) => {
+      const [y,m,d] = k.split('-').map(Number);
+      return new Date(y, m-1, d) >= today;
+    })
+    .sort(([a],[b]) => a.localeCompare(b))
+    .slice(0, 5);
+
+  const el = document.getElementById('upcomingList');
+  if (upcoming.length === 0) {
+    el.innerHTML = `<p style="font-size:13px;color:var(--text-tertiary);">No upcoming workouts scheduled.</p>`;
+    return;
+  }
+
+  el.innerHTML = upcoming.map(([dateKey, planKey]) => {
+    const [y,m,d] = dateKey.split('-').map(Number);
+    const date = new Date(y, m-1, d);
+    const dayNum   = date.getDate();
+    const monthAbb = date.toLocaleDateString('en-AU', { month: 'short' });
+    const p = PLANS[planKey];
+    return `
+      <div class="upcoming-item">
+        <div class="upcoming-date-badge">
+          <div class="upcoming-date-day">${dayNum}</div>
+          <div class="upcoming-date-month">${monthAbb}</div>
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:500;">${p.label}</div>
+          <div style="font-size:11px;color:var(--text-tertiary);">${date.toLocaleDateString('en-AU',{weekday:'long'})}</div>
+        </div>
+        <button onclick="event.stopPropagation();openModal('${dateKey}')"
+                style="font-size:11px;padding:4px 8px;border-radius:var(--radius-sm);
+                       border:0.5px solid var(--border-md);background:none;
+                       color:var(--text-tertiary);cursor:pointer;">Edit</button>
+      </div>`;
+  }).join('');
+}
+
+// ── This week summary ──
+function renderWeekSummary() {
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const dow = today.getDay() === 0 ? 6 : today.getDay() - 1; // Mon=0
+  const weekStart = new Date(today); weekStart.setDate(today.getDate() - dow);
+
+  const days = Array.from({length:7}, (_, i) => {
+    const d = new Date(weekStart); d.setDate(weekStart.getDate() + i);
+    return { date: d, key: fmtDate(d), label: DAY_ABBR[i] };
+  });
+
+  const el = document.getElementById('weekSummary');
+  el.innerHTML = days.map(({ date, key, label }) => {
+    const planKey = schedule[key];
+    const isToday = fmtDate(new Date()) === key;
+    const isPast  = date < new Date(new Date().setHours(0,0,0,0));
+    return `
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:12px;font-weight:${isToday?'600':'400'};
+                     color:${isToday?'var(--accent)':'var(--text-tertiary)'};
+                     width:28px;flex-shrink:0;">${label}</span>
+        ${planKey
+          ? `<div class="cal-workout-chip ${PLANS[planKey].chipClass}" style="flex:1;">
+               <div class="cal-dot" style="background:${PLANS[planKey].dot};"></div>
+               ${PLANS[planKey].label}
+             </div>`
+          : `<span style="font-size:12px;color:var(--text-tertiary);
+                          ${isPast?'text-decoration:line-through;':''}">
+               ${isPast ? 'No workout' : 'Rest / unscheduled'}
+             </span>`}
+      </div>`;
+  }).join('');
+}
+
+// ── Init ──
+renderCalendar();
+</script>
+</body>
+</html>

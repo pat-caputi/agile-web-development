@@ -11,6 +11,27 @@
     );
   </script>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <style>
+    :root {
+      --r-unranked:  #6B6A64; --r-unranked-bg: rgba(107,106,100,0.12);
+      --r-bronze:    #CD7F32; --r-bronze-bg:   rgba(205,127,50,0.13);
+      --r-silver:    #A8A9AD; --r-silver-bg:   rgba(168,169,173,0.12);
+      --r-gold:      #EF9F27; --r-gold-bg:     rgba(239,159,39,0.13);
+      --r-platinum:  #4DD0C4; --r-platinum-bg: rgba(77,208,196,0.13);
+      --r-diamond:   #8AB4F8; --r-diamond-bg:  rgba(138,180,248,0.14);
+    }
+    .rank-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 10px; border-radius: 6px;
+      font-size: 11.5px; font-weight: 600; white-space: nowrap;
+    }
+    .rb-unranked { background: var(--r-unranked-bg); color: var(--r-unranked); }
+    .rb-bronze   { background: var(--r-bronze-bg);   color: var(--r-bronze); }
+    .rb-silver   { background: var(--r-silver-bg);   color: var(--r-silver); }
+    .rb-gold     { background: var(--r-gold-bg);     color: var(--r-gold); }
+    .rb-platinum { background: var(--r-platinum-bg); color: var(--r-platinum); }
+    .rb-diamond  { background: var(--r-diamond-bg);  color: var(--r-diamond); }
+  </style>
 </head>
 <body>
 <div class="app-shell">
@@ -83,7 +104,17 @@
       <span class="nav-link-text">My ranks</span>
     </a>
   
+    <a href="{{ url_for('calendar') }}" class="nav-link {% if request.endpoint == 'calendar' %}active{% endif %}" data-label="Calendar">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <rect x="2" y="3" width="12" height="11" rx="2" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M5 1v3M11 1v3M2 7h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="nav-link-text">Calendar</span>
+    </a>
+
     <div class="nav-spacer"></div>
+
+    
   
     <!-- Dark mode toggle -->
     <button class="theme-toggle" id="themeToggleBtn" data-label="Dark mode">
@@ -104,20 +135,12 @@
   
     <!-- User profile chip -->
     <a href="{{ url_for('profile') }}" class="nav-user" data-label="Profile">
-      {% if nav_user and nav_user.profile_photo %}
-        <img
-          class="avatar nav-user-avatar"
-          src="{{ url_for('static', filename=nav_user.profile_photo) }}"
-          alt="{{ nav_user.username }} profile photo"
-        >
-      {% else %}
-        <div class="avatar nav-user-avatar">
-          {{ (nav_user.username.split()[0][0] + (nav_user.username.split()[1][0] if nav_user.username.split()|length > 1 else '')).upper() if nav_user else '?' }}
-        </div>
-      {% endif %}
+      <div class="avatar" style="background:var(--accent-light);color:var(--accent-dark);">
+        {{ user.username[0] | upper }}
+      </div>
       <div class="nav-user-info">
-        <div class="nav-user-name">{{ nav_user.username.title() if nav_user else 'Guest' }}</div>
-        <div class="nav-user-rank">Rank #3</div>
+        <div class="nav-user-name">{{ user.username.title() }}</div>
+        <div class="nav-user-rank">Rank #{{ rank if rank else 'N/A' }}</div>
       </div>
     </a>
   
@@ -168,7 +191,8 @@
           </div>
 
           <div class="podium-score">
-            {{ user.weekly_volume|int }} kg
+            {% set t = tier_map.get(user.id, {'icon': '—', 'name': 'Unranked', 'css': 'rb-unranked'}) %}
+            <span class="rank-badge {{ t.css }}" style="font-size:11px;">{{ t.icon }} {{ t.name }}</span>
           </div>
 
           <div class="podium-block"
@@ -193,7 +217,7 @@
             <th style="width:36px;"></th>
             <th>User</th>
             <th>Workouts</th>
-            <th class="right">Volume</th>
+            <th class="right">Overall Rank</th>
             <th class="right" style="width:44px;">+/−</th>
           </tr>
         </thead>
@@ -219,8 +243,9 @@
                 {{ user.workouts_count }}
               </td>
 
-              <td style="text-align:right;font-weight:500;">
-                {{ user.weekly_volume|int }} kg
+              <td style="text-align:right;">
+                {% set t = tier_map.get(user.id, {'icon': '—', 'name': 'Unranked', 'css': 'rb-unranked'}) %}
+                <span class="rank-badge {{ t.css }}">{{ t.icon }} {{ t.name }}</span>
               </td>
 
               <td style="text-align:right;">

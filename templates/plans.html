@@ -12,6 +12,7 @@
   </script>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   <style>
+    /* ── Modals ── */
     .modal-backdrop {
       display:none;position:fixed;inset:0;
       background:rgba(0,0,0,0.45);z-index:100;
@@ -40,7 +41,6 @@
     }
     .delete-btn:hover { background:var(--danger-bg); }
 
-    /* Create plan modal exercise checklist */
     .ex-check-item {
       display:flex;align-items:center;gap:10px;
       padding:7px 10px;border-radius:var(--radius-md);cursor:pointer;
@@ -64,120 +64,149 @@
     .cat-arms      { background:#F1EFE8;color:#444441; }
     .cat-core      { background:#FBEAF0;color:#72243E; }
     .cat-cardio    { background:#EAF3DE;color:#27500A; }
+
+    /* ── Drag and drop (Issue #11) ── */
+    .exercise-list-dnd {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-height: 20px;
+    }
+
+    .dnd-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: var(--radius-md);
+      background: var(--surface-2);
+      border: 0.5px solid var(--border);
+      cursor: grab;
+      transition: background 0.12s, border-color 0.12s, opacity 0.15s, box-shadow 0.15s;
+      user-select: none;
+    }
+
+    .dnd-item:active { cursor: grabbing; }
+
+    .dnd-item.dragging {
+      opacity: 0.4;
+      border-color: var(--accent);
+    }
+
+    .dnd-item.drag-over {
+      background: var(--accent-light);
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1.5px var(--accent-light);
+    }
+
+    .dnd-handle {
+      display: flex;
+      flex-direction: column;
+      gap: 2.5px;
+      flex-shrink: 0;
+      opacity: 0.35;
+      transition: opacity 0.12s;
+      padding: 2px;
+    }
+
+    .dnd-item:hover .dnd-handle { opacity: 0.7; }
+
+    .dnd-handle span {
+      display: block;
+      width: 14px;
+      height: 1.5px;
+      background: currentColor;
+      border-radius: 1px;
+    }
+
+    .dnd-item-name {
+      font-size: 13px;
+      color: var(--text-secondary);
+      flex: 1;
+    }
+
+    /* Ghost placeholder that appears while dragging */
+    .dnd-placeholder {
+      height: 38px;
+      border: 1.5px dashed var(--accent);
+      border-radius: var(--radius-md);
+      background: var(--accent-light);
+      opacity: 0.5;
+    }
+
+    /* Drag hint label */
+    .drag-hint {
+      font-size: 10.5px;
+      color: var(--text-tertiary);
+      margin-top: 6px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
   </style>
 </head>
 <body>
 <div class="app-shell">
 
   <nav class="sidebar">
-
     <div class="sidebar-logo">
       <div class="sidebar-logo-icon">L</div>
       <span class="sidebar-logo-text">Lift<span>AGILE</span></span>
     </div>
-    
     <button class="sidebar-toggle" id="sidebarCollapseBtn" title="Collapse sidebar">
       <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-        <path d="M9 11L5 7l4-4" stroke="currentColor" stroke-width="1.5"
-              stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M9 11L5 7l4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </button>
-  
-    <!-- Navigation links -->
-    <!-- Add data-label for the collapsed tooltip -->
-    <a href="{{ url_for('dashboard') }}"
-       class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}"
-       data-label="Dashboard">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <rect x="1" y="1" width="6" height="6" rx="1.5" fill="currentColor"/>
-        <rect x="9" y="1" width="6" height="6" rx="1.5" fill="currentColor"/>
-        <rect x="1" y="9" width="6" height="6" rx="1.5" fill="currentColor"/>
-        <rect x="9" y="9" width="6" height="6" rx="1.5" fill="currentColor"/>
-      </svg>
+    <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}" data-label="Dashboard">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="9" y="1" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="1" y="9" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="9" y="9" width="6" height="6" rx="1.5" fill="currentColor"/></svg>
       <span class="nav-link-text">Dashboard</span>
     </a>
-  
-    <a href="{{ url_for('log_workout') }}"
-       class="nav-link {% if request.endpoint == 'log_workout' %}active{% endif %}"
-       data-label="Log workout">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <path d="M2 8h2m8 0h2M4 8V5.5a1.5 1.5 0 013 0v5a1.5 1.5 0 003 0V5.5"
-              stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-      </svg>
+    <a href="{{ url_for('log_workout') }}" class="nav-link {% if request.endpoint == 'log_workout' %}active{% endif %}" data-label="Log workout">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 8h2m8 0h2M4 8V5.5a1.5 1.5 0 013 0v5a1.5 1.5 0 003 0V5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
       <span class="nav-link-text">Log workout</span>
     </a>
-  
-    <a href="{{ url_for('plans') }}"
-       class="nav-link {% if request.endpoint == 'plans' %}active{% endif %}"
-       data-label="My plans">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/>
-        <path d="M5 6h6M5 9h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-      </svg>
+    <a href="{{ url_for('plans') }}" class="nav-link {% if request.endpoint == 'plans' %}active{% endif %}" data-label="My plans">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 6h6M5 9h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
       <span class="nav-link-text">My plans</span>
     </a>
-  
-    <a href="{{ url_for('leaderboard') }}"
-       class="nav-link {% if request.endpoint == 'leaderboard' %}active{% endif %}"
-       data-label="Leaderboard">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <path d="M3 13V8m5 5V4m5 9V7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-      </svg>
+    <a href="{{ url_for('leaderboard') }}" class="nav-link {% if request.endpoint == 'leaderboard' %}active{% endif %}" data-label="Leaderboard">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 13V8m5 5V4m5 9V7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
       <span class="nav-link-text">Leaderboard</span>
     </a>
-  
-    <a href="{{ url_for('ranks') }}"
-       class="nav-link {% if request.endpoint == 'ranks' %}active{% endif %}"
-       data-label="My ranks">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <path d="M8 2l1.8 3.6L14 6.3l-3 2.9.7 4.1L8 11.4l-3.7 1.9.7-4.1-3-2.9 4.2-.7z"
-              stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
-      </svg>
+    <a href="{{ url_for('ranks') }}" class="nav-link {% if request.endpoint == 'ranks' %}active{% endif %}" data-label="My ranks">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2l1.8 3.6L14 6.3l-3 2.9.7 4.1L8 11.4l-3.7 1.9.7-4.1-3-2.9 4.2-.7z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
       <span class="nav-link-text">My ranks</span>
     </a>
-  
-    <div class="nav-spacer"></div>
-  
-    <!-- Dark mode toggle -->
-    <button class="theme-toggle" id="themeToggleBtn" data-label="Dark mode">
-      <!-- Sun icon (shown in dark mode — click to go light) -->
-      <svg id="themeIconDark" width="16" height="16" viewBox="0 0 16 16" fill="none"
-           style="display:none;">
-        <circle cx="8" cy="8" r="3.5" stroke="currentColor" stroke-width="1.5"/>
-        <path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3.1 3.1l1 1M11.9 11.9l1 1M3.1 12.9l1-1M11.9 4.1l1-1"
-              stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+    <a href="{{ url_for('calendar') }}" class="nav-link {% if request.endpoint == 'calendar' %}active{% endif %}" data-label="Calendar">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <rect x="2" y="3" width="12" height="11" rx="2" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M5 1v3M11 1v3M2 7h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
       </svg>
-      <!-- Moon icon (shown in light mode — click to go dark) -->
+      <span class="nav-link-text">Calendar</span>
+    </a>
+    <div class="nav-spacer"></div>
+    <button class="theme-toggle" id="themeToggleBtn" data-label="Dark mode">
+      <svg id="themeIconDark" width="16" height="16" viewBox="0 0 16 16" fill="none" style="display:none;">
+        <circle cx="8" cy="8" r="3.5" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3.1 3.1l1 1M11.9 11.9l1 1M3.1 12.9l1-1M11.9 4.1l1-1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
       <svg id="themeIconLight" width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <path d="M13.5 9.5A5.5 5.5 0 016.5 2.5a5.5 5.5 0 100 11 5.5 5.5 0 007-4z"
-              stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M13.5 9.5A5.5 5.5 0 016.5 2.5a5.5 5.5 0 100 11 5.5 5.5 0 007-4z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
       </svg>
       <span class="theme-toggle-text" id="themeToggleLabel">Dark mode</span>
     </button>
-  
     <!-- User profile chip -->
     <a href="{{ url_for('profile') }}" class="nav-user" data-label="Profile">
-      {% if nav_user and nav_user.profile_photo %}
-        <img
-          class="avatar nav-user-avatar"
-          src="{{ url_for('static', filename=nav_user.profile_photo) }}"
-          alt="{{ nav_user.username }} profile photo"
-        >
-      {% else %}
-        <div class="avatar nav-user-avatar">
-          {{ (nav_user.username.split()[0][0] + (nav_user.username.split()[1][0] if nav_user.username.split()|length > 1 else '')).upper() if nav_user else '?' }}
-        </div>
-      {% endif %}
+      <div class="avatar" style="background:var(--accent-light);color:var(--accent-dark);">
+        {{ user.username[0] | upper }}
+      </div>
       <div class="nav-user-info">
-        <div class="nav-user-name">{{ nav_user.username.title() if nav_user else 'Guest' }}</div>
-        <div class="nav-user-rank">Rank #3</div>
+        <div class="nav-user-name">{{ user.username.title() }}</div>
+        <div class="nav-user-rank">Rank #{{ rank if rank else 'N/A' }}</div>
       </div>
     </a>
-  
   </nav>
-  
- 
-  
 
   <main class="main">
     <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;">
@@ -199,31 +228,22 @@
           <div class="plan-card-title">Push day</div>
           <div style="display:flex;gap:6px;">
             <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="openModal('Push day')">Edit</button>
-            <button class="delete-btn" onclick="confirmDelete(this, 'Push day')">Delete</button>
+            <button class="delete-btn" onclick="confirmDelete(this,'Push day')">Delete</button>
           </div>
         </div>
         <div class="plan-card-meta">6 exercises · ~60 min · Last used 2 days ago</div>
         <div style="margin-bottom:12px;">
-          <span class="plan-tag">Chest</span>
-          <span class="plan-tag">Shoulders</span>
-          <span class="plan-tag">Triceps</span>
+          <span class="plan-tag">Chest</span><span class="plan-tag">Shoulders</span><span class="plan-tag">Triceps</span>
         </div>
         <div style="padding-top:12px;border-top:0.5px solid var(--border);">
-          <div style="font-size:11px;color:var(--text-tertiary);margin-bottom:6px;letter-spacing:0.02em;">EXERCISES</div>
-          <div style="display:flex;flex-direction:column;gap:4px;">
-            <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);">
-              <div class="ex-icon cat-chest" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">B</div> Bench press
-            </div>
-            <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);">
-              <div class="ex-icon cat-chest" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">I</div> Incline bench press
-            </div>
-            <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);">
-              <div class="ex-icon cat-shoulders" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">O</div> Overhead press
-            </div>
-            <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);">
-              <div class="ex-icon cat-shoulders" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">L</div> Lateral raises
-            </div>
-            <div style="font-size:12px;color:var(--text-tertiary);padding-left:28px;">+ 2 more (Tricep pushdown, Cable fly)</div>
+          <div style="font-size:11px;color:var(--text-tertiary);margin-bottom:6px;letter-spacing:0.02em;">EXERCISES <span style="font-weight:400;opacity:0.7;">· drag to reorder</span></div>
+          <div class="exercise-list-dnd" id="dnd-push">
+            <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-chest" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">B</div><span class="dnd-item-name">Bench press</span></div>
+            <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-chest" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">I</div><span class="dnd-item-name">Incline bench press</span></div>
+            <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-shoulders" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">O</div><span class="dnd-item-name">Overhead press</span></div>
+            <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-shoulders" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">L</div><span class="dnd-item-name">Lateral raises</span></div>
+            <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-arms" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">T</div><span class="dnd-item-name">Tricep pushdown</span></div>
+            <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-chest" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">C</div><span class="dnd-item-name">Cable fly</span></div>
           </div>
         </div>
         <div style="margin-top:14px;">
@@ -240,23 +260,22 @@
           <div class="plan-card-title">Pull day</div>
           <div style="display:flex;gap:6px;">
             <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="openModal('Pull day')">Edit</button>
-            <button class="delete-btn" onclick="confirmDelete(this, 'Pull day')">Delete</button>
+            <button class="delete-btn" onclick="confirmDelete(this,'Pull day')">Delete</button>
           </div>
         </div>
         <div class="plan-card-meta">6 exercises · ~55 min · Last used 3 days ago</div>
         <div style="margin-bottom:12px;">
-          <span class="plan-tag">Back</span>
-          <span class="plan-tag">Biceps</span>
-          <span class="plan-tag">Rear delts</span>
+          <span class="plan-tag">Back</span><span class="plan-tag">Biceps</span><span class="plan-tag">Rear delts</span>
         </div>
         <div style="padding-top:12px;border-top:0.5px solid var(--border);">
-          <div style="font-size:11px;color:var(--text-tertiary);margin-bottom:6px;letter-spacing:0.02em;">EXERCISES</div>
-          <div style="display:flex;flex-direction:column;gap:4px;">
-            <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);"><div class="ex-icon cat-back" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">P</div> Pull up</div>
-            <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);"><div class="ex-icon cat-back" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">R</div> Barbell row</div>
-            <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);"><div class="ex-icon cat-back" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">L</div> Lat pulldown</div>
-            <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);"><div class="ex-icon cat-arms" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">B</div> Bicep curl</div>
-            <div style="font-size:12px;color:var(--text-tertiary);padding-left:28px;">+ 2 more (Hammer curl, Face pull)</div>
+          <div style="font-size:11px;color:var(--text-tertiary);margin-bottom:6px;letter-spacing:0.02em;">EXERCISES <span style="font-weight:400;opacity:0.7;">· drag to reorder</span></div>
+          <div class="exercise-list-dnd" id="dnd-pull">
+            <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-back" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">P</div><span class="dnd-item-name">Pull up</span></div>
+            <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-back" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">R</div><span class="dnd-item-name">Barbell row</span></div>
+            <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-back" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">L</div><span class="dnd-item-name">Lat pulldown</span></div>
+            <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-arms" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">B</div><span class="dnd-item-name">Bicep curl</span></div>
+            <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-arms" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">H</div><span class="dnd-item-name">Hammer curl</span></div>
+            <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-back" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">F</div><span class="dnd-item-name">Face pull</span></div>
           </div>
         </div>
         <div style="margin-top:14px;">
@@ -273,24 +292,23 @@
           <div class="plan-card-title">Leg day</div>
           <div style="display:flex;gap:6px;">
             <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="openModal('Leg day')">Edit</button>
-            <button class="delete-btn" onclick="confirmDelete(this, 'Leg day')">Delete</button>
+            <button class="delete-btn" onclick="confirmDelete(this,'Leg day')">Delete</button>
           </div>
         </div>
         <div class="plan-card-meta">7 exercises · ~65 min · Last used 4 days ago</div>
         <div style="margin-bottom:12px;">
-          <span class="plan-tag">Quads</span>
-          <span class="plan-tag">Hamstrings</span>
-          <span class="plan-tag">Glutes</span>
-          <span class="plan-tag">Calves</span>
+          <span class="plan-tag">Quads</span><span class="plan-tag">Hamstrings</span><span class="plan-tag">Glutes</span><span class="plan-tag">Calves</span>
         </div>
         <div style="padding-top:12px;border-top:0.5px solid var(--border);">
-          <div style="font-size:11px;color:var(--text-tertiary);margin-bottom:6px;letter-spacing:0.02em;">EXERCISES</div>
-          <div style="display:flex;flex-direction:column;gap:4px;">
-            <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);"><div class="ex-icon cat-legs" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">S</div> Barbell squat</div>
-            <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);"><div class="ex-icon cat-legs" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">L</div> Leg press</div>
-            <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);"><div class="ex-icon cat-legs" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">R</div> Romanian deadlift</div>
-            <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);"><div class="ex-icon cat-legs" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">L</div> Leg curl</div>
-            <div style="font-size:12px;color:var(--text-tertiary);padding-left:28px;">+ 3 more (Leg extension, Hip thrust, Calf raise)</div>
+          <div style="font-size:11px;color:var(--text-tertiary);margin-bottom:6px;letter-spacing:0.02em;">EXERCISES <span style="font-weight:400;opacity:0.7;">· drag to reorder</span></div>
+          <div class="exercise-list-dnd" id="dnd-legs">
+            <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-legs" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">S</div><span class="dnd-item-name">Barbell squat</span></div>
+            <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-legs" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">L</div><span class="dnd-item-name">Leg press</span></div>
+            <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-legs" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">R</div><span class="dnd-item-name">Romanian deadlift</span></div>
+            <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-legs" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">L</div><span class="dnd-item-name">Leg curl</span></div>
+            <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-legs" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">L</div><span class="dnd-item-name">Leg extension</span></div>
+            <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-legs" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">H</div><span class="dnd-item-name">Hip thrust</span></div>
+            <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-legs" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">C</div><span class="dnd-item-name">Calf raise</span></div>
           </div>
         </div>
         <div style="margin-top:14px;">
@@ -307,24 +325,24 @@
           <div class="plan-card-title">Upper body</div>
           <div style="display:flex;gap:6px;">
             <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="openModal('Upper body')">Edit</button>
-            <button class="delete-btn" onclick="confirmDelete(this, 'Upper body')">Delete</button>
+            <button class="delete-btn" onclick="confirmDelete(this,'Upper body')">Delete</button>
           </div>
         </div>
         <div class="plan-card-meta">8 exercises · ~70 min · Last used 1 week ago</div>
         <div style="margin-bottom:12px;">
-          <span class="plan-tag">Chest</span>
-          <span class="plan-tag">Back</span>
-          <span class="plan-tag">Shoulders</span>
-          <span class="plan-tag">Arms</span>
+          <span class="plan-tag">Chest</span><span class="plan-tag">Back</span><span class="plan-tag">Shoulders</span><span class="plan-tag">Arms</span>
         </div>
         <div style="padding-top:12px;border-top:0.5px solid var(--border);">
-          <div style="font-size:11px;color:var(--text-tertiary);margin-bottom:6px;letter-spacing:0.02em;">EXERCISES</div>
-          <div style="display:flex;flex-direction:column;gap:4px;">
-            <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);"><div class="ex-icon cat-chest" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">B</div> Bench press</div>
-            <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);"><div class="ex-icon cat-back" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">R</div> Barbell row</div>
-            <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);"><div class="ex-icon cat-shoulders" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">O</div> Overhead press</div>
-            <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);"><div class="ex-icon cat-back" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">L</div> Lat pulldown</div>
-            <div style="font-size:12px;color:var(--text-tertiary);padding-left:28px;">+ 4 more</div>
+          <div style="font-size:11px;color:var(--text-tertiary);margin-bottom:6px;letter-spacing:0.02em;">EXERCISES <span style="font-weight:400;opacity:0.7;">· drag to reorder</span></div>
+          <div class="exercise-list-dnd" id="dnd-upper">
+            <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-chest" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">B</div><span class="dnd-item-name">Bench press</span></div>
+            <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-back" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">R</div><span class="dnd-item-name">Barbell row</span></div>
+            <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-shoulders" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">O</div><span class="dnd-item-name">Overhead press</span></div>
+            <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-back" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">L</div><span class="dnd-item-name">Lat pulldown</span></div>
+            <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-arms" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">B</div><span class="dnd-item-name">Bicep curl</span></div>
+            <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-arms" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">T</div><span class="dnd-item-name">Tricep pushdown</span></div>
+            <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-shoulders" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">L</div><span class="dnd-item-name">Lateral raises</span></div>
+            <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-back" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">F</div><span class="dnd-item-name">Face pull</span></div>
           </div>
         </div>
         <div style="margin-top:14px;">
@@ -341,23 +359,22 @@
           <div class="plan-card-title">Arms &amp; core</div>
           <div style="display:flex;gap:6px;">
             <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="openModal('Arms & core')">Edit</button>
-            <button class="delete-btn" onclick="confirmDelete(this, 'Arms & core')">Delete</button>
+            <button class="delete-btn" onclick="confirmDelete(this,'Arms & core')">Delete</button>
           </div>
         </div>
         <div class="plan-card-meta">6 exercises · ~45 min · Last used 5 days ago</div>
         <div style="margin-bottom:12px;">
-          <span class="plan-tag">Biceps</span>
-          <span class="plan-tag">Triceps</span>
-          <span class="plan-tag">Core</span>
+          <span class="plan-tag">Biceps</span><span class="plan-tag">Triceps</span><span class="plan-tag">Core</span>
         </div>
         <div style="padding-top:12px;border-top:0.5px solid var(--border);">
-          <div style="font-size:11px;color:var(--text-tertiary);margin-bottom:6px;letter-spacing:0.02em;">EXERCISES</div>
-          <div style="display:flex;flex-direction:column;gap:4px;">
-            <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);"><div class="ex-icon cat-arms" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">B</div> Barbell curl</div>
-            <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);"><div class="ex-icon cat-arms" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">S</div> Skull crusher</div>
-            <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);"><div class="ex-icon cat-arms" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">H</div> Hammer curl</div>
-            <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);"><div class="ex-icon cat-core" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">P</div> Plank</div>
-            <div style="font-size:12px;color:var(--text-tertiary);padding-left:28px;">+ 2 more (Cable crunch, Hanging leg raise)</div>
+          <div style="font-size:11px;color:var(--text-tertiary);margin-bottom:6px;letter-spacing:0.02em;">EXERCISES <span style="font-weight:400;opacity:0.7;">· drag to reorder</span></div>
+          <div class="exercise-list-dnd" id="dnd-arms">
+            <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-arms" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">B</div><span class="dnd-item-name">Barbell curl</span></div>
+            <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-arms" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">S</div><span class="dnd-item-name">Skull crusher</span></div>
+            <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-arms" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">H</div><span class="dnd-item-name">Hammer curl</span></div>
+            <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-arms" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">T</div><span class="dnd-item-name">Tricep pushdown</span></div>
+            <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-core" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">P</div><span class="dnd-item-name">Plank</span></div>
+            <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-core" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">C</div><span class="dnd-item-name">Cable crunch</span></div>
           </div>
         </div>
         <div style="margin-top:14px;">
@@ -374,24 +391,24 @@
           <div class="plan-card-title">Full body</div>
           <div style="display:flex;gap:6px;">
             <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="openModal('Full body')">Edit</button>
-            <button class="delete-btn" onclick="confirmDelete(this, 'Full body')">Delete</button>
+            <button class="delete-btn" onclick="confirmDelete(this,'Full body')">Delete</button>
           </div>
         </div>
         <div class="plan-card-meta">8 exercises · ~75 min · Last used 2 weeks ago</div>
         <div style="margin-bottom:12px;">
-          <span class="plan-tag">Chest</span>
-          <span class="plan-tag">Back</span>
-          <span class="plan-tag">Legs</span>
-          <span class="plan-tag">Shoulders</span>
+          <span class="plan-tag">Chest</span><span class="plan-tag">Back</span><span class="plan-tag">Legs</span><span class="plan-tag">Shoulders</span>
         </div>
         <div style="padding-top:12px;border-top:0.5px solid var(--border);">
-          <div style="font-size:11px;color:var(--text-tertiary);margin-bottom:6px;letter-spacing:0.02em;">EXERCISES</div>
-          <div style="display:flex;flex-direction:column;gap:4px;">
-            <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);"><div class="ex-icon cat-legs" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">S</div> Barbell squat</div>
-            <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);"><div class="ex-icon cat-chest" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">B</div> Bench press</div>
-            <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);"><div class="ex-icon cat-back" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">D</div> Deadlift</div>
-            <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);"><div class="ex-icon cat-back" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">P</div> Pull up</div>
-            <div style="font-size:12px;color:var(--text-tertiary);padding-left:28px;">+ 4 more</div>
+          <div style="font-size:11px;color:var(--text-tertiary);margin-bottom:6px;letter-spacing:0.02em;">EXERCISES <span style="font-weight:400;opacity:0.7;">· drag to reorder</span></div>
+          <div class="exercise-list-dnd" id="dnd-full">
+            <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-legs" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">S</div><span class="dnd-item-name">Barbell squat</span></div>
+            <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-chest" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">B</div><span class="dnd-item-name">Bench press</span></div>
+            <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-back" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">D</div><span class="dnd-item-name">Deadlift</span></div>
+            <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-back" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">P</div><span class="dnd-item-name">Pull up</span></div>
+            <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-shoulders" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">O</div><span class="dnd-item-name">Overhead press</span></div>
+            <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-legs" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">L</div><span class="dnd-item-name">Leg press</span></div>
+            <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-arms" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">B</div><span class="dnd-item-name">Bicep curl</span></div>
+            <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-core" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">P</div><span class="dnd-item-name">Plank</span></div>
           </div>
         </div>
         <div style="margin-top:14px;">
@@ -416,83 +433,64 @@
   </main>
 </div>
 
-<!-- Create / Edit plan modal -->
+<!-- Create / Edit plan modal (unchanged) -->
 <div class="modal-backdrop" id="planModal">
   <div class="modal">
     <div class="modal-title" id="modalTitle">Create new plan</div>
     <div class="modal-sub" id="modalSub">Choose a name and pick exercises</div>
-
-    <!-- Plan name -->
     <div style="margin-bottom:14px;">
       <label class="field-label" for="planName">Plan name</label>
       <input type="text" class="field-input" id="planName" placeholder="e.g. Push day, Leg day…">
     </div>
-
-    <!-- Estimated duration -->
     <div style="margin-bottom:14px;">
       <label class="field-label" for="planDuration">Estimated duration (minutes)</label>
       <input type="number" class="field-input" id="planDuration" placeholder="e.g. 60" min="1">
     </div>
-
-    <!-- Exercise picker -->
     <div style="margin-bottom:14px;">
       <label class="field-label">Select exercises</label>
-      <input type="text" class="field-input" placeholder="Search exercises…"
-             oninput="filterModalExercises(this.value)"
-             style="margin-bottom:8px;">
-      <div id="modalExPicker"
-           style="max-height:280px;overflow-y:auto;border:0.5px solid var(--border-md);
-                  border-radius:var(--radius-md);padding:4px;">
-
+      <input type="text" class="field-input" placeholder="Search exercises…" oninput="filterModalExercises(this.value)" style="margin-bottom:8px;">
+      <div id="modalExPicker" style="max-height:280px;overflow-y:auto;border:0.5px solid var(--border-md);border-radius:var(--radius-md);padding:4px;">
         <div style="font-size:10px;color:var(--text-tertiary);letter-spacing:0.06em;padding:8px 10px 4px;font-weight:600;">CHEST</div>
-        <label class="ex-check-item" data-name="bench press" data-cat="chest"><input type="checkbox" value="Bench press"> <span style="font-size:13px;">Bench press</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Barbell</span></label>
-        <label class="ex-check-item" data-name="incline bench press" data-cat="chest"><input type="checkbox" value="Incline bench press"> <span style="font-size:13px;">Incline bench press</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Barbell</span></label>
-        <label class="ex-check-item" data-name="dumbbell chest fly" data-cat="chest"><input type="checkbox" value="Dumbbell chest fly"> <span style="font-size:13px;">Dumbbell chest fly</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Dumbbell</span></label>
-        <label class="ex-check-item" data-name="cable fly" data-cat="chest"><input type="checkbox" value="Cable fly"> <span style="font-size:13px;">Cable fly</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Cable</span></label>
-        <label class="ex-check-item" data-name="push up" data-cat="chest"><input type="checkbox" value="Push up"> <span style="font-size:13px;">Push up</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Bodyweight</span></label>
-
+        <label class="ex-check-item" data-name="bench press"><input type="checkbox" value="Bench press"> <span style="font-size:13px;">Bench press</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Barbell</span></label>
+        <label class="ex-check-item" data-name="incline bench press"><input type="checkbox" value="Incline bench press"> <span style="font-size:13px;">Incline bench press</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Barbell</span></label>
+        <label class="ex-check-item" data-name="dumbbell chest fly"><input type="checkbox" value="Dumbbell chest fly"> <span style="font-size:13px;">Dumbbell chest fly</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Dumbbell</span></label>
+        <label class="ex-check-item" data-name="cable fly"><input type="checkbox" value="Cable fly"> <span style="font-size:13px;">Cable fly</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Cable</span></label>
+        <label class="ex-check-item" data-name="push up"><input type="checkbox" value="Push up"> <span style="font-size:13px;">Push up</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Bodyweight</span></label>
         <div style="font-size:10px;color:var(--text-tertiary);letter-spacing:0.06em;padding:8px 10px 4px;font-weight:600;">BACK</div>
-        <label class="ex-check-item" data-name="pull up" data-cat="back"><input type="checkbox" value="Pull up"> <span style="font-size:13px;">Pull up</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Bodyweight</span></label>
-        <label class="ex-check-item" data-name="barbell row" data-cat="back"><input type="checkbox" value="Barbell row"> <span style="font-size:13px;">Barbell row</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Barbell</span></label>
-        <label class="ex-check-item" data-name="lat pulldown" data-cat="back"><input type="checkbox" value="Lat pulldown"> <span style="font-size:13px;">Lat pulldown</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Cable</span></label>
-        <label class="ex-check-item" data-name="seated cable row" data-cat="back"><input type="checkbox" value="Seated cable row"> <span style="font-size:13px;">Seated cable row</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Cable</span></label>
-        <label class="ex-check-item" data-name="deadlift" data-cat="back"><input type="checkbox" value="Deadlift"> <span style="font-size:13px;">Deadlift</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Barbell</span></label>
-        <label class="ex-check-item" data-name="face pull" data-cat="back"><input type="checkbox" value="Face pull"> <span style="font-size:13px;">Face pull</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Cable</span></label>
-
+        <label class="ex-check-item" data-name="pull up"><input type="checkbox" value="Pull up"> <span style="font-size:13px;">Pull up</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Bodyweight</span></label>
+        <label class="ex-check-item" data-name="barbell row"><input type="checkbox" value="Barbell row"> <span style="font-size:13px;">Barbell row</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Barbell</span></label>
+        <label class="ex-check-item" data-name="lat pulldown"><input type="checkbox" value="Lat pulldown"> <span style="font-size:13px;">Lat pulldown</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Cable</span></label>
+        <label class="ex-check-item" data-name="seated cable row"><input type="checkbox" value="Seated cable row"> <span style="font-size:13px;">Seated cable row</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Cable</span></label>
+        <label class="ex-check-item" data-name="deadlift"><input type="checkbox" value="Deadlift"> <span style="font-size:13px;">Deadlift</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Barbell</span></label>
+        <label class="ex-check-item" data-name="face pull"><input type="checkbox" value="Face pull"> <span style="font-size:13px;">Face pull</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Cable</span></label>
         <div style="font-size:10px;color:var(--text-tertiary);letter-spacing:0.06em;padding:8px 10px 4px;font-weight:600;">LEGS</div>
-        <label class="ex-check-item" data-name="barbell squat" data-cat="legs"><input type="checkbox" value="Barbell squat"> <span style="font-size:13px;">Barbell squat</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Barbell</span></label>
-        <label class="ex-check-item" data-name="leg press" data-cat="legs"><input type="checkbox" value="Leg press"> <span style="font-size:13px;">Leg press</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Machine</span></label>
-        <label class="ex-check-item" data-name="romanian deadlift" data-cat="legs"><input type="checkbox" value="Romanian deadlift"> <span style="font-size:13px;">Romanian deadlift</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Barbell</span></label>
-        <label class="ex-check-item" data-name="leg curl" data-cat="legs"><input type="checkbox" value="Leg curl"> <span style="font-size:13px;">Leg curl</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Machine</span></label>
-        <label class="ex-check-item" data-name="leg extension" data-cat="legs"><input type="checkbox" value="Leg extension"> <span style="font-size:13px;">Leg extension</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Machine</span></label>
-        <label class="ex-check-item" data-name="hip thrust" data-cat="legs"><input type="checkbox" value="Hip thrust"> <span style="font-size:13px;">Hip thrust</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Barbell</span></label>
-        <label class="ex-check-item" data-name="calf raise" data-cat="legs"><input type="checkbox" value="Calf raise"> <span style="font-size:13px;">Calf raise</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Machine</span></label>
-
+        <label class="ex-check-item" data-name="barbell squat"><input type="checkbox" value="Barbell squat"> <span style="font-size:13px;">Barbell squat</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Barbell</span></label>
+        <label class="ex-check-item" data-name="leg press"><input type="checkbox" value="Leg press"> <span style="font-size:13px;">Leg press</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Machine</span></label>
+        <label class="ex-check-item" data-name="romanian deadlift"><input type="checkbox" value="Romanian deadlift"> <span style="font-size:13px;">Romanian deadlift</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Barbell</span></label>
+        <label class="ex-check-item" data-name="leg curl"><input type="checkbox" value="Leg curl"> <span style="font-size:13px;">Leg curl</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Machine</span></label>
+        <label class="ex-check-item" data-name="leg extension"><input type="checkbox" value="Leg extension"> <span style="font-size:13px;">Leg extension</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Machine</span></label>
+        <label class="ex-check-item" data-name="hip thrust"><input type="checkbox" value="Hip thrust"> <span style="font-size:13px;">Hip thrust</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Barbell</span></label>
+        <label class="ex-check-item" data-name="calf raise"><input type="checkbox" value="Calf raise"> <span style="font-size:13px;">Calf raise</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Machine</span></label>
         <div style="font-size:10px;color:var(--text-tertiary);letter-spacing:0.06em;padding:8px 10px 4px;font-weight:600;">SHOULDERS</div>
-        <label class="ex-check-item" data-name="overhead press" data-cat="shoulders"><input type="checkbox" value="Overhead press"> <span style="font-size:13px;">Overhead press</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Barbell</span></label>
-        <label class="ex-check-item" data-name="lateral raises" data-cat="shoulders"><input type="checkbox" value="Lateral raises"> <span style="font-size:13px;">Lateral raises</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Dumbbell</span></label>
-        <label class="ex-check-item" data-name="dumbbell shoulder press" data-cat="shoulders"><input type="checkbox" value="Dumbbell shoulder press"> <span style="font-size:13px;">Dumbbell shoulder press</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Dumbbell</span></label>
-        <label class="ex-check-item" data-name="rear delt fly" data-cat="shoulders"><input type="checkbox" value="Rear delt fly"> <span style="font-size:13px;">Rear delt fly</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Dumbbell</span></label>
-        <label class="ex-check-item" data-name="arnold press" data-cat="shoulders"><input type="checkbox" value="Arnold press"> <span style="font-size:13px;">Arnold press</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Dumbbell</span></label>
-
+        <label class="ex-check-item" data-name="overhead press"><input type="checkbox" value="Overhead press"> <span style="font-size:13px;">Overhead press</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Barbell</span></label>
+        <label class="ex-check-item" data-name="lateral raises"><input type="checkbox" value="Lateral raises"> <span style="font-size:13px;">Lateral raises</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Dumbbell</span></label>
+        <label class="ex-check-item" data-name="rear delt fly"><input type="checkbox" value="Rear delt fly"> <span style="font-size:13px;">Rear delt fly</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Dumbbell</span></label>
+        <label class="ex-check-item" data-name="arnold press"><input type="checkbox" value="Arnold press"> <span style="font-size:13px;">Arnold press</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Dumbbell</span></label>
         <div style="font-size:10px;color:var(--text-tertiary);letter-spacing:0.06em;padding:8px 10px 4px;font-weight:600;">ARMS</div>
-        <label class="ex-check-item" data-name="bicep curl" data-cat="arms"><input type="checkbox" value="Bicep curl"> <span style="font-size:13px;">Bicep curl</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Dumbbell</span></label>
-        <label class="ex-check-item" data-name="barbell curl" data-cat="arms"><input type="checkbox" value="Barbell curl"> <span style="font-size:13px;">Barbell curl</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Barbell</span></label>
-        <label class="ex-check-item" data-name="hammer curl" data-cat="arms"><input type="checkbox" value="Hammer curl"> <span style="font-size:13px;">Hammer curl</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Dumbbell</span></label>
-        <label class="ex-check-item" data-name="tricep pushdown" data-cat="arms"><input type="checkbox" value="Tricep pushdown"> <span style="font-size:13px;">Tricep pushdown</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Cable</span></label>
-        <label class="ex-check-item" data-name="skull crusher" data-cat="arms"><input type="checkbox" value="Skull crusher"> <span style="font-size:13px;">Skull crusher</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Barbell</span></label>
-        <label class="ex-check-item" data-name="overhead tricep extension" data-cat="arms"><input type="checkbox" value="Overhead tricep extension"> <span style="font-size:13px;">Overhead tricep extension</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Dumbbell</span></label>
-        <label class="ex-check-item" data-name="tricep dip" data-cat="arms"><input type="checkbox" value="Tricep dip"> <span style="font-size:13px;">Tricep dip</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Bodyweight</span></label>
-
+        <label class="ex-check-item" data-name="bicep curl"><input type="checkbox" value="Bicep curl"> <span style="font-size:13px;">Bicep curl</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Dumbbell</span></label>
+        <label class="ex-check-item" data-name="barbell curl"><input type="checkbox" value="Barbell curl"> <span style="font-size:13px;">Barbell curl</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Barbell</span></label>
+        <label class="ex-check-item" data-name="hammer curl"><input type="checkbox" value="Hammer curl"> <span style="font-size:13px;">Hammer curl</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Dumbbell</span></label>
+        <label class="ex-check-item" data-name="tricep pushdown"><input type="checkbox" value="Tricep pushdown"> <span style="font-size:13px;">Tricep pushdown</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Cable</span></label>
+        <label class="ex-check-item" data-name="skull crusher"><input type="checkbox" value="Skull crusher"> <span style="font-size:13px;">Skull crusher</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Barbell</span></label>
+        <label class="ex-check-item" data-name="overhead tricep extension"><input type="checkbox" value="Overhead tricep extension"> <span style="font-size:13px;">Overhead tricep extension</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Dumbbell</span></label>
         <div style="font-size:10px;color:var(--text-tertiary);letter-spacing:0.06em;padding:8px 10px 4px;font-weight:600;">CORE</div>
-        <label class="ex-check-item" data-name="plank" data-cat="core"><input type="checkbox" value="Plank"> <span style="font-size:13px;">Plank</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Bodyweight</span></label>
-        <label class="ex-check-item" data-name="cable crunch" data-cat="core"><input type="checkbox" value="Cable crunch"> <span style="font-size:13px;">Cable crunch</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Cable</span></label>
-        <label class="ex-check-item" data-name="hanging leg raise" data-cat="core"><input type="checkbox" value="Hanging leg raise"> <span style="font-size:13px;">Hanging leg raise</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Bodyweight</span></label>
-        <label class="ex-check-item" data-name="russian twist" data-cat="core"><input type="checkbox" value="Russian twist"> <span style="font-size:13px;">Russian twist</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Plate</span></label>
+        <label class="ex-check-item" data-name="plank"><input type="checkbox" value="Plank"> <span style="font-size:13px;">Plank</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Bodyweight</span></label>
+        <label class="ex-check-item" data-name="cable crunch"><input type="checkbox" value="Cable crunch"> <span style="font-size:13px;">Cable crunch</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Cable</span></label>
+        <label class="ex-check-item" data-name="hanging leg raise"><input type="checkbox" value="Hanging leg raise"> <span style="font-size:13px;">Hanging leg raise</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Bodyweight</span></label>
+        <label class="ex-check-item" data-name="russian twist"><input type="checkbox" value="Russian twist"> <span style="font-size:13px;">Russian twist</span> <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Plate</span></label>
       </div>
       <div style="font-size:11.5px;color:var(--text-tertiary);margin-top:6px;" id="selectedCount">0 exercises selected</div>
     </div>
-
     <div style="display:flex;gap:10px;">
       <button class="btn btn-primary" style="flex:1;" onclick="savePlan()">Save plan</button>
       <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
@@ -502,6 +500,7 @@
 
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 <script>
+// ── Modal ──
 function openModal(planName) {
   document.getElementById('planModal').classList.add('show');
   if (planName) {
@@ -518,21 +517,17 @@ function openModal(planName) {
   }
 }
 
-function closeModal() {
-  document.getElementById('planModal').classList.remove('show');
-}
+function closeModal() { document.getElementById('planModal').classList.remove('show'); }
 
 function savePlan() {
   const name = document.getElementById('planName').value.trim();
   if (!name) { document.getElementById('planName').focus(); return; }
   closeModal();
-  alert(`Plan "${name}" saved! (demo — in the real app this would be stored in the database)`);
+  alert(`Plan "${name}" saved! (demo)`);
 }
 
 function confirmDelete(btn, name) {
-  if (confirm(`Delete "${name}"? This cannot be undone.`)) {
-    btn.closest('.plan-card').remove();
-  }
+  if (confirm(`Delete "${name}"? This cannot be undone.`)) btn.closest('.plan-card').remove();
 }
 
 function filterModalExercises(q) {
@@ -554,6 +549,94 @@ function updateSelectedCount() {
 document.getElementById('planModal').addEventListener('click', function(e) {
   if (e.target === this) closeModal();
 });
+
+// ── DRAG AND DROP (Issue #11) ──
+// Uses native HTML5 drag-and-drop — no libraries needed
+let dragSrc = null;
+let placeholder = null;
+
+function initDnd(listId) {
+  const list = document.getElementById(listId);
+  if (!list) return;
+
+  list.addEventListener('dragstart', e => {
+    const item = e.target.closest('.dnd-item');
+    if (!item) return;
+    dragSrc = item;
+
+    // Create placeholder same height as item
+    placeholder = document.createElement('div');
+    placeholder.className = 'dnd-placeholder';
+    placeholder.style.height = item.offsetHeight + 'px';
+
+    // Slight delay so the drag image shows before we add the class
+    requestAnimationFrame(() => item.classList.add('dragging'));
+
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', ''); // required for Firefox
+  });
+
+  list.addEventListener('dragend', e => {
+    const item = e.target.closest('.dnd-item');
+    if (!item) return;
+    item.classList.remove('dragging');
+    placeholder?.remove();
+    placeholder = null;
+    dragSrc = null;
+    // Clear any lingering drag-over states
+    list.querySelectorAll('.dnd-item').forEach(i => i.classList.remove('drag-over'));
+  });
+
+  list.addEventListener('dragover', e => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (!dragSrc || !placeholder) return;
+
+    const target = e.target.closest('.dnd-item');
+    if (!target || target === dragSrc) return;
+
+    // Determine if cursor is in top or bottom half of the target
+    const rect = target.getBoundingClientRect();
+    const midY = rect.top + rect.height / 2;
+    const after = e.clientY > midY;
+
+    // Clear all drag-over highlights
+    list.querySelectorAll('.dnd-item').forEach(i => i.classList.remove('drag-over'));
+    target.classList.add('drag-over');
+
+    // Move placeholder
+    if (after) {
+      target.after(placeholder);
+    } else {
+      target.before(placeholder);
+    }
+  });
+
+  list.addEventListener('dragleave', e => {
+    // Only clear if leaving the list entirely
+    if (!list.contains(e.relatedTarget)) {
+      list.querySelectorAll('.dnd-item').forEach(i => i.classList.remove('drag-over'));
+    }
+  });
+
+  list.addEventListener('drop', e => {
+    e.preventDefault();
+    if (!dragSrc || !placeholder) return;
+
+    // Insert dragged item where placeholder is
+    list.insertBefore(dragSrc, placeholder);
+    placeholder.remove();
+    placeholder = null;
+
+    // Clean up states
+    dragSrc.classList.remove('dragging');
+    list.querySelectorAll('.dnd-item').forEach(i => i.classList.remove('drag-over'));
+    dragSrc = null;
+  });
+}
+
+// Initialise drag and drop on all exercise lists
+['dnd-push', 'dnd-pull', 'dnd-legs', 'dnd-upper', 'dnd-arms', 'dnd-full'].forEach(initDnd);
 </script>
 </body>
 </html>
