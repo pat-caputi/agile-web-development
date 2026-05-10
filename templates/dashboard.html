@@ -174,16 +174,19 @@
       <!-- Left: chart + session -->
       <div class="card">
         <div class="card-title">Weekly volume (kg)</div>
-        <div class="bar-chart">
-          <div class="bar-col"><div class="bar-fill" style="height:45%"></div><span class="bar-day">Mon</span></div>
-          <div class="bar-col"><div class="bar-fill" style="height:68%"></div><span class="bar-day">Tue</span></div>
-          <div class="bar-col"><div class="bar-fill" style="height:32%"></div><span class="bar-day">Wed</span></div>
-          <div class="bar-col"><div class="bar-fill today" style="height:85%"></div><span class="bar-day">Thu</span></div>
-          <div class="bar-col"><div class="bar-fill rest" style="height:0%"></div><span class="bar-day">Fri</span></div>
-          <div class="bar-col"><div class="bar-fill rest" style="height:0%"></div><span class="bar-day">Sat</span></div>
-          <div class="bar-col"><div class="bar-fill rest" style="height:0%"></div><span class="bar-day">Sun</span></div>
-        </div>
 
+        <div class="bar-chart">
+          {% for item in weekly_chart_data %}
+            <div class="bar-col">
+              <span class="bar-day">{{ item.day }}</span>
+
+              <div class="bar-fill {% if item.volume == 0 %}rest{% endif %}" 
+                  style="height:{{ item.height }}%"
+                  title="{{ item.volume }} kg">
+              </div>
+            </div>
+          {% endfor %}
+        </div>
         <hr class="card-divider">
 
         <div class="card-title">Today's session · Push day</div>

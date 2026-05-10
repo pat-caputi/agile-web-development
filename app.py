@@ -369,6 +369,38 @@ def dashboard():
     rank = get_user_rank(session['user_id'])
     total_users = User.query.count()
 
+    daily_rows = (
+        db.session.query(
+            func.strftime('%w', Workout.date).label('day'),
+            func.sum(WorkoutSet.weight * WorkoutSet.reps).label('volume')
+        )
+        .join(Workout, WorkoutSet.workout_id == Workout.id)
+        .filter(
+            Workout.user_id == session['user_id'],
+            Workout.date >= start_of_week
+        )
+        .group_by(func.strftime('%w', Workout.date))
+        .all()
+    )
+
+    daily_volumes = [0, 0, 0, 0, 0, 0, 0]
+
+    for row in daily_rows:
+        sqlite_day = int(row.day)
+        python_day = (sqlite_day - 1) % 7
+        daily_volumes[python_day] = row.volume or 0
+
+    max_volume = max(daily_volumes) if max(daily_volumes) > 0 else 1
+
+    weekly_chart_data = [
+        {
+            "day": day,
+            "volume": int(daily_volumes[index]),
+            "height": 0 if daily_volumes[index] == 0 else max(8, int((daily_volumes[index] / max_volume) * 100))
+        }
+        for index, day in enumerate(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"])
+    ]
+
     return render_template(
         'dashboard.html',
         user=user,
@@ -377,7 +409,8 @@ def dashboard():
         workouts_count=workouts_count,
         streak=get_current_streak(session['user_id']),
         rank=rank,
-        total_users=total_users
+        total_users=total_users,
+        weekly_chart_data=weekly_chart_data
     )
 
 

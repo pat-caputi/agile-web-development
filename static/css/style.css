@@ -483,12 +483,12 @@ html, body {
 /* ══════════════════════════════════════════
    BAR CHART
 ══════════════════════════════════════════ */
-.bar-chart { display: flex; align-items: flex-end; gap: 6px; height: 88px; margin-bottom: 4px; }
-.bar-col   { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; }
-.bar-fill  { width: 100%; border-radius: 3px 3px 0 0; background: var(--purple-200); min-height: 2px; }
+.bar-chart { display: flex; align-items: flex-end; gap: 10px; height: 220px; margin-bottom: 12px; }
+.bar-col   { flex: 1; height: 180px; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
+.bar-fill  { width: 100%; border-radius: 8px 8px 0 0; background: var(--purple-200); min-height: 12px; transition: height 0.3s ease; }
 .bar-fill.today { background: var(--accent); }
 .bar-fill.rest  { background: var(--gray-100); }
-.bar-day   { font-size: 10px; color: var(--text-tertiary); }
+.bar-day   { font-size: 10px; color: var(--text-tertiary); margin-top: 8px; }
 
 /* ══════════════════════════════════════════
    EXERCISE LIST
