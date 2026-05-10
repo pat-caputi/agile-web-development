@@ -217,6 +217,31 @@ def get_user_rank(user_id):
 
     return None
 
+def get_current_streak(user_id):
+    workouts = (
+        Workout.query
+        .filter_by(user_id=user_id)
+        .order_by(Workout.date.desc())
+        .all()
+    )
+
+    if not workouts:
+        return 0
+
+    workout_days = {
+        workout.date.date()
+        for workout in workouts
+    }
+
+    streak = 0
+    current_day = datetime.utcnow().date()
+
+    while current_day in workout_days:
+        streak += 1
+        current_day -= timedelta(days=1)
+
+    return streak
+
 
 # ── Routes ──
 @app.route('/')
@@ -349,7 +374,7 @@ def dashboard():
         today=today,
         weekly_volume=weekly_volume,
         workouts_count=workouts_count,
-        streak=12,
+        streak=get_current_streak(session['user_id']),
         rank=rank
     )
 
