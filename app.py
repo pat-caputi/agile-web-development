@@ -362,6 +362,32 @@ def logout():
 
 
 # LOG WORKOUT
+PLANS_DATA = {
+    "push": {
+        "name": "Push day",
+        "exercises": ["Bench press", "Incline bench press", "Overhead press", "Lateral raises", "Tricep pushdown", "Cable fly"]
+    },
+    "pull": {
+        "name": "Pull day",
+        "exercises": ["Pull up", "Barbell row", "Lat pulldown", "Bicep curl", "Hammer curl", "Face pull"]
+    },
+    "legs": {
+        "name": "Leg day",
+        "exercises": ["Barbell squat", "Leg press", "Romanian deadlift", "Leg curl", "Leg extension", "Hip thrust", "Calf raise"]
+    },
+    "upper": {
+        "name": "Upper body",
+        "exercises": ["Bench press", "Barbell row", "Overhead press", "Lat pulldown", "Bicep curl", "Tricep pushdown", "Lateral raises", "Face pull"]
+    },
+    "arms_core": {
+        "name": "Arms & core",
+        "exercises": ["Barbell curl", "Skull crusher", "Hammer curl", "Tricep pushdown", "Plank", "Cable crunch"]
+    },
+    "full_body": {
+        "name": "Full body",
+        "exercises": ["Barbell squat", "Bench press", "Deadlift", "Pull up", "Overhead press", "Leg press", "Bicep curl", "Plank"]
+    }
+}
 @app.route('/log_workout', methods=['GET', 'POST'])
 def log_workout():
     if 'user_id' not in session:
@@ -428,11 +454,15 @@ def log_workout():
 
     today = datetime.utcnow()
 
+    selected_plan_key = request.args.get("plan", "push")
+    selected_plan = PLANS_DATA.get(selected_plan_key, PLANS_DATA["push"])
+
     return render_template(
         'log_workout.html',
         today=today,
         user=user,
-        rank=get_user_rank(session['user_id'])
+        rank=get_user_rank(session['user_id']),
+        selected_plan=selected_plan
     )
 
 
