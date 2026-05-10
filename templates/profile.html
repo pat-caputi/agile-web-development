@@ -89,7 +89,38 @@
       </svg>
       <span class="nav-link-text">Calendar</span>
     </a>
-  
+
+    <a href="{{ url_for('public_feed') }}"
+       class="nav-link {% if request.endpoint == 'public_feed' %}active{% endif %}"
+       data-label="Feed">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M2 4h12M2 8h8M2 12h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="nav-link-text">Feed</span>
+    </a>
+
+    <a href="{{ url_for('search_page') }}"
+       class="nav-link {% if request.endpoint == 'search_page' %}active{% endif %}"
+       data-label="Search">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="nav-link-text">Search</span>
+    </a>
+
+    {% if nav_user %}
+    <a href="{{ url_for('public_profile', username=nav_user.username) }}"
+       class="nav-link {% if request.endpoint == 'public_profile' %}active{% endif %}"
+       data-label="Public profile">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="5.5" r="2.5" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M2.5 14c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="nav-link-text">Public profile</span>
+    </a>
+    {% endif %}
+
     <div class="nav-spacer"></div>
 
 <!-- Dark mode toggle -->

@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ profile_user.username }} · LiftAGILE</title>
+  <script>
+    document.documentElement.setAttribute(
+      'data-theme',
+      localStorage.getItem('liftlab-theme') || 'light'
+    );
+  </script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-icon">L</div>
+      <span class="sidebar-logo-text">Lift<span>AGILE</span></span>
+    </div>
+
+    <button class="sidebar-toggle" id="sidebarCollapseBtn" title="Collapse sidebar">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+        <path d="M9 11L5 7l4-4" stroke="currentColor" stroke-width="1.5"
+              stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+
+    <a href="{{ url_for('dashboard') }}"
+       class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}"
+       data-label="Dashboard">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <rect x="1" y="1" width="6" height="6" rx="1.5" fill="currentColor"/>
+        <rect x="9" y="1" width="6" height="6" rx="1.5" fill="currentColor"/>
+        <rect x="1" y="9" width="6" height="6" rx="1.5" fill="currentColor"/>
+        <rect x="9" y="9" width="6" height="6" rx="1.5" fill="currentColor"/>
+      </svg>
+      <span class="nav-link-text">Dashboard</span>
+    </a>
+
+    <a href="{{ url_for('log_workout') }}"
+       class="nav-link {% if request.endpoint == 'log_workout' %}active{% endif %}"
+       data-label="Log workout">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M2 8h2m8 0h2M4 8V5.5a1.5 1.5 0 013 0v5a1.5 1.5 0 003 0V5.5"
+              stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="nav-link-text">Log workout</span>
+    </a>
+
+    <a href="{{ url_for('plans') }}"
+       class="nav-link {% if request.endpoint == 'plans' %}active{% endif %}"
+       data-label="My plans">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M5 6h6M5 9h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="nav-link-text">My plans</span>
+    </a>
+
+    <a href="{{ url_for('leaderboard') }}"
+       class="nav-link {% if request.endpoint == 'leaderboard' %}active{% endif %}"
+       data-label="Leaderboard">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M3 13V8m5 5V4m5 9V7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="nav-link-text">Leaderboard</span>
+    </a>
+
+    <a href="{{ url_for('ranks') }}"
+       class="nav-link {% if request.endpoint == 'ranks' %}active{% endif %}"
+       data-label="My ranks">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M8 2l1.8 3.6L14 6.3l-3 2.9.7 4.1L8 11.4l-3.7 1.9.7-4.1-3-2.9 4.2-.7z"
+              stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+      </svg>
+      <span class="nav-link-text">My ranks</span>
+    </a>
+
+    <a href="{{ url_for('calendar') }}"
+       class="nav-link {% if request.endpoint == 'calendar' %}active{% endif %}"
+       data-label="Calendar">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <rect x="2" y="3" width="12" height="11" rx="2" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M5 1v3M11 1v3M2 7h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="nav-link-text">Calendar</span>
+    </a>
+
+    <a href="{{ url_for('public_feed') }}"
+       class="nav-link {% if request.endpoint == 'public_feed' %}active{% endif %}"
+       data-label="Feed">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M2 4h12M2 8h8M2 12h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="nav-link-text">Feed</span>
+    </a>
+
+    <a href="{{ url_for('search_page') }}"
+       class="nav-link {% if request.endpoint == 'search_page' %}active{% endif %}"
+       data-label="Search">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="nav-link-text">Search</span>
+    </a>
+
+    {% if nav_user %}
+    <a href="{{ url_for('public_profile', username=nav_user.username) }}"
+       class="nav-link {% if request.endpoint == 'public_profile' %}active{% endif %}"
+       data-label="Public profile">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="5.5" r="2.5" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M2.5 14c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="nav-link-text">Public profile</span>
+    </a>
+    {% endif %}
+
+    <div class="nav-spacer"></div>
+
+    <button class="theme-toggle" id="themeToggleBtn" data-label="Dark mode">
+      <svg id="themeIconDark" width="16" height="16" viewBox="0 0 16 16" fill="none" style="display:none;">
+        <circle cx="8" cy="8" r="3.5" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3.1 3.1l1 1M11.9 11.9l1 1M3.1 12.9l1-1M11.9 4.1l1-1"
+              stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+      <svg id="themeIconLight" width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M13.5 9.5A5.5 5.5 0 016.5 2.5a5.5 5.5 0 100 11 5.5 5.5 0 007-4z"
+              stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="theme-toggle-text" id="themeToggleLabel">Dark mode</span>
+    </button>
+
+    <a href="{{ url_for('profile') }}"
+       class="nav-user {% if request.endpoint == 'profile' %}nav-user-active{% endif %}"
+       data-label="Profile">
+      {% include "_sidebar_avatar.html" %}
+      <div class="nav-user-info">
+        <div class="nav-user-name">{{ nav_user.username.title() if nav_user else "Profile" }}</div>
+        <div class="nav-user-rank">View profile</div>
+      </div>
+    </a>
+
+  </nav>
+
+  <!-- Main -->
+  <main class="main">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div style="margin-bottom:12px;padding:10px 14px;background:var(--success-bg);color:var(--success-text);border-radius:var(--radius-md);font-size:13px;">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <!-- ── Hero card ── -->
+    <div class="pp-hero card">
+      <div class="pp-hero-avatar">
+        {% if profile_user.profile_photo %}
+          <img src="{{ url_for('static', filename=profile_user.profile_photo) }}"
+               alt="{{ profile_user.username }}"
+               class="pp-avatar-img">
+        {% else %}
+          <div class="pp-avatar-init">{{ profile_user.username[:2].upper() }}</div>
+        {% endif %}
+      </div>
+
+      <div class="pp-hero-body">
+        <div class="pp-hero-top">
+          <div>
+            <h1 class="pp-username">{{ profile_user.username.title() }}</h1>
+            <p class="pp-bio">{{ profile_user.bio or 'No bio added yet.' }}</p>
+          </div>
+          <div class="pp-hero-action">
+            {% if is_own_profile %}
+              <a href="{{ url_for('profile') }}" class="btn btn-secondary" style="font-size:12px;padding:6px 16px;">
+                Edit Profile
+              </a>
+            {% elif is_following %}
+              <form action="{{ url_for('unfollow_user', user_id=profile_user.id) }}" method="POST">
+                <button class="btn btn-secondary" type="submit" style="font-size:12px;padding:6px 16px;">
+                  Unfollow
+                </button>
+              </form>
+            {% else %}
+              <form action="{{ url_for('follow_user', user_id=profile_user.id) }}" method="POST">
+                <button class="btn btn-primary" type="submit" style="font-size:12px;padding:6px 16px;">
+                  Follow
+                </button>
+              </form>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="pp-hero-stats">
+          <div class="pp-hero-stat">
+            <span class="pp-hero-stat-val">{{ followers_count }}</span>
+            <span class="pp-hero-stat-lbl">followers</span>
+          </div>
+          <div class="pp-hero-stat-divider"></div>
+          <div class="pp-hero-stat">
+            <span class="pp-hero-stat-val">{{ following_count }}</span>
+            <span class="pp-hero-stat-lbl">following</span>
+          </div>
+          <div class="pp-hero-stat-divider"></div>
+          <div class="pp-hero-stat">
+            <span class="pp-hero-stat-val">{{ public_plans_count }}</span>
+            <span class="pp-hero-stat-lbl">public plans</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% if not profile_visible %}
+      <!-- Private profile notice -->
+      <div class="pp-private card">
+        <div class="pp-private-icon">🔒</div>
+        <div class="pp-private-title">This profile is private</div>
+        <div class="pp-private-sub">This user has chosen not to share their profile publicly.</div>
+      </div>
+
+    {% else %}
+
+      <!-- ── Stats row ── -->
+      <div class="pp-stats-grid">
+        <div class="pp-stat-card">
+          <div class="pp-stat-icon">🏋️</div>
+          <div class="pp-stat-val">{{ total_workouts }}</div>
+          <div class="pp-stat-lbl">Total Workouts</div>
+        </div>
+        <div class="pp-stat-card">
+          <div class="pp-stat-icon">⚡</div>
+          <div class="pp-stat-val">{{ '{:,}'.format(total_volume) }}<span style="font-size:12px;font-weight:400;"> kg</span></div>
+          <div class="pp-stat-lbl">Total Volume</div>
+        </div>
+        <div class="pp-stat-card">
+          <div class="pp-stat-icon">🎯</div>
+          <div class="pp-stat-val">{{ pr_count }}</div>
+          <div class="pp-stat-lbl">PRs Set</div>
+        </div>
+        <div class="pp-stat-card">
+          <div class="pp-stat-icon">📅</div>
+          <div class="pp-stat-val">{{ workouts_this_week }}</div>
+          <div class="pp-stat-lbl">This Week</div>
+        </div>
+      </div>
+
+      <!-- ── Tabs ── -->
+      <div class="pp-tabs">
+        <a href="{{ url_for('public_profile', username=profile_user.username, tab='plans') }}"
+           class="pp-tab {% if active_tab == 'plans' %}active{% endif %}">
+          Plans
+          <span class="pp-tab-count">{{ public_plans_count }}</span>
+        </a>
+        <a href="{{ url_for('public_profile', username=profile_user.username, tab='activity') }}"
+           class="pp-tab {% if active_tab == 'activity' %}active{% endif %}">
+          Activity
+        </a>
+        <a href="{{ url_for('public_profile', username=profile_user.username, tab='achievements') }}"
+           class="pp-tab {% if active_tab == 'achievements' %}active{% endif %}">
+          Achievements
+          <span class="pp-tab-count">{{ badges | length }}</span>
+        </a>
+      </div>
+
+      <!-- ═══ PLANS TAB ═══ -->
+      {% if active_tab == 'plans' %}
+        {% if public_plans %}
+          <div class="pp-plans-list">
+            {% for plan in public_plans %}
+              {% set likes      = likes_map.get(plan.id, 0) %}
+              {% set n_comments = comments_map.get(plan.id, 0) %}
+              {% set tags       = tags_map.get(plan.id, ['Workout Plan']) %}
+              <div class="pp-plan-card card">
+                <div class="pp-plan-title">{{ plan.title }}</div>
+                {% if plan.description %}
+                  <div class="pp-plan-desc">
+                    {{ plan.description[:140] }}{% if plan.description | length > 140 %}…{% endif %}
+                  </div>
+                {% endif %}
+                <div class="fd-tags" style="margin-bottom:0;">
+                  {% for tag in tags %}
+                    <span class="fd-tag">{{ tag }}</span>
+                  {% endfor %}
+                </div>
+                <div class="pp-plan-footer">
+                  <span class="pp-plan-stat">
+                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                      <path d="M8 13.5C4 11 1.5 8.5 1.5 5.5A3.5 3.5 0 018 3.6 3.5 3.5 0 0114.5 5.5C14.5 8.5 12 11 8 13.5z"
+                            stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
+                    {{ likes }}
+                  </span>
+                  <span class="pp-plan-stat">
+                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                      <path d="M2 2h12a1 1 0 011 1v8a1 1 0 01-1 1H5l-3 3V3a1 1 0 011-1z"
+                            stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                    </svg>
+                    {{ n_comments }}
+                  </span>
+                  <a href="{{ url_for('workout_detail', plan_id=plan.id) }}"
+                     class="btn btn-secondary pp-plan-view">View Plan</a>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="pp-empty card">
+            <div class="pp-empty-icon">📋</div>
+            {% if is_own_profile %}
+              <div class="pp-empty-title">No public plans yet</div>
+              <div class="pp-empty-sub">Make one of your workout plans public to share it with the community.</div>
+              <a href="{{ url_for('plans') }}" class="btn btn-primary" style="margin-top:16px;">Go to My Plans</a>
+            {% else %}
+              <div class="pp-empty-title">No public plans shared yet</div>
+              <div class="pp-empty-sub">This user hasn't shared any public workout plans yet.</div>
+            {% endif %}
+          </div>
+        {% endif %}
+
+      <!-- ═══ ACTIVITY TAB ═══ -->
+      {% elif active_tab == 'activity' %}
+        {% if activity %}
+          <div class="pp-activity card">
+            <div class="card-title">Recent Activity</div>
+            {% for item in activity %}
+              <div class="pp-activity-item">
+                <span class="pp-activity-icon">{{ item.icon }}</span>
+                <span class="pp-activity-text">
+                  {% if item.link %}
+                    <a href="{{ item.link }}" style="color:var(--accent);text-decoration:none;">
+                      {{ item.text }}
+                    </a>
+                  {% else %}
+                    {{ item.text }}
+                  {% endif %}
+                </span>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="pp-empty card">
+            <div class="pp-empty-icon">📭</div>
+            <div class="pp-empty-title">No public activity yet</div>
+            <div class="pp-empty-sub">
+              {% if is_own_profile %}
+                Log workouts, share plans, and interact with the community to build your activity.
+              {% else %}
+                This user hasn't had any public activity yet.
+              {% endif %}
+            </div>
+          </div>
+        {% endif %}
+
+      <!-- ═══ ACHIEVEMENTS TAB ═══ -->
+      {% elif active_tab == 'achievements' %}
+        <div class="pp-badges-grid">
+          {% for label, icon, css_class in badges %}
+            <div class="pp-badge {{ css_class }}">
+              <span class="pp-badge-icon">{{ icon }}</span>
+              <span class="pp-badge-label">{{ label }}</span>
+            </div>
+          {% endfor %}
+        </div>
+
+        <!-- Milestones progress -->
+        <div class="card" style="margin-top:14px;">
+          <div class="card-title">Milestones</div>
+          <div class="pp-milestones">
+
+            {% set pct_workouts = [(total_workouts / 50 * 100) | int, 100] | min %}
+            <div class="pp-milestone">
+              <div class="pp-milestone-header">
+                <span>Workouts logged</span>
+                <span class="pp-milestone-val">{{ total_workouts }} / 50</span>
+              </div>
+              <div class="pp-milestone-bar">
+                <div class="pp-milestone-fill" data-width="{{ pct_workouts }}"></div>
+              </div>
+            </div>
+
+            {% set pct_prs = [(pr_count / 10 * 100) | int, 100] | min %}
+            <div class="pp-milestone">
+              <div class="pp-milestone-header">
+                <span>PRs set</span>
+                <span class="pp-milestone-val">{{ pr_count }} / 10</span>
+              </div>
+              <div class="pp-milestone-bar">
+                <div class="pp-milestone-fill" data-width="{{ pct_prs }}"></div>
+              </div>
+            </div>
+
+            {% set pct_vol = [(total_volume / 10000 * 100) | int, 100] | min %}
+            <div class="pp-milestone">
+              <div class="pp-milestone-header">
+                <span>Volume (kg)</span>
+                <span class="pp-milestone-val">{{ '{:,}'.format(total_volume) }} / 10,000</span>
+              </div>
+              <div class="pp-milestone-bar">
+                <div class="pp-milestone-fill" data-width="{{ pct_vol }}"></div>
+              </div>
+            </div>
+
+            {% set pct_plans = [(public_plans_count / 5 * 100) | int, 100] | min %}
+            <div class="pp-milestone">
+              <div class="pp-milestone-header">
+                <span>Public plans shared</span>
+                <span class="pp-milestone-val">{{ public_plans_count }} / 5</span>
+              </div>
+              <div class="pp-milestone-bar">
+                <div class="pp-milestone-fill" data-width="{{ pct_plans }}"></div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      {% endif %}
+
+    {% endif %}{# end profile_visible #}
+
+  </main>
+
+</div>
+<script>
+  document.querySelectorAll('.pp-milestone-fill[data-width]').forEach(function(el) {
+    el.style.width = el.dataset.width + '%';
+  });
+</script>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

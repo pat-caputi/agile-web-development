@@ -1,9 +1,9 @@
-from flask import Flask, render_template, request, redirect, session, flash, url_for
+from flask import Flask, render_template, request, redirect, session, flash, url_for, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from sqlalchemy import func, or_
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 import os
 import re
@@ -37,6 +37,7 @@ class User(db.Model):
     password = db.Column(db.String(200), nullable=False)
     bio = db.Column(db.String(280), default="")
     profile_photo = db.Column(db.String(255), default="")
+    profile_public = db.Column(db.Boolean, default=True)
 
 
 class Workout(db.Model):
@@ -63,6 +64,57 @@ class PersonalRecord(db.Model):
     __table_args__ = (
         db.UniqueConstraint('user_id', 'exercise', name='uq_user_exercise'),
     )
+
+
+class WorkoutPlan(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(120), nullable=False)
+    description = db.Column(db.Text)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    is_public = db.Column(db.Boolean, default=True)
+    user = db.relationship("User", backref="workout_plans")
+
+
+# ------------------------------------------------------------
+# Social / Public Sharing Models
+# ------------------------------------------------------------
+
+class Follow(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+
+    follower_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    followed_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    __table_args__ = (
+        db.UniqueConstraint("follower_id", "followed_id", name="unique_follow"),
+    )
+
+
+class WorkoutLike(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    workout_id = db.Column(db.Integer, db.ForeignKey("workout_plan.id"), nullable=False)
+
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "workout_id", name="unique_workout_like"),
+    )
+
+
+class WorkoutComment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+
+    body = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    workout_id = db.Column(db.Integer, db.ForeignKey("workout_plan.id"), nullable=False)
+
+    user = db.relationship("User", backref="workout_comments")
 
 
 # ── Create DB ──
@@ -220,6 +272,32 @@ def initials(name):
         return parts[0][:2].upper()
 
     return (parts[0][0] + parts[1][0]).upper()
+
+
+def get_plan_tags(plan):
+    text = ((plan.title or '') + ' ' + (plan.description or '')).lower()
+    tags = []
+    if any(w in text for w in ['strength', 'powerlifting', 'deadlift', 'squat', 'bench', 'weightlift']):
+        tags.append('Strength')
+    if any(w in text for w in ['cardio', 'running', 'cycling', 'hiit', 'endurance', 'aerobic']):
+        tags.append('Cardio')
+    if any(w in text for w in ['beginner', 'starter', 'easy', 'basic', 'novice']):
+        tags.append('Beginner')
+    if any(w in text for w in ['intermediate', 'moderate']):
+        tags.append('Intermediate')
+    if any(w in text for w in ['advanced', 'expert', 'elite']):
+        tags.append('Advanced')
+    if any(w in text for w in ['upper body', 'chest', 'back', 'shoulder', 'arm', 'push day', 'pull day']):
+        tags.append('Upper Body')
+    if any(w in text for w in ['lower body', 'leg day', 'quad', 'hamstring', 'glute', 'calf']):
+        tags.append('Lower Body')
+    if any(w in text for w in ['core', 'abs', 'plank', 'crunch']):
+        tags.append('Core')
+    if any(w in text for w in ['full body', 'full-body', 'total body']):
+        tags.append('Full Body')
+    if not tags:
+        tags.append('Workout Plan')
+    return tags[:3]
 
 
 @app.context_processor
@@ -384,6 +462,22 @@ def dashboard():
     weekly_volume = sum(ws.weight * ws.reps for ws in weekly_sets)
     rank = get_user_rank(session['user_id'])
 
+    top_users = (
+        db.session.query(
+            User.id,
+            User.username,
+            User.profile_photo,
+            func.sum(WorkoutSet.weight * WorkoutSet.reps).label('weekly_volume')
+        )
+        .join(Workout, Workout.user_id == User.id)
+        .join(WorkoutSet, WorkoutSet.workout_id == Workout.id)
+        .filter(Workout.date >= start_of_week)
+        .group_by(User.id, User.username, User.profile_photo)
+        .order_by(func.sum(WorkoutSet.weight * WorkoutSet.reps).desc())
+        .limit(5)
+        .all()
+    )
+
     return render_template(
         'dashboard.html',
         user=user,
@@ -391,7 +485,8 @@ def dashboard():
         weekly_volume=weekly_volume,
         workouts_count=workouts_count,
         streak=12,
-        rank=rank
+        rank=rank,
+        top_users=top_users,
     )
 
 
@@ -532,13 +627,36 @@ def leaderboard():
         for uid, gpts in user_group_pts.items()
     }
 
+    # PR count and strength score per user
+    pr_count_map = {}
+    for pr in all_prs:
+        pr_count_map[pr.user_id] = pr_count_map.get(pr.user_id, 0) + 1
+
+    strength_map = {uid: tier['points'] for uid, tier in tier_map.items()}
+
+    # Achievement badges — one winner per category
+    badges_map = {}
+    if leaderboard_data:
+        vol_w = max(leaderboard_data, key=lambda r: r.weekly_volume or 0)
+        badges_map.setdefault(vol_w.id, []).append('vol')
+        freq_w = max(leaderboard_data, key=lambda r: r.workouts_count or 0)
+        badges_map.setdefault(freq_w.id, []).append('freq')
+    if strength_map:
+        badges_map.setdefault(max(strength_map, key=strength_map.get), []).append('str')
+    if pr_count_map:
+        badges_map.setdefault(max(pr_count_map, key=pr_count_map.get), []).append('pr')
+
     return render_template(
         'leaderboard.html',
         leaderboard_data=leaderboard_data,
         tier_map=tier_map,
+        pr_count_map=pr_count_map,
+        strength_map=strength_map,
+        badges_map=badges_map,
         current_user_id=session['user_id'],
         user=user,
-        rank=get_user_rank(session['user_id'])
+        rank=get_user_rank(session['user_id']),
+        today=datetime.now(timezone.utc),
     )
 
 
@@ -554,11 +672,44 @@ def plans():
         session.clear()
         return redirect('/login')
 
+    user_plans = (
+        WorkoutPlan.query
+        .filter_by(user_id=session['user_id'])
+        .order_by(WorkoutPlan.id.desc())
+        .all()
+    )
+    tags_map = {p.id: get_plan_tags(p) for p in user_plans}
+
     return render_template(
         'plans.html',
         user=user,
-        rank=get_user_rank(session['user_id'])
+        rank=get_user_rank(session['user_id']),
+        user_plans=user_plans,
+        tags_map=tags_map,
     )
+
+@app.route('/plans/create', methods=['POST'])
+def create_plan():
+    user, err = _require_login()
+    if err:
+        return jsonify({"ok": False, "error": "Not logged in"}), 401
+
+    title = request.form.get('title', '').strip()
+    exercises = request.form.getlist('exercises')
+
+    if not title:
+        return jsonify({"ok": False, "error": "Plan name is required."}), 400
+    if not exercises:
+        return jsonify({"ok": False, "error": "Please select at least one exercise."}), 400
+    if len(title) > 120:
+        return jsonify({"ok": False, "error": "Plan name must be 120 characters or fewer."}), 400
+
+    description = ', '.join(exercises)
+    plan = WorkoutPlan(title=title, description=description, user_id=user.id, is_public=False)
+    db.session.add(plan)
+    db.session.commit()
+    return jsonify({"ok": True, "plan_id": plan.id})
+
 
 @app.route('/calendar')
 def calendar():
@@ -703,6 +854,497 @@ def ranks():
         muscle_groups=MUSCLE_GROUPS,
         overall_tier=overall_tier,
     )
+
+
+# ------------------------------------------------------------
+# Social / Public Sharing Routes
+# ------------------------------------------------------------
+
+def _require_login():
+    """Returns (user, None) on success or (None, redirect_response) when not logged in."""
+    if 'user_id' not in session:
+        return None, redirect('/login')
+    user = db.session.get(User, session['user_id'])
+    if user is None:
+        session.clear()
+        return None, redirect('/login')
+    return user, None
+
+
+@app.route("/feed")
+def public_feed():
+    user, err = _require_login()
+    if err:
+        return err
+
+    feed_filter = request.args.get("filter", "all")
+    base_q = WorkoutPlan.query.filter_by(is_public=True)
+
+    if feed_filter == "liked":
+        plans = (
+            base_q
+            .outerjoin(WorkoutLike, WorkoutLike.workout_id == WorkoutPlan.id)
+            .group_by(WorkoutPlan.id)
+            .order_by(func.count(WorkoutLike.id).desc(), WorkoutPlan.id.desc())
+            .all()
+        )
+    elif feed_filter == "following":
+        followed_ids = [
+            f.followed_id
+            for f in Follow.query.filter_by(follower_id=user.id).all()
+        ]
+        plans = (
+            base_q
+            .filter(WorkoutPlan.user_id.in_(followed_ids))
+            .order_by(WorkoutPlan.id.desc())
+            .all()
+        ) if followed_ids else []
+    else:
+        plans = base_q.order_by(WorkoutPlan.id.desc()).all()
+
+    plan_ids = [p.id for p in plans]
+    likes_map = {}
+    comments_map = {}
+    comments_preview_map = {}
+    liked_by_user_set = set()
+
+    if plan_ids:
+        like_rows = (
+            db.session.query(WorkoutLike.workout_id, func.count(WorkoutLike.id))
+            .filter(WorkoutLike.workout_id.in_(plan_ids))
+            .group_by(WorkoutLike.workout_id)
+            .all()
+        )
+        likes_map = {wid: cnt for wid, cnt in like_rows}
+
+        comment_rows = (
+            db.session.query(WorkoutComment.workout_id, func.count(WorkoutComment.id))
+            .filter(WorkoutComment.workout_id.in_(plan_ids))
+            .group_by(WorkoutComment.workout_id)
+            .all()
+        )
+        comments_map = {wid: cnt for wid, cnt in comment_rows}
+
+        liked_by_user_set = {
+            lk.workout_id for lk in
+            WorkoutLike.query.filter(
+                WorkoutLike.workout_id.in_(plan_ids),
+                WorkoutLike.user_id == user.id
+            ).all()
+        }
+
+        for pid in plan_ids:
+            preview = (
+                WorkoutComment.query
+                .filter_by(workout_id=pid)
+                .order_by(WorkoutComment.created_at.desc())
+                .limit(2)
+                .all()
+            )
+            if preview:
+                comments_preview_map[pid] = preview
+
+    tags_map = {p.id: get_plan_tags(p) for p in plans}
+
+    return render_template(
+        "feed.html",
+        plans=plans,
+        feed_filter=feed_filter,
+        likes_map=likes_map,
+        comments_map=comments_map,
+        comments_preview_map=comments_preview_map,
+        liked_by_user_set=liked_by_user_set,
+        tags_map=tags_map,
+    )
+
+
+@app.route("/u/<username>")
+def public_profile(username):
+    user, err = _require_login()
+    if err:
+        return err
+
+    profile_user = User.query.filter_by(username=username).first_or_404()
+    is_own_profile = profile_user.id == user.id
+    active_tab = request.args.get("tab", "plans")
+
+    is_following = Follow.query.filter_by(
+        follower_id=user.id, followed_id=profile_user.id
+    ).first() is not None
+
+    followers_count = Follow.query.filter_by(followed_id=profile_user.id).count()
+    following_count = Follow.query.filter_by(follower_id=profile_user.id).count()
+
+    profile_visible = profile_user.profile_public or is_own_profile
+
+    # Defaults — safe fallbacks used when profile is private or data is absent
+    public_plans      = []
+    public_plans_count = 0
+    total_workouts    = 0
+    total_volume      = 0
+    pr_count          = 0
+    workouts_this_week = 0
+    likes_map         = {}
+    comments_map      = {}
+    tags_map          = {}
+    badges            = []
+    activity          = []
+
+    if profile_visible:
+        public_plans = (
+            WorkoutPlan.query
+            .filter_by(user_id=profile_user.id, is_public=True)
+            .order_by(WorkoutPlan.id.desc())
+            .all()
+        )
+        public_plans_count = len(public_plans)
+
+        total_workouts = Workout.query.filter_by(user_id=profile_user.id).count()
+
+        vol_row = (
+            db.session.query(func.sum(WorkoutSet.weight * WorkoutSet.reps))
+            .join(Workout, Workout.id == WorkoutSet.workout_id)
+            .filter(Workout.user_id == profile_user.id)
+            .scalar()
+        )
+        total_volume = int(vol_row or 0)
+
+        pr_count = PersonalRecord.query.filter_by(user_id=profile_user.id).count()
+
+        start_of_week = get_start_of_week()
+        workouts_this_week = Workout.query.filter(
+            Workout.user_id == profile_user.id,
+            Workout.date >= start_of_week
+        ).count()
+
+        # Per-plan engagement data
+        plan_ids = [p.id for p in public_plans]
+        if plan_ids:
+            like_rows = (
+                db.session.query(WorkoutLike.workout_id, func.count(WorkoutLike.id))
+                .filter(WorkoutLike.workout_id.in_(plan_ids))
+                .group_by(WorkoutLike.workout_id)
+                .all()
+            )
+            likes_map = {wid: cnt for wid, cnt in like_rows}
+
+            comment_rows = (
+                db.session.query(WorkoutComment.workout_id, func.count(WorkoutComment.id))
+                .filter(WorkoutComment.workout_id.in_(plan_ids))
+                .group_by(WorkoutComment.workout_id)
+                .all()
+            )
+            comments_map = {wid: cnt for wid, cnt in comment_rows}
+
+        tags_map = {p.id: get_plan_tags(p) for p in public_plans}
+
+        # Achievement badges (thresholds are lenient on purpose)
+        badges.append(('New Member',        '👋', 'badge-new'))
+        if public_plans_count >= 1:
+            badges.append(('Community Sharer',  '📤', 'badge-share'))
+        if total_workouts >= 10:
+            badges.append(('Consistent Trainer','🗓️',  'badge-consistent'))
+        if pr_count >= 5:
+            badges.append(('PR Machine',        '🏆', 'badge-pr'))
+        if total_volume >= 10000:
+            badges.append(('Volume Builder',    '💪', 'badge-volume'))
+        if total_workouts >= 50:
+            badges.append(('Dedicated Athlete', '🔥', 'badge-dedicated'))
+
+        # Recent activity (built from existing tables — no schema change)
+        latest_plan = (
+            WorkoutPlan.query
+            .filter_by(user_id=profile_user.id, is_public=True)
+            .order_by(WorkoutPlan.id.desc())
+            .first()
+        )
+        if latest_plan:
+            activity.append({
+                'icon': '📋',
+                'text': f'Shared a workout plan: {latest_plan.title}',
+                'link': url_for('workout_detail', plan_id=latest_plan.id),
+            })
+
+        latest_comment = (
+            WorkoutComment.query
+            .filter_by(user_id=profile_user.id)
+            .order_by(WorkoutComment.created_at.desc())
+            .first()
+        )
+        if latest_comment:
+            commented_plan = (
+                WorkoutPlan.query
+                .filter_by(id=latest_comment.workout_id, is_public=True)
+                .first()
+            )
+            if commented_plan:
+                activity.append({
+                    'icon': '💬',
+                    'text': f'Commented on: {commented_plan.title}',
+                    'link': url_for('workout_detail', plan_id=commented_plan.id),
+                })
+
+        latest_like = (
+            WorkoutLike.query
+            .filter_by(user_id=profile_user.id)
+            .order_by(WorkoutLike.created_at.desc())
+            .first()
+        )
+        if latest_like:
+            liked_plan = (
+                WorkoutPlan.query
+                .filter_by(id=latest_like.workout_id, is_public=True)
+                .first()
+            )
+            if liked_plan:
+                activity.append({
+                    'icon': '❤️',
+                    'text': f'Liked: {liked_plan.title}',
+                    'link': url_for('workout_detail', plan_id=liked_plan.id),
+                })
+
+        latest_pr = (
+            PersonalRecord.query
+            .filter_by(user_id=profile_user.id)
+            .order_by(PersonalRecord.date_set.desc())
+            .first()
+        )
+        if latest_pr:
+            activity.append({
+                'icon': '🎯',
+                'text': (f'Set a PR: {latest_pr.exercise.title()} — '
+                         f'{latest_pr.best_weight:g} kg × {latest_pr.best_reps} reps'),
+                'link': None,
+            })
+
+    return render_template(
+        "public_profile.html",
+        profile_user=profile_user,
+        public_plans=public_plans,
+        public_plans_count=public_plans_count,
+        is_own_profile=is_own_profile,
+        is_following=is_following,
+        followers_count=followers_count,
+        following_count=following_count,
+        profile_visible=profile_visible,
+        active_tab=active_tab,
+        total_workouts=total_workouts,
+        total_volume=total_volume,
+        pr_count=pr_count,
+        workouts_this_week=workouts_this_week,
+        likes_map=likes_map,
+        comments_map=comments_map,
+        tags_map=tags_map,
+        badges=badges,
+        activity=activity,
+    )
+
+
+@app.route("/follow/<int:user_id>", methods=["POST"])
+def follow_user(user_id):
+    user, err = _require_login()
+    if err:
+        return err
+
+    user_to_follow = User.query.get_or_404(user_id)
+
+    if user_to_follow.id == user.id:
+        flash("You cannot follow yourself.", "warning")
+        return redirect(url_for("public_profile", username=user_to_follow.username))
+
+    existing = Follow.query.filter_by(
+        follower_id=user.id, followed_id=user_to_follow.id
+    ).first()
+
+    if not existing:
+        db.session.add(Follow(follower_id=user.id, followed_id=user_to_follow.id))
+        db.session.commit()
+        flash(f"You are now following {user_to_follow.username}.", "success")
+
+    return redirect(url_for("public_profile", username=user_to_follow.username))
+
+
+@app.route("/unfollow/<int:user_id>", methods=["POST"])
+def unfollow_user(user_id):
+    user, err = _require_login()
+    if err:
+        return err
+
+    user_to_unfollow = User.query.get_or_404(user_id)
+
+    follow = Follow.query.filter_by(
+        follower_id=user.id, followed_id=user_to_unfollow.id
+    ).first()
+
+    if follow:
+        db.session.delete(follow)
+        db.session.commit()
+        flash(f"You unfollowed {user_to_unfollow.username}.", "info")
+
+    return redirect(url_for("public_profile", username=user_to_unfollow.username))
+
+
+@app.route("/workout/<int:plan_id>")
+def workout_detail(plan_id):
+    user, err = _require_login()
+    if err:
+        return err
+
+    plan = WorkoutPlan.query.get_or_404(plan_id)
+
+    if not plan.is_public and plan.user_id != user.id:
+        flash("This workout plan is private.", "danger")
+        return redirect(url_for("public_feed"))
+
+    likes_count = WorkoutLike.query.filter_by(workout_id=plan.id).count()
+    user_has_liked = WorkoutLike.query.filter_by(
+        workout_id=plan.id, user_id=user.id
+    ).first() is not None
+
+    comments = (
+        WorkoutComment.query
+        .filter_by(workout_id=plan.id)
+        .order_by(WorkoutComment.created_at.desc())
+        .all()
+    )
+
+    return render_template(
+        "workout_detail.html",
+        plan=plan,
+        likes_count=likes_count,
+        user_has_liked=user_has_liked,
+        comments=comments,
+        is_owner=(plan.user_id == user.id),
+    )
+
+
+@app.route("/workout/<int:plan_id>/like", methods=["POST"])
+def toggle_workout_like(plan_id):
+    user, err = _require_login()
+    if err:
+        return err
+
+    plan = WorkoutPlan.query.get_or_404(plan_id)
+
+    if not plan.is_public and plan.user_id != user.id:
+        flash("You cannot like a private workout plan.", "danger")
+        return redirect(url_for("public_feed"))
+
+    existing_like = WorkoutLike.query.filter_by(
+        workout_id=plan.id, user_id=user.id
+    ).first()
+
+    if existing_like:
+        db.session.delete(existing_like)
+    else:
+        db.session.add(WorkoutLike(workout_id=plan.id, user_id=user.id))
+
+    db.session.commit()
+    return redirect(url_for("workout_detail", plan_id=plan.id))
+
+
+@app.route("/workout/<int:plan_id>/like/json", methods=["POST"])
+def toggle_workout_like_json(plan_id):
+    user, err = _require_login()
+    if err:
+        return jsonify({"error": "not logged in"}), 401
+
+    plan = WorkoutPlan.query.get_or_404(plan_id)
+
+    if not plan.is_public and plan.user_id != user.id:
+        return jsonify({"error": "private plan"}), 403
+
+    existing_like = WorkoutLike.query.filter_by(
+        workout_id=plan.id, user_id=user.id
+    ).first()
+
+    if existing_like:
+        db.session.delete(existing_like)
+        liked = False
+    else:
+        db.session.add(WorkoutLike(workout_id=plan.id, user_id=user.id))
+        liked = True
+
+    db.session.commit()
+    count = WorkoutLike.query.filter_by(workout_id=plan.id).count()
+    return jsonify({"liked": liked, "count": count})
+
+
+@app.route("/workout/<int:plan_id>/comment", methods=["POST"])
+def add_workout_comment(plan_id):
+    user, err = _require_login()
+    if err:
+        return err
+
+    plan = WorkoutPlan.query.get_or_404(plan_id)
+
+    if not plan.is_public and plan.user_id != user.id:
+        flash("You cannot comment on a private workout plan.", "danger")
+        return redirect(url_for("public_feed"))
+
+    body = request.form.get("body", "").strip()
+
+    if not body:
+        flash("Comment cannot be empty.", "warning")
+        return redirect(url_for("workout_detail", plan_id=plan.id))
+
+    db.session.add(WorkoutComment(body=body, user_id=user.id, workout_id=plan.id))
+    db.session.commit()
+
+    flash("Comment added.", "success")
+    return redirect(url_for("workout_detail", plan_id=plan.id))
+
+
+@app.route("/workout/<int:plan_id>/toggle-public", methods=["POST"])
+def toggle_plan_visibility(plan_id):
+    user, err = _require_login()
+    if err:
+        return err
+
+    plan = WorkoutPlan.query.get_or_404(plan_id)
+
+    if plan.user_id != user.id:
+        flash("You can only change visibility of your own plans.", "warning")
+        return redirect(url_for("plans"))
+
+    plan.is_public = not plan.is_public
+    db.session.commit()
+
+    status = "public" if plan.is_public else "private"
+    flash(f'"{plan.title}" is now {status}.', "success")
+
+    next_url = request.form.get("next") or url_for("plans")
+    return redirect(next_url)
+
+
+@app.route("/search")
+def search_page():
+    _, err = _require_login()
+    if err:
+        return err
+
+    query = request.args.get("q", "").strip()
+    users = []
+    plans = []
+
+    if query:
+        users = (
+            User.query
+            .filter(User.username.ilike(f"%{query}%"))
+            .limit(10)
+            .all()
+        )
+        plans = (
+            WorkoutPlan.query
+            .filter(
+                WorkoutPlan.is_public == True,
+                WorkoutPlan.title.ilike(f"%{query}%")
+            )
+            .limit(10)
+            .all()
+        )
+
+    return render_template("search.html", query=query, users=users, plans=plans)
 
 
 # ── Run app ──
