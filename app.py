@@ -38,9 +38,148 @@ class WorkoutSet(db.Model):
     reps = db.Column(db.Integer, nullable=False)
 
 
+class PersonalRecord(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    exercise = db.Column(db.String(100), nullable=False)
+    best_weight = db.Column(db.Float, nullable=False)
+    best_reps = db.Column(db.Integer, nullable=False)
+    date_set = db.Column(db.DateTime, default=datetime.utcnow)
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'exercise', name='uq_user_exercise'),
+    )
+
+
 # ── Create DB ──
 with app.app_context():
     db.create_all()
+
+
+# ── Rank tier thresholds ──
+TIER_THRESHOLDS = [
+    (25000, 'Diamond',  '💎', 'rb-diamond'),
+    (12000, 'Platinum', '🔷', 'rb-platinum'),
+    (5000,  'Gold',     '🥇', 'rb-gold'),
+    (2000,  'Silver',   '🥈', 'rb-silver'),
+    (500,   'Bronze',   '🥉', 'rb-bronze'),
+    (0,     'Unranked', '—',  'rb-unranked'),
+]
+
+MUSCLE_GROUPS = ['chest', 'back', 'legs', 'shoulders', 'arms', 'core']
+
+MUSCLE_CONFIG = {
+    'chest':     {'label': 'Chest',     'letter': 'C', 'icon_bg': '#EEEDFE', 'icon_color': '#534AB7'},
+    'back':      {'label': 'Back',      'letter': 'B', 'icon_bg': '#E1F5EE', 'icon_color': '#085041'},
+    'legs':      {'label': 'Legs',      'letter': 'L', 'icon_bg': '#FAECE7', 'icon_color': '#712B13'},
+    'shoulders': {'label': 'Shoulders', 'letter': 'S', 'icon_bg': '#FAEEDA', 'icon_color': '#633806'},
+    'arms':      {'label': 'Arms',      'letter': 'A', 'icon_bg': '#F1EFE8', 'icon_color': '#444441'},
+    'core':      {'label': 'Core',      'letter': 'C', 'icon_bg': '#FBEAF0', 'icon_color': '#72243E'},
+}
+
+EXERCISE_MUSCLE_MAP = {
+    # chest
+    'bench press': 'chest', 'incline bench press': 'chest', 'decline bench press': 'chest',
+    'cable fly': 'chest', 'chest fly': 'chest', 'push up': 'chest',
+    'dumbbell press': 'chest', 'dumbbell fly': 'chest', 'pec deck': 'chest',
+    'dumbbell chest fly': 'chest', 'dumbbell bench press': 'chest',
+    # back
+    'deadlift': 'back', 'pull up': 'back', 'chin up': 'back',
+    'barbell row': 'back', 'lat pulldown': 'back', 'cable row': 'back',
+    'seated row': 'back', 't-bar row': 'back', 'single arm row': 'back',
+    'seated cable row': 'back', 'single-arm dumbbell row': 'back', 'chest-supported row': 'back',
+    # legs
+    'barbell squat': 'legs', 'squat': 'legs', 'leg press': 'legs',
+    'romanian deadlift': 'legs', 'rdl': 'legs', 'leg curl': 'legs',
+    'leg extension': 'legs', 'lunge': 'legs', 'bulgarian split squat': 'legs',
+    'calf raise': 'legs', 'hack squat': 'legs', 'goblet squat': 'legs',
+    'dumbbell lunge': 'legs', 'hip thrust': 'legs', 'sumo deadlift': 'legs', 'step up': 'legs',
+    # shoulders
+    'overhead press': 'shoulders', 'ohp': 'shoulders', 'military press': 'shoulders',
+    'lateral raise': 'shoulders', 'lateral raises': 'shoulders',
+    'arnold press': 'shoulders', 'front raise': 'shoulders',
+    'face pull': 'shoulders', 'upright row': 'shoulders',
+    'dumbbell shoulder press': 'shoulders',
+    'rear delt fly': 'shoulders', 'cable lateral raise': 'shoulders',
+    # arms
+    'bicep curl': 'arms', 'hammer curl': 'arms', 'preacher curl': 'arms',
+    'concentration curl': 'arms', 'cable curl': 'arms',
+    'tricep pushdown': 'arms', 'tricep extension': 'arms',
+    'skull crusher': 'arms', 'close grip bench press': 'arms', 'dip': 'arms',
+    'barbell curl': 'arms', 'tricep dip': 'arms', 'overhead tricep extension': 'arms',
+    # core
+    'plank': 'core', 'cable crunch': 'core', 'crunch': 'core',
+    'hanging leg raise': 'core', 'leg raise': 'core',
+    'ab wheel': 'core', 'russian twist': 'core', 'sit up': 'core',
+    'ab crunch machine': 'core', 'dead bug': 'core',
+}
+
+
+def get_tier(points):
+    v = int(points or 0)
+    for i, (threshold, name, icon, css) in enumerate(TIER_THRESHOLDS):
+        if v >= threshold:
+            if i == 0:
+                pct, next_threshold, next_name = 100, None, None
+            else:
+                next_threshold, next_name, _, _ = TIER_THRESHOLDS[i - 1]
+                pct = min(99, int((v - threshold) / (next_threshold - threshold) * 100))
+            return {
+                'name': name, 'icon': icon, 'css': css,
+                'points': v, 'pct': pct,
+                'current_threshold': threshold,
+                'next_threshold': next_threshold,
+                'next_name': next_name,
+            }
+    return {
+        'name': 'Unranked', 'icon': '—', 'css': 'rb-unranked',
+        'points': 0, 'pct': 0,
+        'current_threshold': 0, 'next_threshold': 500, 'next_name': 'Bronze',
+    }
+
+
+def get_muscle_group_data(user_id):
+    """Returns (muscle_data dict, overall_tier dict) based on the user's PRs."""
+    prs = PersonalRecord.query.filter_by(user_id=user_id).all()
+
+    group_points = {g: 0 for g in MUSCLE_GROUPS}
+    group_exercises = {g: [] for g in MUSCLE_GROUPS}
+
+    for pr in prs:
+        group = EXERCISE_MUSCLE_MAP.get(pr.exercise.lower().strip())
+        if group:
+            pts = int(pr.best_weight * pr.best_reps)
+            group_points[group] += pts
+            group_exercises[group].append({'name': pr.exercise.title(), 'pts': pts})
+
+    for g in MUSCLE_GROUPS:
+        group_exercises[g].sort(key=lambda x: x['pts'], reverse=True)
+
+    muscle_data = {}
+    for g in MUSCLE_GROUPS:
+        cfg = MUSCLE_CONFIG[g]
+        tier = get_tier(group_points[g])
+        muscle_data[g] = {
+            'label':      cfg['label'],
+            'letter':     cfg['letter'],
+            'icon_bg':    cfg['icon_bg'],
+            'icon_color': cfg['icon_color'],
+            'tier_name':  tier['name'],
+            'tier_icon':  tier['icon'],
+            'css':        tier['css'],
+            'points':     tier['points'],
+            'pct':        tier['pct'],
+            'current_threshold': tier['current_threshold'],
+            'next_threshold':    tier['next_threshold'],
+            'next_name':         tier['next_name'],
+            'exercises':  group_exercises[g][:3],
+        }
+
+    total_points = sum(group_points.values())
+    avg_points = total_points / len(MUSCLE_GROUPS)
+    overall_t = get_tier(avg_points)
+    overall_tier = {**overall_t, 'total_points': total_points}
+
+    return muscle_data, overall_tier
 
 
 # ── Helpers ──
@@ -259,6 +398,30 @@ def log_workout():
             )
             db.session.add(ws)
 
+        # Detect and update personal records
+        for item in sets:
+            exercise_key = item['exercise'].strip().lower()
+            weight = float(item['weight'])
+            reps = int(item['reps'])
+            new_pts = weight * reps
+
+            pr = PersonalRecord.query.filter_by(
+                user_id=session['user_id'],
+                exercise=exercise_key
+            ).first()
+
+            if pr is None:
+                db.session.add(PersonalRecord(
+                    user_id=session['user_id'],
+                    exercise=exercise_key,
+                    best_weight=weight,
+                    best_reps=reps,
+                ))
+            elif new_pts > pr.best_weight * pr.best_reps:
+                pr.best_weight = weight
+                pr.best_reps = reps
+                pr.date_set = datetime.utcnow()
+
         db.session.commit()
         flash("Workout saved successfully!")
         return redirect('/dashboard')
@@ -314,9 +477,23 @@ def leaderboard():
         .all()
     )
 
+    all_prs = PersonalRecord.query.all()
+    user_group_pts = {}
+    for pr in all_prs:
+        uid = pr.user_id
+        group = EXERCISE_MUSCLE_MAP.get(pr.exercise.lower().strip())
+        if group:
+            user_group_pts.setdefault(uid, {g: 0 for g in MUSCLE_GROUPS})
+            user_group_pts[uid][group] += int(pr.best_weight * pr.best_reps)
+    tier_map = {
+        uid: get_tier(sum(gpts.values()) / len(MUSCLE_GROUPS))
+        for uid, gpts in user_group_pts.items()
+    }
+
     return render_template(
         'leaderboard.html',
         leaderboard_data=leaderboard_data,
+        tier_map=tier_map,
         current_user_id=session['user_id'],
         user=user,
         rank=get_user_rank(session['user_id'])
@@ -367,6 +544,7 @@ def calendar():
 
 
 
+
 # PROFILE
 @app.route('/profile')
 def profile():
@@ -413,12 +591,25 @@ def profile():
             "volume": total_volume
         })
 
+    prs = PersonalRecord.query.filter_by(user_id=session['user_id']).all()
+    prs.sort(key=lambda p: p.best_weight * p.best_reps, reverse=True)
+    pr_list = [{
+        'exercise': p.exercise.title(),
+        'weight': p.best_weight,
+        'reps': p.best_reps,
+        'pts': int(p.best_weight * p.best_reps),
+        'group': EXERCISE_MUSCLE_MAP.get(p.exercise.lower().strip(), 'other'),
+        'css': MUSCLE_CONFIG.get(EXERCISE_MUSCLE_MAP.get(p.exercise.lower().strip()), {}).get('icon_bg', '#f0f0f0'),
+        'css_color': MUSCLE_CONFIG.get(EXERCISE_MUSCLE_MAP.get(p.exercise.lower().strip()), {}).get('icon_color', '#333'),
+    } for p in prs]
+
     return render_template(
         'profile.html',
         user=user,
         workouts_count=workouts_count,
         rank=rank,
-        recent_workouts=workout_cards
+        recent_workouts=workout_cards,
+        pr_list=pr_list,
     )
 
 
@@ -434,12 +625,15 @@ def ranks():
         session.clear()
         return redirect('/login')
 
-    rank = get_user_rank(session['user_id'])
+    muscle_data, overall_tier = get_muscle_group_data(session['user_id'])
 
     return render_template(
         'ranks.html',
         user=user,
-        rank=rank
+        rank=get_user_rank(session['user_id']),
+        muscle_data=muscle_data,
+        muscle_groups=MUSCLE_GROUPS,
+        overall_tier=overall_tier,
     )
 
 
