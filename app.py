@@ -341,7 +341,6 @@ def plans():
         rank=get_user_rank(session['user_id'])
     )
 
-<<<<<<< Frontend-teaks
 @app.route('/calendar')
 def calendar():
     if 'user_id' not in session:
@@ -367,10 +366,8 @@ def calendar():
     )
 
 
-=======
 
 # PROFILE
->>>>>>> main
 @app.route('/profile')
 def profile():
     if 'user_id' not in session:
