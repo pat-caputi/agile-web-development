@@ -366,8 +366,23 @@ def dashboard():
     ).all()
 
     weekly_volume = sum(ws.weight * ws.reps for ws in weekly_sets)
+    last_week_start = start_of_week - timedelta(days=7)
+    last_week_end = start_of_week
+
+    last_week_sets = db.session.query(WorkoutSet).join(Workout).filter(
+        Workout.user_id == session['user_id'],
+        Workout.date >= last_week_start,
+        Workout.date < last_week_end
+    ).all()
+
+    last_week_volume = sum(ws.weight * ws.reps for ws in last_week_sets)
     rank = get_user_rank(session['user_id'])
     total_users = User.query.count()
+    
+    if last_week_volume > 0:
+        volume_change = int(((weekly_volume - last_week_volume) / last_week_volume) * 100)
+    else:
+        volume_change = 0
 
     daily_rows = (
         db.session.query(
@@ -410,7 +425,8 @@ def dashboard():
         streak=get_current_streak(session['user_id']),
         rank=rank,
         total_users=total_users,
-        weekly_chart_data=weekly_chart_data
+        weekly_chart_data=weekly_chart_data,
+        volume_change=volume_change
     )
 
 

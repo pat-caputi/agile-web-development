@@ -149,7 +149,17 @@
       <div class="stat-card">
         <div class="stat-label">Weekly volume</div>
         <div class="stat-value">{{ weekly_volume }}<span class="stat-unit"> kg</span></div>
-        <div class="stat-meta"><span class="badge badge-success">—</span></div>
+        <div class="stat-meta">
+          <span class="badge badge-success">
+            {% if volume_change > 0 %}
+              +{{ volume_change }}%
+            {% elif volume_change < 0 %}
+              {{ volume_change }}%
+            {% else %}
+              0%
+            {% endif %}
+          </span>
+        </div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Workouts logged</div>
