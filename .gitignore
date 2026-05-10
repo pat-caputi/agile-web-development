@@ -18,3 +18,6 @@ instance/users.db
 
 static/uploads/profile_pictures/*
 !static/uploads/profile_pictures/.gitkeep
+.venv/
+__pycache__/
+venv/
