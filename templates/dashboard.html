@@ -150,7 +150,9 @@
       {% endif %}
     {% endwith %}
     <div class="page-header">
-      <h1 class="page-title">Good morning, {{ user.username.title() }}</h1>
+      <h1 class="page-title">
+        Good morning, {{ nav_user.username.title() if nav_user else "User" }}
+      </h1>
       <p class="page-sub">{{ today.strftime("%A, %d %B") }} · Week {{ today.strftime("%U") }} · {{ workouts_count }} workouts this week</p>
     </div>
 
@@ -255,7 +257,9 @@
             </div>
             <div class="rank-item you">
               <span class="rank-num">3</span>
-              <div class="avatar" style="background:#AFA9EC;color:#26215C;">{{ (user.username.split()[0][0] + (user.username.split()[1][0] if user.username.split()|length > 1 else '')).upper() }}</div>
+              <div class="avatar" style="background:#AFA9EC;color:#26215C;">
+                {{ (nav_user.username[:2]).upper() if nav_user else "U" }}
+              </div>
               <span class="rank-name">You</span>
               <span class="rank-score">18,420 kg</span>
             </div>
