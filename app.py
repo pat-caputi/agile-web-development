@@ -367,6 +367,7 @@ def dashboard():
 
     weekly_volume = sum(ws.weight * ws.reps for ws in weekly_sets)
     rank = get_user_rank(session['user_id'])
+    total_users = User.query.count()
 
     return render_template(
         'dashboard.html',
@@ -375,7 +376,8 @@ def dashboard():
         weekly_volume=weekly_volume,
         workouts_count=workouts_count,
         streak=get_current_streak(session['user_id']),
-        rank=rank
+        rank=rank,
+        total_users=total_users
     )
 
 
