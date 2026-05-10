@@ -652,11 +652,16 @@ function saveWorkout() {
     const exName = b.dataset.exname || 'Exercise';
     let sets = 0, v = 0;
     b.querySelectorAll('.set-row').forEach(r => {
-      const w    = parseFloat(r.querySelectorAll('input')[0]?.value) || 0;
-      const reps = parseInt(r.querySelectorAll('input')[1]?.value)   || 0;
-      if (w > 0 && reps > 0) { _workoutSets.push({exercise: exName, weight: w, reps: reps}); }
-      v += w * reps; if (w > 0 || reps > 0) sets++;
-    });
+    const isDone = r.classList.contains('done');
+    const w = parseFloat(r.querySelectorAll('input')[0]?.value) || 0;
+    const reps = parseInt(r.querySelectorAll('input')[1]?.value) || 0;
+
+    if (isDone && w > 0 && reps > 0) {
+      _workoutSets.push({exercise: exName, weight: w, reps: reps});
+      v += w * reps;
+      sets++;
+    }
+  });
     vol += v;
     lines += `<div class="summary-row"><span>${exName}</span><span style="color:var(--text-secondary);font-size:12px;">${sets} set${sets !== 1 ? 's' : ''} · ${v.toLocaleString()} kg</span></div>`;
   });
