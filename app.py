@@ -553,17 +553,9 @@ def leaderboard():
         .all()
     )
 
-    all_prs = PersonalRecord.query.all()
-    user_group_pts = {}
-    for pr in all_prs:
-        uid = pr.user_id
-        group = EXERCISE_MUSCLE_MAP.get(pr.exercise.lower().strip())
-        if group:
-            user_group_pts.setdefault(uid, {g: 0 for g in MUSCLE_GROUPS})
-            user_group_pts[uid][group] += int(pr.best_weight * pr.best_reps)
     tier_map = {
-        uid: get_tier(sum(gpts.values()) / len(MUSCLE_GROUPS))
-        for uid, gpts in user_group_pts.items()
+        item.id: get_tier(item.weekly_volume or 0)
+        for item in leaderboard_data
     }
 
     return render_template(
