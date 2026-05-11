@@ -2864,6 +2864,10 @@ img.nav-user-avatar {
 /* Suppress all transitions during initial page load to prevent theme flash */
 html.preloading, html.preloading * { transition: none !important; }
 
+/* Theme toggle label text — CSS content so it's correct from first paint */
+#themeToggleLabel::after              { content: 'Dark mode'; }
+[data-theme="dark"] #themeToggleLabel::after { content: 'Light mode'; }
+
 /* Error Message  */
 .error-msg {
   background: rgba(239, 68, 68, 0.12);
