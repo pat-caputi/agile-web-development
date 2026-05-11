@@ -9,6 +9,9 @@
       'data-theme',
       localStorage.getItem('liftlab-theme') || 'light'
     );
+    if (localStorage.getItem('liftlab-sidebar') === 'collapsed') {
+      document.documentElement.setAttribute('data-sidebar', 'collapsed');
+    }
   </script>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
@@ -89,7 +92,38 @@
       </svg>
       <span class="nav-link-text">Calendar</span>
     </a>
-  
+
+    <a href="{{ url_for('public_feed') }}"
+       class="nav-link {% if request.endpoint == 'public_feed' %}active{% endif %}"
+       data-label="Feed">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M2 4h12M2 8h8M2 12h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="nav-link-text">Feed</span>
+    </a>
+
+    <a href="{{ url_for('search_page') }}"
+       class="nav-link {% if request.endpoint == 'search_page' %}active{% endif %}"
+       data-label="Search">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="nav-link-text">Search</span>
+    </a>
+
+    {% if nav_user %}
+    <a href="{{ url_for('public_profile', username=nav_user.username) }}"
+       class="nav-link {% if request.endpoint == 'public_profile' %}active{% endif %}"
+       data-label="Public profile">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="5.5" r="2.5" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M2.5 14c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="nav-link-text">Public profile</span>
+    </a>
+    {% endif %}
+
     <div class="nav-spacer"></div>
 
 <!-- Dark mode toggle -->
@@ -111,17 +145,23 @@
 
 <!-- User profile chip -->
 <a href="{{ url_for('profile') }}"
-   class="nav-user"
-   data-label="Profile"
-   style="background:var(--accent-light);border-color:var(--accent);">
+   class="nav-user {% if request.endpoint == 'profile' %}nav-user-active{% endif %}"
+   data-label="Profile">
 
-  <div class="avatar" style="background:var(--accent-light);color:var(--accent-dark);">
-    {{ (user.username.split()[0][0] + (user.username.split()[1][0] if user.username.split()|length > 1 else '')).upper() }}
-  </div>
+  {% include "_sidebar_avatar.html" %}
 
   <div class="nav-user-info">
-    <div class="nav-user-name">{{ user.username.title() }}</div>
-    <div class="nav-user-rank">Rank #{{ rank if rank else 'N/A' }}</div>
+    <div class="nav-user-name">
+      {{ nav_user.username.title() if nav_user else "Profile" }}
+    </div>
+
+    <div class="nav-user-rank">
+      {% if rank is defined and rank %}
+        Rank #{{ rank }}
+      {% else %}
+        View profile
+      {% endif %}
+    </div>
   </div>
 </a>
   
@@ -141,25 +181,93 @@
 
       <!-- Left: profile card -->
       <div style="display:flex;flex-direction:column;gap:14px;">
-        <div class="card" style="text-align:center;padding:28px 20px;">
-          <div class="avatar avatar-lg" style="background:var(--accent-light);color:var(--accent-dark);margin:0 auto 14px;width:64px;height:64px;font-size:22px;">{{ (user.username.split()[0][0] + (user.username.split()[1][0] if user.username.split()|length > 1 else '')).upper() }}</div>
-          <div style="font-size:18px;font-weight:600;letter-spacing:-0.3px;">{{ user.username.title() }}</div>
-          <div style="font-size:13px;color:var(--text-secondary);margin-top:4px;">{{ user.email }}</div>
-          <div style="font-size:13px;color:var(--text-tertiary);margin-top:6px;line-height:1.5;">Lifting since 2021 · Push/pull/legs enjoyer</div>
-          <div style="margin-top:16px;padding-top:16px;border-top:0.5px solid var(--border);display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
-            <div>
-              <div style="font-size:18px;font-weight:600;">{{ workouts_count }}</div>
-              <div style="font-size:11px;color:var(--text-tertiary);">Workouts</div>
+        <div class="card profile-overview-card">
+          <form
+            method="POST"
+            action="{{ url_for('profile') }}"
+            enctype="multipart/form-data"
+            id="profileUpdateForm"
+          >
+
+            <!-- Profile photo -->
+            <label for="profile_photo" class="profile-photo-edit-wrapper">
+              {% if user.profile_photo %}
+                <img
+                  class="profile-photo-xl"
+                  src="{{ url_for('static', filename=user.profile_photo) }}"
+                  alt="{{ user.username }} profile photo"
+                >
+              {% else %}
+                <div class="profile-photo-xl profile-photo-placeholder">
+                  {{ (user.username.split()[0][0] + (user.username.split()[1][0] if user.username.split()|length > 1 else '')).upper() }}
+                </div>
+              {% endif %}
+
+              <span class="profile-photo-overlay">
+                ✎
+              </span>
+            </label>
+
+            <input
+              id="profile_photo"
+              name="profile_photo"
+              type="file"
+              accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
+              class="profile-photo-input"
+            >
+
+            <div class="profile-photo-hint" id="photoFileName"></div>
+
+            <!-- User info -->
+            <h2 class="profile-name">{{ user.username.title() }}</h2>
+            <p class="profile-email">{{ user.email }}</p>
+
+            <!-- Bio display -->
+            <p class="profile-bio" id="bioDisplay">
+              {{ user.bio if user.bio else "No bio added yet." }}
+            </p>
+
+            <!-- Edit bio button -->
+            <button type="button" class="profile-edit-link" id="editBioBtn">
+              Edit bio
+            </button>
+
+            <!-- Hidden bio editor -->
+            <div class="bio-editor" id="bioEditor">
+              <label for="bio">Bio</label>
+
+              <textarea
+                id="bio"
+                name="bio"
+                maxlength="280"
+                rows="3"
+                placeholder="Tell others about your training style..."
+              >{{ user.bio or "" }}</textarea>
             </div>
-            <div>
-              <div style="font-size:18px;font-weight:600;">#{{ rank if rank else 'N/A' }}</div>
-              <div style="font-size:11px;color:var(--text-tertiary);">Rank</div>
+
+            <!-- Hidden update button -->
+            <button type="submit" class="btn btn-primary btn-block profile-update-btn" id="profileUpdateBtn">
+              Update profile
+            </button>
+
+            <!-- Stats -->
+            <div class="profile-stats">
+              <div>
+                <strong>{{ workouts_count if workouts_count is defined else 0 }}</strong>
+                <span>Workouts</span>
+              </div>
+
+              <div>
+                <strong>{% if rank %}#{{ rank }}{% else %}-{% endif %}</strong>
+                <span>Rank</span>
+              </div>
+
+              <div>
+                <strong>12</strong>
+                <span>Day streak</span>
+              </div>
             </div>
-            <div>
-              <div style="font-size:18px;font-weight:600;">12</div>
-              <div style="font-size:11px;color:var(--text-tertiary);">Day streak</div>
-            </div>
-          </div>
+          </form>
         </div>
 
         <div class="card">
@@ -252,6 +360,36 @@
 
   </main>
 </div>
+<script>
+  const editBioBtn = document.getElementById("editBioBtn");
+  const bioEditor = document.getElementById("bioEditor");
+  const bioTextarea = document.getElementById("bio");
+  const profilePhotoInput = document.getElementById("profile_photo");
+  const profileUpdateBtn = document.getElementById("profileUpdateBtn");
+  const photoFileName = document.getElementById("photoFileName");
+
+  function showUpdateButton() {
+    profileUpdateBtn.classList.add("is-visible");
+  }
+
+  editBioBtn.addEventListener("click", () => {
+    bioEditor.classList.add("is-open");
+    editBioBtn.style.display = "none";
+    showUpdateButton();
+    bioTextarea.focus();
+  });
+
+  bioTextarea.addEventListener("input", () => {
+    showUpdateButton();
+  });
+
+  profilePhotoInput.addEventListener("change", () => {
+    if (profilePhotoInput.files.length > 0) {
+      photoFileName.textContent = profilePhotoInput.files[0].name;
+      showUpdateButton();
+    }
+  });
+</script>
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>

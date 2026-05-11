@@ -9,6 +9,9 @@
       'data-theme',
       localStorage.getItem('liftlab-theme') || 'light'
     );
+    if (localStorage.getItem('liftlab-sidebar') === 'collapsed') {
+      document.documentElement.setAttribute('data-sidebar', 'collapsed');
+    }
   </script>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   <style>
@@ -43,16 +46,14 @@
       <div class="sidebar-logo-icon">L</div>
       <span class="sidebar-logo-text">Lift<span>AGILE</span></span>
     </div>
-    
+
     <button class="sidebar-toggle" id="sidebarCollapseBtn" title="Collapse sidebar">
       <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
         <path d="M9 11L5 7l4-4" stroke="currentColor" stroke-width="1.5"
               stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </button>
-  
-    <!-- Navigation links -->
-    <!-- Add data-label for the collapsed tooltip -->
+
     <a href="{{ url_for('dashboard') }}"
        class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}"
        data-label="Dashboard">
@@ -64,7 +65,7 @@
       </svg>
       <span class="nav-link-text">Dashboard</span>
     </a>
-  
+
     <a href="{{ url_for('log_workout') }}"
        class="nav-link {% if request.endpoint == 'log_workout' %}active{% endif %}"
        data-label="Log workout">
@@ -74,7 +75,7 @@
       </svg>
       <span class="nav-link-text">Log workout</span>
     </a>
-  
+
     <a href="{{ url_for('plans') }}"
        class="nav-link {% if request.endpoint == 'plans' %}active{% endif %}"
        data-label="My plans">
@@ -84,7 +85,7 @@
       </svg>
       <span class="nav-link-text">My plans</span>
     </a>
-  
+
     <a href="{{ url_for('leaderboard') }}"
        class="nav-link {% if request.endpoint == 'leaderboard' %}active{% endif %}"
        data-label="Leaderboard">
@@ -93,7 +94,7 @@
       </svg>
       <span class="nav-link-text">Leaderboard</span>
     </a>
-  
+
     <a href="{{ url_for('ranks') }}"
        class="nav-link {% if request.endpoint == 'ranks' %}active{% endif %}"
        data-label="My ranks">
@@ -103,8 +104,10 @@
       </svg>
       <span class="nav-link-text">My ranks</span>
     </a>
-  
-    <a href="{{ url_for('calendar') }}" class="nav-link {% if request.endpoint == 'calendar' %}active{% endif %}" data-label="Calendar">
+
+    <a href="{{ url_for('calendar') }}"
+       class="nav-link {% if request.endpoint == 'calendar' %}active{% endif %}"
+       data-label="Calendar">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
         <rect x="2" y="3" width="12" height="11" rx="2" stroke="currentColor" stroke-width="1.5"/>
         <path d="M5 1v3M11 1v3M2 7h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
@@ -112,163 +115,418 @@
       <span class="nav-link-text">Calendar</span>
     </a>
 
+    <a href="{{ url_for('public_feed') }}"
+       class="nav-link {% if request.endpoint == 'public_feed' %}active{% endif %}"
+       data-label="Feed">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M2 4h12M2 8h8M2 12h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="nav-link-text">Feed</span>
+    </a>
+
+    <a href="{{ url_for('search_page') }}"
+       class="nav-link {% if request.endpoint == 'search_page' %}active{% endif %}"
+       data-label="Search">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="nav-link-text">Search</span>
+    </a>
+
+    {% if nav_user %}
+    <a href="{{ url_for('public_profile', username=nav_user.username) }}"
+       class="nav-link {% if request.endpoint == 'public_profile' %}active{% endif %}"
+       data-label="Public profile">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="5.5" r="2.5" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M2.5 14c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="nav-link-text">Public profile</span>
+    </a>
+    {% endif %}
+
     <div class="nav-spacer"></div>
 
-    
-  
-    <!-- Dark mode toggle -->
     <button class="theme-toggle" id="themeToggleBtn" data-label="Dark mode">
-      <!-- Sun icon (shown in dark mode — click to go light) -->
-      <svg id="themeIconDark" width="16" height="16" viewBox="0 0 16 16" fill="none"
-           style="display:none;">
+      <svg id="themeIconDark" width="16" height="16" viewBox="0 0 16 16" fill="none" style="display:none;">
         <circle cx="8" cy="8" r="3.5" stroke="currentColor" stroke-width="1.5"/>
         <path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3.1 3.1l1 1M11.9 11.9l1 1M3.1 12.9l1-1M11.9 4.1l1-1"
               stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
       </svg>
-      <!-- Moon icon (shown in light mode — click to go dark) -->
       <svg id="themeIconLight" width="16" height="16" viewBox="0 0 16 16" fill="none">
         <path d="M13.5 9.5A5.5 5.5 0 016.5 2.5a5.5 5.5 0 100 11 5.5 5.5 0 007-4z"
               stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
       </svg>
       <span class="theme-toggle-text" id="themeToggleLabel">Dark mode</span>
     </button>
-  
-    <!-- User profile chip -->
-    <a href="{{ url_for('profile') }}" class="nav-user" data-label="Profile">
-      <div class="avatar" style="background:var(--accent-light);color:var(--accent-dark);">
-        {{ user.username[0] | upper }}
-      </div>
+
+    <a href="{{ url_for('profile') }}"
+       class="nav-user {% if request.endpoint == 'profile' %}nav-user-active{% endif %}"
+       data-label="Profile">
+      {% include "_sidebar_avatar.html" %}
       <div class="nav-user-info">
-        <div class="nav-user-name">{{ user.username.title() }}</div>
-        <div class="nav-user-rank">Rank #{{ rank if rank else 'N/A' }}</div>
+        <div class="nav-user-name">{{ nav_user.username.title() if nav_user else "Profile" }}</div>
+        <div class="nav-user-rank">
+          {% if rank is defined and rank %}Rank #{{ rank }}{% else %}View profile{% endif %}
+        </div>
       </div>
     </a>
-  
+
   </nav>
-  
-  
 
   <!-- Main -->
   <main class="main">
+
+    <!-- Page header -->
     <div class="page-header">
       <h1 class="page-title">Leaderboard</h1>
-      <p class="page-sub">Week 24 · Resets in 3 days</p>
+      <p class="page-sub">
+        Week {{ today.strftime("%U") if today is defined else "" }} ·
+        {{ leaderboard_data | length }} athletes this week
+      </p>
     </div>
 
-    <!-- Category pills -->
-    <div class="pill-tabs">
-      <button class="pill active" onclick="switchTab(this,'vol')">Total volume</button>
-      <button class="pill" onclick="switchTab(this,'freq')">Frequency</button>
-      <button class="pill" onclick="switchTab(this,'str')">Strength score</button>
-      <button class="pill" onclick="switchTab(this,'pr')">PRs set</button>
+    <!-- Sort tabs -->
+    <div class="lb-sort-tabs">
+      <button class="lb-sort-tab active" data-sort="vol">⚡ Volume</button>
+      <button class="lb-sort-tab" data-sort="freq">📅 Frequency</button>
+      <button class="lb-sort-tab" data-sort="str">💪 Strength</button>
+      <button class="lb-sort-tab" data-sort="pr">🎯 PRs</button>
     </div>
 
     <!-- Podium -->
-    <div class="card" style="margin-bottom:16px;">
-      <div class="podium">
+    <section class="leaderboard-podium-card">
+      {% if leaderboard_data %}
+        {% set first  = leaderboard_data[0] %}
+        {% set second = leaderboard_data[1] if leaderboard_data|length > 1 else none %}
+        {% set third  = leaderboard_data[2] if leaderboard_data|length > 2 else none %}
 
-        {% for user in leaderboard_data[:3] %}
-        <div class="podium-place {% if user.id == current_user_id %}lb-row-you{% endif %}">
-          {% if loop.index == 1 %}
-            <div style="font-size:20px;margin-bottom:2px;">🥇</div>
-          {% elif loop.index == 2 %}
-            <div style="font-size:20px;margin-bottom:2px;">🥈</div>
-          {% elif loop.index == 3 %}
-            <div style="font-size:20px;margin-bottom:2px;">🥉</div>
+        {# badge label lookup — used in podium and table #}
+        {% set badge_labels = {
+          'vol':  '⚡ Volume King',
+          'freq': '📅 Most Consistent',
+          'str':  '💪 Strength Leader',
+          'pr':   '🎯 PR Machine'
+        } %}
+
+        <div class="podium-stage">
+
+          <!-- 2nd place – left -->
+          {% if second %}
+          <div class="podium-player podium-second">
+            <div class="podium-medal">🥈</div>
+            {% if second.profile_photo %}
+              <img class="podium-avatar"
+                   src="{{ url_for('static', filename=second.profile_photo) }}"
+                   alt="{{ second.username }}">
+            {% else %}
+              <div class="podium-avatar podium-initials">{{ second.username[:2]|upper }}</div>
+            {% endif %}
+            <div class="podium-name">
+              {% if second.id == current_user_id %}You{% else %}{{ second.username }}{% endif %}
+            </div>
+            <div class="podium-badges">
+              {% for b in badges_map.get(second.id, []) %}
+                <span class="lb-achievement lb-ach-{{ b }}">{{ badge_labels[b] }}</span>
+              {% endfor %}
+            </div>
+            <div class="podium-score" data-uid="{{ second.id }}">
+              {{ second.weekly_volume|int }} kg
+            </div>
+            <div class="podium-block podium-block-second"><span>2</span></div>
+          </div>
           {% endif %}
 
-          <div class="podium-avatar"
-               style="width:46px;height:46px;font-size:15px;font-weight:600;background:#FAEEDA;color:#633806;">
-            {{ user.username[:2]|upper }}
-          </div>
-
-          <div class="podium-name">
-            {% if user.id == current_user_id %}
-              You
+          <!-- 1st place – centre -->
+          <div class="podium-player podium-first">
+            <div class="podium-medal">🏆</div>
+            {% if first.profile_photo %}
+              <img class="podium-avatar podium-avatar-large"
+                   src="{{ url_for('static', filename=first.profile_photo) }}"
+                   alt="{{ first.username }}">
             {% else %}
-              {{ user.username }}
+              <div class="podium-avatar podium-avatar-large podium-initials">{{ first.username[:2]|upper }}</div>
             {% endif %}
+            <div class="podium-name podium-name-first">
+              {% if first.id == current_user_id %}You{% else %}{{ first.username }}{% endif %}
+            </div>
+            <div class="podium-badges">
+              {% for b in badges_map.get(first.id, []) %}
+                <span class="lb-achievement lb-ach-{{ b }}">{{ badge_labels[b] }}</span>
+              {% endfor %}
+            </div>
+            <div class="podium-score" data-uid="{{ first.id }}">
+              {{ first.weekly_volume|int }} kg
+            </div>
+            <div class="podium-block podium-block-first"><span>1</span></div>
           </div>
 
-          <div class="podium-score">
-            {% set t = tier_map.get(user.id, {'icon': '—', 'name': 'Unranked', 'css': 'rb-unranked'}) %}
-            <span class="rank-badge {{ t.css }}" style="font-size:11px;">{{ t.icon }} {{ t.name }}</span>
+          <!-- 3rd place – right -->
+          {% if third %}
+          <div class="podium-player podium-third">
+            <div class="podium-medal">🥉</div>
+            {% if third.profile_photo %}
+              <img class="podium-avatar"
+                   src="{{ url_for('static', filename=third.profile_photo) }}"
+                   alt="{{ third.username }}">
+            {% else %}
+              <div class="podium-avatar podium-initials">{{ third.username[:2]|upper }}</div>
+            {% endif %}
+            <div class="podium-name">
+              {% if third.id == current_user_id %}You{% else %}{{ third.username }}{% endif %}
+            </div>
+            <div class="podium-badges">
+              {% for b in badges_map.get(third.id, []) %}
+                <span class="lb-achievement lb-ach-{{ b }}">{{ badge_labels[b] }}</span>
+              {% endfor %}
+            </div>
+            <div class="podium-score" data-uid="{{ third.id }}">
+              {{ third.weekly_volume|int }} kg
+            </div>
+            <div class="podium-block podium-block-third"><span>3</span></div>
           </div>
+          {% endif %}
 
-          <div class="podium-block"
-               style="height:72px;background:var(--amber-400);color:var(--amber-800);">
-            {{ loop.index }}
-          </div>
         </div>
-        {% else %}
-        <div class="podium-place">
-          <div class="podium-name">No leaderboard data this week.</div>
-        </div>
-        {% endfor %}
-      </div>
-    </div>
+      {% else %}
+        <div class="lb-empty">No workout data this week — be the first to log a session!</div>
+      {% endif %}
+    </section>
 
-    <!-- Full table -->
+    <!-- Full table card -->
     <div class="card">
-      <table class="lb-table">
+
+      <!-- Tier filter tabs -->
+      <div class="leaderboard-tabs">
+        <button class="leaderboard-tab active" data-filter="all">Overall</button>
+        <button class="leaderboard-tab" data-filter="diamond">💎 Diamond</button>
+        <button class="leaderboard-tab" data-filter="platinum">🔷 Platinum</button>
+        <button class="leaderboard-tab" data-filter="gold">🥇 Gold</button>
+        <button class="leaderboard-tab" data-filter="silver">🥈 Silver</button>
+        <button class="leaderboard-tab" data-filter="bronze">🥉 Bronze</button>
+      </div>
+
+      <table class="lb-table" id="lbTable">
         <thead>
           <tr>
-            <th style="width:32px;">#</th>
-            <th style="width:36px;"></th>
-            <th>User</th>
-            <th>Workouts</th>
-            <th class="right">Overall Rank</th>
-            <th class="right" style="width:44px;">+/−</th>
+            <th style="width:40px;">#</th>
+            <th style="width:40px;"></th>
+            <th>Athlete</th>
+            <th class="lb-score-header right" id="scoreHeader">Volume</th>
+            <th class="right">Tier</th>
+            <th class="right" style="width:80px;">Profile</th>
+            <th style="width:28px;"></th>
           </tr>
         </thead>
 
-        <tbody>
-            {% for user in leaderboard_data %}
-            <tr class="{% if user.id == current_user_id %}lb-row-you{% endif %}"style="{% if user.id == current_user_id %}background:#eae6ff;{% endif %}">
-              <td>
-                <span style="font-size:13px;font-weight:600;color:var(--text-tertiary);">
-                  {{ loop.index }}
-                </span>
-              </td>
+        {% if leaderboard_data %}
+          {% set badge_labels = {
+            'vol':  '⚡ Volume King',
+            'freq': '📅 Most Consistent',
+            'str':  '💪 Strength Leader',
+            'pr':   '🎯 PR Machine'
+          } %}
+          {% for u in leaderboard_data %}
+            {% set t = tier_map.get(u.id, {'icon': '—', 'name': 'Unranked', 'css': 'rb-unranked'}) %}
+            {% set u_str = strength_map.get(u.id, 0) %}
+            {% set u_pr  = pr_count_map.get(u.id, 0) %}
+            <tbody
+              class="lb-tbody-row {% if u.id == current_user_id %}current-user{% endif %}"
+              data-uid="{{ u.id }}"
+              data-tier="{{ t.name | lower }}"
+              data-vol="{{ (u.weekly_volume or 0) | int }}"
+              data-freq="{{ u.workouts_count or 0 }}"
+              data-str="{{ u_str | int }}"
+              data-pr="{{ u_pr }}"
+            >
+              <!-- Main row -->
+              <tr class="lb-row-main leaderboard-row {% if u.id == current_user_id %}current-user{% endif %}">
+                <!-- Rank -->
+                <td>
+                  <span class="lb-rank-num">{{ loop.index }}</span>
+                  <span class="lb-rank-change lb-rank-new">New</span>
+                </td>
 
-              <td>
-                <div class="avatar" style="background:#ddd;color:#333;">
-                  {{ user.username[:2]|upper }}
-                </div>
-              </td>
+                <!-- Avatar -->
+                <td>
+                  {% if u.profile_photo %}
+                    <img class="leaderboard-user-avatar"
+                         src="{{ url_for('static', filename=u.profile_photo) }}"
+                         alt="{{ u.username }}">
+                  {% else %}
+                    <div class="leaderboard-user-avatar leaderboard-user-initials">
+                      {{ u.username[:2]|upper }}
+                    </div>
+                  {% endif %}
+                </td>
 
-              <td>{{ user.username }}</td>
+                <!-- Username + badges -->
+                <td>
+                  <div class="lb-user-cell">
+                    <div class="lb-user-name">
+                      {% if u.id == current_user_id %}<strong>You</strong> · {% endif %}{{ u.username }}
+                    </div>
+                    <div class="lb-user-badges">
+                      {% for b in badges_map.get(u.id, []) %}
+                        <span class="lb-achievement lb-ach-{{ b }}">{{ badge_labels[b] }}</span>
+                      {% endfor %}
+                    </div>
+                  </div>
+                </td>
 
-              <td style="color:var(--text-tertiary);">
-                {{ user.workouts_count }}
-              </td>
+                <!-- Score (dynamically updated by JS) -->
+                <td class="lb-score-col lb-score-display" style="text-align:right;">
+                  {{ (u.weekly_volume or 0)|int | string + ' kg' }}
+                </td>
 
-              <td style="text-align:right;">
-                {% set t = tier_map.get(user.id, {'icon': '—', 'name': 'Unranked', 'css': 'rb-unranked'}) %}
-                <span class="rank-badge {{ t.css }}">{{ t.icon }} {{ t.name }}</span>
-              </td>
+                <!-- Tier badge -->
+                <td style="text-align:right;">
+                  <span class="rank-badge {{ t.css }}">{{ t.icon }} {{ t.name }}</span>
+                </td>
 
-              <td style="text-align:right;">
-                —
-              </td>
-            </tr>
-            {% else %}
-            <tr>
-              <td colspan="6">No data this week</td>
-            </tr>
-            {% endfor %}
+                <!-- Public profile link -->
+                <td style="text-align:right;">
+                  <a href="{{ url_for('public_profile', username=u.username) }}"
+                     class="lb-profile-link"
+                     onclick="event.stopPropagation()">View →</a>
+                </td>
+
+                <!-- Expand chevron -->
+                <td class="lb-chevron">
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                  </svg>
+                </td>
+              </tr>
+
+              <!-- Detail (expandable) row -->
+              <tr class="lb-row-detail">
+                <td colspan="7">
+                  <div class="lb-mini-stats">
+                    <div class="lb-stat-item">
+                      <strong>{{ (u.weekly_volume or 0)|int }}</strong>
+                      <span>kg volume</span>
+                    </div>
+                    <div class="lb-stat-item">
+                      <strong>{{ u.workouts_count or 0 }}</strong>
+                      <span>workouts</span>
+                    </div>
+                    <div class="lb-stat-item">
+                      <strong>{{ u_str|int }}</strong>
+                      <span>strength pts</span>
+                    </div>
+                    <div class="lb-stat-item">
+                      <strong>{{ u_pr }}</strong>
+                      <span>PRs set</span>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          {% endfor %}
+        {% else %}
+          <tbody>
+            <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-tertiary);font-size:13px;">
+              No athletes on the board this week.
+            </td></tr>
           </tbody>
+        {% endif %}
       </table>
     </div>
   </main>
 </div>
 
-<script src="{{ url_for('static', filename='js/main.js') }}"></script>
 <script>
-function switchTab(btn, tab) {
-  document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
-  btn.classList.add('active');
+/* ── Data ────────────────────────────────────────── */
+const SORT_CONFIG = {
+  vol:  { label: 'Volume',    fmt: v => `${Number(v).toLocaleString()} kg` },
+  freq: { label: 'Frequency', fmt: v => `${v} sessions` },
+  str:  { label: 'Strength',  fmt: v => `${Number(v).toLocaleString()} pts` },
+  pr:   { label: 'PRs',       fmt: v => `${v} PRs` },
+};
+
+/* Podium scores keyed by user id (uid → { vol, freq, str, pr }) */
+const podiumScores = {};
+document.querySelectorAll('.lb-tbody-row').forEach(tb => {
+  podiumScores[tb.dataset.uid] = {
+    vol:  tb.dataset.vol,
+    freq: tb.dataset.freq,
+    str:  tb.dataset.str,
+    pr:   tb.dataset.pr,
+  };
+});
+
+let currentSort   = 'vol';
+let currentFilter = 'all';
+
+/* ── Sort ────────────────────────────────────────── */
+function applySort(key) {
+  currentSort = key;
+  const table   = document.getElementById('lbTable');
+  const tbodies = Array.from(table.querySelectorAll('tbody.lb-tbody-row'));
+
+  tbodies.sort((a, b) => Number(b.dataset[key]) - Number(a.dataset[key]));
+
+  tbodies.forEach((tb, i) => {
+    table.appendChild(tb);
+
+    /* Update rank number */
+    tb.querySelector('.lb-rank-num').textContent = i + 1;
+
+    /* Update score cell */
+    const cell = tb.querySelector('.lb-score-display');
+    cell.textContent = SORT_CONFIG[key].fmt(tb.dataset[key]);
+  });
+
+  /* Update column header */
+  document.getElementById('scoreHeader').textContent = SORT_CONFIG[key].label;
+
+  /* Update podium scores */
+  document.querySelectorAll('.podium-score[data-uid]').forEach(el => {
+    const d = podiumScores[el.dataset.uid];
+    if (d) el.textContent = SORT_CONFIG[key].fmt(d[key]);
+  });
 }
+
+/* ── Tier filter ─────────────────────────────────── */
+function applyFilter(tier) {
+  currentFilter = tier;
+  document.querySelectorAll('tbody.lb-tbody-row').forEach(tb => {
+    const match = tier === 'all' || tb.dataset.tier === tier;
+    tb.style.display = match ? '' : 'none';
+    if (!match && tb.classList.contains('expanded')) {
+      tb.classList.remove('expanded');
+    }
+  });
+}
+
+/* ── Row expand / collapse ───────────────────────── */
+document.querySelectorAll('.lb-row-main').forEach(row => {
+  row.addEventListener('click', () => {
+    row.closest('tbody').classList.toggle('expanded');
+  });
+});
+
+/* ── Sort tab clicks ─────────────────────────────── */
+document.querySelectorAll('.lb-sort-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.lb-sort-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    applySort(tab.dataset.sort);
+  });
+});
+
+/* ── Tier tab clicks ─────────────────────────────── */
+document.querySelectorAll('.leaderboard-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.leaderboard-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    applyFilter(tab.dataset.filter);
+  });
+});
 </script>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>

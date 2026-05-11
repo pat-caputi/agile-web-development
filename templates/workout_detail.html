@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ plan.title }} · LiftAGILE</title>
+  <script>
+    document.documentElement.setAttribute(
+      'data-theme',
+      localStorage.getItem('liftlab-theme') || 'light'
+    );
+    if (localStorage.getItem('liftlab-sidebar') === 'collapsed') {
+      document.documentElement.setAttribute('data-sidebar', 'collapsed');
+    }
+  </script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-icon">L</div>
+      <span class="sidebar-logo-text">Lift<span>AGILE</span></span>
+    </div>
+
+    <button class="sidebar-toggle" id="sidebarCollapseBtn" title="Collapse sidebar">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+        <path d="M9 11L5 7l4-4" stroke="currentColor" stroke-width="1.5"
+              stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+
+    <a href="{{ url_for('dashboard') }}"
+       class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}"
+       data-label="Dashboard">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <rect x="1" y="1" width="6" height="6" rx="1.5" fill="currentColor"/>
+        <rect x="9" y="1" width="6" height="6" rx="1.5" fill="currentColor"/>
+        <rect x="1" y="9" width="6" height="6" rx="1.5" fill="currentColor"/>
+        <rect x="9" y="9" width="6" height="6" rx="1.5" fill="currentColor"/>
+      </svg>
+      <span class="nav-link-text">Dashboard</span>
+    </a>
+
+    <a href="{{ url_for('log_workout') }}"
+       class="nav-link {% if request.endpoint == 'log_workout' %}active{% endif %}"
+       data-label="Log workout">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M2 8h2m8 0h2M4 8V5.5a1.5 1.5 0 013 0v5a1.5 1.5 0 003 0V5.5"
+              stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="nav-link-text">Log workout</span>
+    </a>
+
+    <a href="{{ url_for('plans') }}"
+       class="nav-link {% if request.endpoint == 'plans' %}active{% endif %}"
+       data-label="My plans">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M5 6h6M5 9h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="nav-link-text">My plans</span>
+    </a>
+
+    <a href="{{ url_for('leaderboard') }}"
+       class="nav-link {% if request.endpoint == 'leaderboard' %}active{% endif %}"
+       data-label="Leaderboard">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M3 13V8m5 5V4m5 9V7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="nav-link-text">Leaderboard</span>
+    </a>
+
+    <a href="{{ url_for('ranks') }}"
+       class="nav-link {% if request.endpoint == 'ranks' %}active{% endif %}"
+       data-label="My ranks">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M8 2l1.8 3.6L14 6.3l-3 2.9.7 4.1L8 11.4l-3.7 1.9.7-4.1-3-2.9 4.2-.7z"
+              stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+      </svg>
+      <span class="nav-link-text">My ranks</span>
+    </a>
+
+    <a href="{{ url_for('calendar') }}"
+       class="nav-link {% if request.endpoint == 'calendar' %}active{% endif %}"
+       data-label="Calendar">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <rect x="2" y="3" width="12" height="11" rx="2" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M5 1v3M11 1v3M2 7h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="nav-link-text">Calendar</span>
+    </a>
+
+    <a href="{{ url_for('public_feed') }}"
+       class="nav-link {% if request.endpoint == 'public_feed' %}active{% endif %}"
+       data-label="Feed">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M2 4h12M2 8h8M2 12h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="nav-link-text">Feed</span>
+    </a>
+
+    <a href="{{ url_for('search_page') }}"
+       class="nav-link {% if request.endpoint == 'search_page' %}active{% endif %}"
+       data-label="Search">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="nav-link-text">Search</span>
+    </a>
+
+    {% if nav_user %}
+    <a href="{{ url_for('public_profile', username=nav_user.username) }}"
+       class="nav-link {% if request.endpoint == 'public_profile' %}active{% endif %}"
+       data-label="Public profile">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="5.5" r="2.5" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M2.5 14c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="nav-link-text">Public profile</span>
+    </a>
+    {% endif %}
+
+    <div class="nav-spacer"></div>
+
+    <button class="theme-toggle" id="themeToggleBtn" data-label="Dark mode">
+      <svg id="themeIconDark" width="16" height="16" viewBox="0 0 16 16" fill="none" style="display:none;">
+        <circle cx="8" cy="8" r="3.5" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3.1 3.1l1 1M11.9 11.9l1 1M3.1 12.9l1-1M11.9 4.1l1-1"
+              stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+      <svg id="themeIconLight" width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M13.5 9.5A5.5 5.5 0 016.5 2.5a5.5 5.5 0 100 11 5.5 5.5 0 007-4z"
+              stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="theme-toggle-text" id="themeToggleLabel">Dark mode</span>
+    </button>
+
+    <a href="{{ url_for('profile') }}"
+       class="nav-user {% if request.endpoint == 'profile' %}nav-user-active{% endif %}"
+       data-label="Profile">
+      {% include "_sidebar_avatar.html" %}
+      <div class="nav-user-info">
+        <div class="nav-user-name">{{ nav_user.username.title() if nav_user else "Profile" }}</div>
+        <div class="nav-user-rank">View profile</div>
+      </div>
+    </a>
+
+  </nav>
+
+  <!-- Main -->
+  <main class="main">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div style="margin-bottom:12px;padding:10px 14px;background:var(--success-bg);color:var(--success-text);border-radius:var(--radius-md);font-size:13px;">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <div style="display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:16px;align-items:start;">
+
+      <!-- Left: plan detail -->
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div class="card">
+          <a href="{{ url_for('public_feed') }}"
+             style="font-size:12px;color:var(--text-tertiary);text-decoration:none;display:inline-block;margin-bottom:12px;">
+            ← Back to feed
+          </a>
+
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:4px;">
+            <div>
+              <h1 class="page-title" style="margin-bottom:4px;">{{ plan.title }}</h1>
+              <span class="vis-badge {% if plan.is_public %}vis-public{% else %}vis-private{% endif %}">
+                {{ 'Public' if plan.is_public else 'Private' }}
+              </span>
+            </div>
+            {% if is_owner %}
+              <form action="{{ url_for('toggle_plan_visibility', plan_id=plan.id) }}" method="POST" style="flex-shrink:0;margin-top:4px;">
+                <input type="hidden" name="next" value="{{ url_for('workout_detail', plan_id=plan.id) }}">
+                <button class="vis-toggle-btn {% if plan.is_public %}vis-toggle-private{% else %}vis-toggle-public{% endif %}" type="submit">
+                  {{ 'Make Private' if plan.is_public else 'Make Public' }}
+                </button>
+              </form>
+            {% endif %}
+          </div>
+
+          <p class="muted" style="margin-bottom:14px;">
+            Shared by
+            {% if plan.user %}
+              <a href="{{ url_for('public_profile', username=plan.user.username) }}"
+                 style="color:var(--accent);text-decoration:none;">{{ plan.user.username }}</a>
+            {% else %}
+              Unknown user
+            {% endif %}
+          </p>
+
+          <hr class="card-divider">
+
+          <p style="font-size:13px;color:var(--text-secondary);line-height:1.6;">
+            {{ plan.description or "No description added." }}
+          </p>
+
+          <div class="workout-actions" style="margin-top:16px;">
+            <form action="{{ url_for('toggle_workout_like', plan_id=plan.id) }}" method="POST">
+              <button class="btn {% if user_has_liked %}btn-primary{% else %}btn-secondary{% endif %}"
+                      type="submit" style="font-size:12px;padding:6px 16px;display:flex;align-items:center;gap:6px;">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                  <path d="M8 13.5C4 11 1.5 8.5 1.5 5.5A3.5 3.5 0 018 3.6 3.5 3.5 0 0114.5 5.5C14.5 8.5 12 11 8 13.5z"
+                        stroke="currentColor" stroke-width="1.5"
+                        {% if user_has_liked %}fill="currentColor"{% endif %}/>
+                </svg>
+                {{ likes_count }} {{ "Like" if not user_has_liked else "Unlike" }}
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: comments -->
+      <div class="card">
+        <div class="card-title">Comments ({{ comments | length }})</div>
+
+        <form action="{{ url_for('add_workout_comment', plan_id=plan.id) }}" method="POST"
+              class="comment-form">
+          <textarea name="body" rows="3"
+                    placeholder="Write a comment…" required></textarea>
+          <button class="btn btn-primary" type="submit"
+                  style="font-size:12px;padding:6px 14px;">Post</button>
+        </form>
+
+        <hr class="card-divider">
+
+        <div class="comments-section" style="margin-top:0;">
+          {% if comments %}
+            {% for comment in comments %}
+              <div class="comment-card card" style="margin-bottom:8px;padding:12px;">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                  <div class="avatar" style="background:var(--purple-50);color:var(--purple-600);width:28px;height:28px;font-size:10px;flex-shrink:0;">
+                    {% if comment.user %}{{ comment.user.username[:2].upper() }}{% else %}?{% endif %}
+                  </div>
+                  <span style="font-size:13px;font-weight:500;">
+                    {% if comment.user %}{{ comment.user.username }}{% else %}User{% endif %}
+                  </span>
+                  <span class="muted" style="margin-left:auto;">
+                    {{ comment.created_at.strftime("%d %b") }}
+                  </span>
+                </div>
+                <p style="font-size:13px;color:var(--text-secondary);margin:0;line-height:1.5;">
+                  {{ comment.body }}
+                </p>
+              </div>
+            {% endfor %}
+          {% else %}
+            <p class="muted" style="text-align:center;padding:16px 0;">
+              No comments yet. Be the first!
+            </p>
+          {% endif %}
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+</div>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

@@ -53,8 +53,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!sidebar) return;
     if (collapsed) {
       sidebar.classList.add('collapsed');
+      document.documentElement.setAttribute('data-sidebar', 'collapsed');
     } else {
       sidebar.classList.remove('collapsed');
+      document.documentElement.removeAttribute('data-sidebar');
     }
   }
 

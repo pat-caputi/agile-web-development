@@ -1,0 +1,11 @@
+{% if nav_user and nav_user.profile_photo %}
+  <img
+    class="avatar nav-user-avatar"
+    src="{{ url_for('static', filename=nav_user.profile_photo) }}"
+    alt="{{ nav_user.username }} profile photo"
+  >
+{% else %}
+  <div class="avatar nav-user-avatar">
+    {{ initials(nav_user.username) if nav_user else "U" }}
+  </div>
+{% endif %}
