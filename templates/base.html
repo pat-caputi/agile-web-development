@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Workout App</title>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #0d1117;
+      color: #f0f6fc;
+      font-family: Arial, sans-serif;
+    }
+
+    a {
+      color: #58a6ff;
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .main-nav {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+      padding: 1rem 2rem;
+      background: rgba(22, 27, 34, 0.95);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      flex-wrap: wrap;
+    }
+
+    .main-nav a {
+      color: #f0f6fc;
+      font-weight: 600;
+    }
+
+    .main-nav a:hover {
+      color: #58a6ff;
+    }
+
+    main {
+      padding: 1rem;
+    }
+
+    .flash-container {
+      max-width: 1100px;
+      margin: 1rem auto;
+    }
+
+    .flash-message {
+      padding: 0.8rem 1rem;
+      border-radius: 12px;
+      margin-bottom: 0.75rem;
+      background: rgba(46, 160, 67, 0.18);
+      border: 1px solid rgba(46, 160, 67, 0.35);
+    }
+  </style>
+</head>
+<body>
+  <nav class="main-nav">
+    <a href="/dashboard">Dashboard</a>
+    <a href="/profile">Profile</a>
+    <a href="/leaderboard">Leaderboard</a>
+    <a href="/feed">Feed</a>
+    <a href="/search">Search</a>
+
+    {% if nav_user %}
+      <a href="{{ url_for('public_profile', username=nav_user.username) }}">Public Profile</a>
+      <a href="{{ url_for('logout') }}">Logout</a>
+    {% endif %}
+  </nav>
+
+  <main>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-container">
+          {% for category, message in messages %}
+            <div class="flash-message {{ category }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

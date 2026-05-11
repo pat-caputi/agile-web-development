@@ -9,6 +9,9 @@
       'data-theme',
       localStorage.getItem('liftlab-theme') || 'light'
     );
+    if (localStorage.getItem('liftlab-sidebar') === 'collapsed') {
+      document.documentElement.setAttribute('data-sidebar', 'collapsed');
+    }
   </script>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
@@ -91,6 +94,36 @@
       <span class="nav-link-text">Calendar</span>
     </a>
 
+    <a href="{{ url_for('public_feed') }}"
+       class="nav-link {% if request.endpoint == 'public_feed' %}active{% endif %}"
+       data-label="Feed">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M2 4h12M2 8h8M2 12h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="nav-link-text">Feed</span>
+    </a>
+
+    <a href="{{ url_for('search_page') }}"
+       class="nav-link {% if request.endpoint == 'search_page' %}active{% endif %}"
+       data-label="Search">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="nav-link-text">Search</span>
+    </a>
+
+    {% if nav_user %}
+    <a href="{{ url_for('public_profile', username=nav_user.username) }}"
+       class="nav-link {% if request.endpoint == 'public_profile' %}active{% endif %}"
+       data-label="Public profile">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="5.5" r="2.5" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M2.5 14c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="nav-link-text">Public profile</span>
+    </a>
+    {% endif %}
 
     <div class="nav-spacer"></div>
 
@@ -114,14 +147,24 @@
 </button>
 
 <!-- User profile chip -->
-<a href="{{ url_for('profile') }}" class="nav-user" data-label="Profile">
-  <div class="avatar" style="background:var(--accent-light);color:var(--accent-dark);">
-    {{ (user.username.split()[0][0] + (user.username.split()[1][0] if user.username.split()|length > 1 else '')).upper() }}
-  </div>
+<a href="{{ url_for('profile') }}"
+   class="nav-user {% if request.endpoint == 'profile' %}nav-user-active{% endif %}"
+   data-label="Profile">
+
+  {% include "_sidebar_avatar.html" %}
 
   <div class="nav-user-info">
-    <div class="nav-user-name">{{ user.username.title() }}</div>
-    <div class="nav-user-rank">Rank #{{ rank if rank else 'N/A' }}</div>
+    <div class="nav-user-name">
+      {{ nav_user.username.title() if nav_user else "Profile" }}
+    </div>
+
+    <div class="nav-user-rank">
+      {% if rank is defined and rank %}
+        Rank #{{ rank }}
+      {% else %}
+        View profile
+      {% endif %}
+    </div>
   </div>
 </a>
   
@@ -140,7 +183,9 @@
       {% endif %}
     {% endwith %}
     <div class="page-header">
-      <h1 class="page-title">Good morning, {{ user.username.title() }}</h1>
+      <h1 class="page-title">
+        Good morning, {{ nav_user.username.title() if nav_user else "User" }}
+      </h1>
       <p class="page-sub">{{ today.strftime("%A, %d %B") }} · Week {{ today.strftime("%U") }} · {{ workouts_count }} workouts this week</p>
     </div>
 
@@ -163,8 +208,8 @@
       </div>
       <div class="stat-card">
         <div class="stat-label">Leaderboard rank</div>
-        <div class="stat-value">#{{ rank }}</div>
-        <div class="stat-meta">of 24 users</div>
+        <div class="stat-value">{% if rank %}#{{ rank }}{% else %}—{% endif %}</div>
+        <div class="stat-meta">of {{ total_users }} user{{ 's' if total_users != 1 else '' }}</div>
       </div>
     </div>
 
@@ -231,36 +276,27 @@
             <a href="{{ url_for('leaderboard') }}" style="font-size:12px;color:var(--accent);text-decoration:none;">View all</a>
           </div>
           <div class="rank-list">
-            <div class="rank-item">
-              <span class="rank-num">1</span>
-              <div class="avatar" style="background:#FAEEDA;color:#633806;">LJ</div>
-              <span class="rank-name">Lebron J.</span>
-              <span class="rank-score">24,810 kg</span>
-            </div>
-            <div class="rank-item">
-              <span class="rank-num">2</span>
-              <div class="avatar" style="background:#E1F5EE;color:#085041;">SC</div>
-              <span class="rank-name">Steph C.</span>
-              <span class="rank-score">21,340 kg</span>
-            </div>
-            <div class="rank-item you">
-              <span class="rank-num">3</span>
-              <div class="avatar" style="background:#AFA9EC;color:#26215C;">{{ (user.username.split()[0][0] + (user.username.split()[1][0] if user.username.split()|length > 1 else '')).upper() }}</div>
-              <span class="rank-name">You</span>
-              <span class="rank-score">18,420 kg</span>
-            </div>
-            <div class="rank-item">
-              <span class="rank-num">4</span>
-              <div class="avatar" style="background:#FAECE7;color:#712B13;">MJ</div>
-              <span class="rank-name">Michael J.</span>
-              <span class="rank-score">16,090 kg</span>
-            </div>
-            <div class="rank-item">
-              <span class="rank-num">5</span>
-              <div class="avatar" style="background:#FBEAF0;color:#72243E;">BR</div>
-              <span class="rank-name">Bill R.</span>
-              <span class="rank-score">14,720 kg</span>
-            </div>
+            {% for entry in top_users %}
+              <div class="rank-item {% if entry.id == user.id %}you{% endif %}">
+                <span class="rank-num">{{ loop.index }}</span>
+                {% if entry.profile_photo %}
+                  <img src="{{ url_for('static', filename=entry.profile_photo) }}"
+                       alt="{{ entry.username }}"
+                       class="avatar"
+                       style="width:28px;height:28px;object-fit:cover;flex-shrink:0;">
+                {% else %}
+                  <div class="avatar" style="background:var(--purple-50);color:var(--purple-600);">
+                    {{ entry.username[:2].upper() }}
+                  </div>
+                {% endif %}
+                <span class="rank-name">
+                  {% if entry.id == user.id %}You{% else %}{{ entry.username.title() }}{% endif %}
+                </span>
+                <span class="rank-score">{{ '{:,.0f}'.format(entry.weekly_volume or 0) }} kg</span>
+              </div>
+            {% else %}
+              <p class="muted" style="text-align:center;padding:12px 0;">No workouts logged this week.</p>
+            {% endfor %}
           </div>
         </div>
         <a href="{{ url_for('log_workout') }}" class="btn btn-primary btn-block">

@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feed · LiftAGILE</title>
+  <script>
+    document.documentElement.setAttribute(
+      'data-theme',
+      localStorage.getItem('liftlab-theme') || 'light'
+    );
+    if (localStorage.getItem('liftlab-sidebar') === 'collapsed') {
+      document.documentElement.setAttribute('data-sidebar', 'collapsed');
+    }
+  </script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-icon">L</div>
+      <span class="sidebar-logo-text">Lift<span>AGILE</span></span>
+    </div>
+
+    <button class="sidebar-toggle" id="sidebarCollapseBtn" title="Collapse sidebar">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+        <path d="M9 11L5 7l4-4" stroke="currentColor" stroke-width="1.5"
+              stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+
+    <a href="{{ url_for('dashboard') }}"
+       class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}"
+       data-label="Dashboard">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <rect x="1" y="1" width="6" height="6" rx="1.5" fill="currentColor"/>
+        <rect x="9" y="1" width="6" height="6" rx="1.5" fill="currentColor"/>
+        <rect x="1" y="9" width="6" height="6" rx="1.5" fill="currentColor"/>
+        <rect x="9" y="9" width="6" height="6" rx="1.5" fill="currentColor"/>
+      </svg>
+      <span class="nav-link-text">Dashboard</span>
+    </a>
+
+    <a href="{{ url_for('log_workout') }}"
+       class="nav-link {% if request.endpoint == 'log_workout' %}active{% endif %}"
+       data-label="Log workout">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M2 8h2m8 0h2M4 8V5.5a1.5 1.5 0 013 0v5a1.5 1.5 0 003 0V5.5"
+              stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="nav-link-text">Log workout</span>
+    </a>
+
+    <a href="{{ url_for('plans') }}"
+       class="nav-link {% if request.endpoint == 'plans' %}active{% endif %}"
+       data-label="My plans">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M5 6h6M5 9h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="nav-link-text">My plans</span>
+    </a>
+
+    <a href="{{ url_for('leaderboard') }}"
+       class="nav-link {% if request.endpoint == 'leaderboard' %}active{% endif %}"
+       data-label="Leaderboard">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M3 13V8m5 5V4m5 9V7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="nav-link-text">Leaderboard</span>
+    </a>
+
+    <a href="{{ url_for('ranks') }}"
+       class="nav-link {% if request.endpoint == 'ranks' %}active{% endif %}"
+       data-label="My ranks">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M8 2l1.8 3.6L14 6.3l-3 2.9.7 4.1L8 11.4l-3.7 1.9.7-4.1-3-2.9 4.2-.7z"
+              stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+      </svg>
+      <span class="nav-link-text">My ranks</span>
+    </a>
+
+    <a href="{{ url_for('calendar') }}"
+       class="nav-link {% if request.endpoint == 'calendar' %}active{% endif %}"
+       data-label="Calendar">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <rect x="2" y="3" width="12" height="11" rx="2" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M5 1v3M11 1v3M2 7h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="nav-link-text">Calendar</span>
+    </a>
+
+    <a href="{{ url_for('public_feed') }}"
+       class="nav-link {% if request.endpoint == 'public_feed' %}active{% endif %}"
+       data-label="Feed">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M2 4h12M2 8h8M2 12h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="nav-link-text">Feed</span>
+    </a>
+
+    <a href="{{ url_for('search_page') }}"
+       class="nav-link {% if request.endpoint == 'search_page' %}active{% endif %}"
+       data-label="Search">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="nav-link-text">Search</span>
+    </a>
+
+    {% if nav_user %}
+    <a href="{{ url_for('public_profile', username=nav_user.username) }}"
+       class="nav-link {% if request.endpoint == 'public_profile' %}active{% endif %}"
+       data-label="Public profile">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="5.5" r="2.5" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M2.5 14c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="nav-link-text">Public profile</span>
+    </a>
+    {% endif %}
+
+    <div class="nav-spacer"></div>
+
+    <button class="theme-toggle" id="themeToggleBtn" data-label="Dark mode">
+      <svg id="themeIconDark" width="16" height="16" viewBox="0 0 16 16" fill="none" style="display:none;">
+        <circle cx="8" cy="8" r="3.5" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3.1 3.1l1 1M11.9 11.9l1 1M3.1 12.9l1-1M11.9 4.1l1-1"
+              stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+      <svg id="themeIconLight" width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M13.5 9.5A5.5 5.5 0 016.5 2.5a5.5 5.5 0 100 11 5.5 5.5 0 007-4z"
+              stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="theme-toggle-text" id="themeToggleLabel">Dark mode</span>
+    </button>
+
+    <a href="{{ url_for('profile') }}"
+       class="nav-user {% if request.endpoint == 'profile' %}nav-user-active{% endif %}"
+       data-label="Profile">
+      {% include "_sidebar_avatar.html" %}
+      <div class="nav-user-info">
+        <div class="nav-user-name">{{ nav_user.username.title() if nav_user else "Profile" }}</div>
+        <div class="nav-user-rank">View profile</div>
+      </div>
+    </a>
+
+  </nav>
+
+  <!-- Main -->
+  <main class="main">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div style="margin-bottom:12px;padding:10px 14px;background:var(--success-bg);color:var(--success-text);border-radius:var(--radius-md);font-size:13px;">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <div class="page-header" style="margin-bottom:16px;">
+      <h1 class="page-title">Community Feed</h1>
+      <p class="page-sub">Public workout plans shared by the community</p>
+    </div>
+
+    <!-- Filter tabs -->
+    <div class="fd-tabs" role="tablist">
+      <a href="{{ url_for('public_feed', filter='all') }}"
+         class="fd-tab {% if feed_filter == 'all' %}active{% endif %}"
+         role="tab">All</a>
+      <a href="{{ url_for('public_feed', filter='recent') }}"
+         class="fd-tab {% if feed_filter == 'recent' %}active{% endif %}"
+         role="tab">Recent</a>
+      <a href="{{ url_for('public_feed', filter='liked') }}"
+         class="fd-tab {% if feed_filter == 'liked' %}active{% endif %}"
+         role="tab">Most Liked</a>
+      <a href="{{ url_for('public_feed', filter='following') }}"
+         class="fd-tab {% if feed_filter == 'following' %}active{% endif %}"
+         role="tab">Following</a>
+    </div>
+
+    <!-- Feed -->
+    {% if plans %}
+      <div class="fd-feed">
+        {% for plan in plans %}
+          {% set likes   = likes_map.get(plan.id, 0) %}
+          {% set n_comments = comments_map.get(plan.id, 0) %}
+          {% set liked   = plan.id in liked_by_user_set %}
+          {% set previews = comments_preview_map.get(plan.id, []) %}
+          {% set tags    = tags_map.get(plan.id, ['Workout Plan']) %}
+
+          <article class="fd-card" data-plan-id="{{ plan.id }}">
+
+            <!-- Card header: avatar + user info -->
+            <div class="fd-card-header">
+              <a href="{{ url_for('public_profile', username=plan.user.username) if plan.user else '#' }}"
+                 class="fd-avatar-link">
+                {% if plan.user and plan.user.profile_photo %}
+                  <img src="{{ url_for('static', filename=plan.user.profile_photo) }}"
+                       alt="{{ plan.user.username }}"
+                       class="fd-avatar fd-avatar-img">
+                {% else %}
+                  <div class="fd-avatar fd-avatar-init">
+                    {{ plan.user.username[:2].upper() if plan.user else '?' }}
+                  </div>
+                {% endif %}
+              </a>
+              <div class="fd-user-info">
+                <a href="{{ url_for('public_profile', username=plan.user.username) if plan.user else '#' }}"
+                   class="fd-username">
+                  {{ plan.user.username if plan.user else 'Unknown' }}
+                </a>
+                <span class="fd-meta">Plan #{{ plan.id }}</span>
+              </div>
+            </div>
+
+            <!-- Title + description -->
+            <div class="fd-title">{{ plan.title }}</div>
+            {% if plan.description %}
+              <div class="fd-desc">
+                {{ plan.description[:160] }}{% if plan.description | length > 160 %}…{% endif %}
+              </div>
+            {% endif %}
+
+            <!-- Tags -->
+            <div class="fd-tags">
+              {% for tag in tags %}
+                <span class="fd-tag">{{ tag }}</span>
+              {% endfor %}
+            </div>
+
+            <div class="fd-divider"></div>
+
+            <!-- Action row -->
+            <div class="fd-actions">
+              <button class="fd-like-btn {% if liked %}liked{% endif %}"
+                      data-plan="{{ plan.id }}"
+                      data-liked="{{ 'true' if liked else 'false' }}"
+                      title="{{ 'Unlike' if liked else 'Like' }}">
+                <svg class="fd-heart" width="15" height="15" viewBox="0 0 16 16" fill="none">
+                  <path d="M8 13.5C4 11 1.5 8.5 1.5 5.5A3.5 3.5 0 018 3.6 3.5 3.5 0 0114.5 5.5C14.5 8.5 12 11 8 13.5z"
+                        stroke="currentColor" stroke-width="1.5"/>
+                </svg>
+                <span class="fd-like-count">{{ likes }}</span>
+              </button>
+
+              <span class="fd-stat">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                  <path d="M2 2h12a1 1 0 011 1v8a1 1 0 01-1 1H5l-3 3V3a1 1 0 011-1z"
+                        stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                </svg>
+                {{ n_comments }}
+              </span>
+
+              <a href="{{ url_for('workout_detail', plan_id=plan.id) }}"
+                 class="btn btn-secondary fd-view-btn">View Plan</a>
+            </div>
+
+            <!-- Comment preview -->
+            {% if previews %}
+              <div class="fd-comments">
+                {% for c in previews %}
+                  <div class="fd-comment-row">
+                    <span class="fd-comment-author">{{ c.user.username if c.user else 'User' }}</span>
+                    <span class="fd-comment-body">
+                      {{ c.body[:90] }}{% if c.body | length > 90 %}…{% endif %}
+                    </span>
+                  </div>
+                {% endfor %}
+                {% if n_comments > 2 %}
+                  <a href="{{ url_for('workout_detail', plan_id=plan.id) }}"
+                     class="fd-view-all">View all {{ n_comments }} comments →</a>
+                {% endif %}
+              </div>
+            {% else %}
+              <div class="fd-no-comments">No comments yet — be the first!</div>
+            {% endif %}
+
+          </article>
+        {% endfor %}
+      </div>
+
+    {% else %}
+      <!-- Empty state (per tab) -->
+      <div class="fd-empty">
+        {% if feed_filter == 'following' %}
+          <div class="fd-empty-icon">👥</div>
+          <div class="fd-empty-title">Nobody followed yet</div>
+          <div class="fd-empty-sub">Follow other athletes to see their workouts here.</div>
+          <a href="{{ url_for('search_page') }}" class="btn btn-primary" style="margin-top:16px;">Find people</a>
+        {% elif feed_filter == 'liked' %}
+          <div class="fd-empty-icon">❤️</div>
+          <div class="fd-empty-title">No liked workouts</div>
+          <div class="fd-empty-sub">No public plans have been liked yet. Be the first!</div>
+          <a href="{{ url_for('public_feed') }}" class="btn btn-secondary" style="margin-top:16px;">Browse all</a>
+        {% else %}
+          <div class="fd-empty-icon">🏋️</div>
+          <div class="fd-empty-title">Nothing here yet</div>
+          <div class="fd-empty-sub">Share a public workout plan to start the community feed.</div>
+          <a href="{{ url_for('plans') }}" class="btn btn-primary" style="margin-top:16px;">My plans</a>
+        {% endif %}
+      </div>
+    {% endif %}
+
+  </main>
+</div>
+
+<script>
+  /* AJAX like toggle */
+  document.querySelectorAll('.fd-like-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const planId  = btn.dataset.plan;
+      const wasLiked = btn.dataset.liked === 'true';
+
+      /* Optimistic update */
+      const countEl = btn.querySelector('.fd-like-count');
+      const newLiked = !wasLiked;
+      btn.dataset.liked = newLiked ? 'true' : 'false';
+      btn.classList.toggle('liked', newLiked);
+      btn.title = newLiked ? 'Unlike' : 'Like';
+      countEl.textContent = parseInt(countEl.textContent, 10) + (newLiked ? 1 : -1);
+
+      fetch(`/workout/${planId}/like/json`, { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+          if (data.error) {
+            /* Roll back on error */
+            btn.dataset.liked = wasLiked ? 'true' : 'false';
+            btn.classList.toggle('liked', wasLiked);
+            btn.title = wasLiked ? 'Unlike' : 'Like';
+            countEl.textContent = data.count !== undefined ? data.count
+              : parseInt(countEl.textContent, 10) + (wasLiked ? 1 : -1);
+            return;
+          }
+          btn.dataset.liked = data.liked ? 'true' : 'false';
+          btn.classList.toggle('liked', data.liked);
+          btn.title = data.liked ? 'Unlike' : 'Like';
+          countEl.textContent = data.count;
+        })
+        .catch(() => {
+          /* Silent fail — the optimistic state stays; the server stays authoritative on refresh */
+        });
+    });
+  });
+</script>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
