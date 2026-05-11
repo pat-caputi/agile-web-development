@@ -336,6 +336,31 @@ def get_user_rank(user_id):
 
     return None
 
+def get_current_streak(user_id):
+    workouts = (
+        Workout.query
+        .filter_by(user_id=user_id)
+        .order_by(Workout.date.desc())
+        .all()
+    )
+
+    if not workouts:
+        return 0
+
+    workout_days = {
+        workout.date.date()
+        for workout in workouts
+    }
+
+    streak = 0
+    current_day = datetime.utcnow().date()
+
+    while current_day in workout_days:
+        streak += 1
+        current_day -= timedelta(days=1)
+
+    return streak
+
 
 def get_pr_list(user_id):
     """Best set per exercise for a user. Uses PersonalRecord if populated; falls back to WorkoutSet."""
@@ -536,8 +561,88 @@ def dashboard():
     ).all()
 
     weekly_volume = sum(ws.weight * ws.reps for ws in weekly_sets)
+
+    last_week_start = start_of_week - timedelta(days=7)
+    last_week_end = start_of_week
+
+    last_week_sets = db.session.query(WorkoutSet).join(Workout).filter(
+        Workout.user_id == session['user_id'],
+        Workout.date >= last_week_start,
+        Workout.date < last_week_end
+    ).all()
+
+    last_week_volume = sum(ws.weight * ws.reps for ws in last_week_sets)
     rank = get_user_rank(session['user_id'])
     total_users = User.query.count()
+
+    if last_week_volume > 0:
+        volume_change = int(((weekly_volume - last_week_volume) / last_week_volume) * 100)
+    else:
+        volume_change = 0
+
+    daily_rows = (
+        db.session.query(
+            func.strftime('%w', Workout.date).label('day'),
+            func.sum(WorkoutSet.weight * WorkoutSet.reps).label('volume')
+        )
+        .join(Workout, WorkoutSet.workout_id == Workout.id)
+        .filter(
+            Workout.user_id == session['user_id'],
+            Workout.date >= start_of_week
+        )
+        .group_by(func.strftime('%w', Workout.date))
+        .all()
+    )
+
+    daily_volumes = [0, 0, 0, 0, 0, 0, 0]
+
+    for row in daily_rows:
+        sqlite_day = int(row.day)
+        python_day = (sqlite_day - 1) % 7
+        daily_volumes[python_day] = row.volume or 0
+
+    max_volume = max(daily_volumes) if max(daily_volumes) > 0 else 1
+
+    weekly_chart_data = [
+        {
+            "day": day,
+            "volume": int(daily_volumes[index]),
+            "height": 0 if daily_volumes[index] == 0 else max(8, int((daily_volumes[index] / max_volume) * 100))
+        }
+        for index, day in enumerate(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"])
+    ]
+
+    latest_workout = (
+        Workout.query
+        .filter_by(user_id=session['user_id'])
+        .order_by(Workout.date.desc())
+        .first()
+    )
+
+    exercise_cards = []
+
+    if latest_workout:
+        latest_sets = WorkoutSet.query.filter_by(workout_id=latest_workout.id).all()
+        exercise_summary = {}
+
+        for s in latest_sets:
+            name = s.exercise.title()
+
+            if name not in exercise_summary:
+                exercise_summary[name] = {
+                    "sets": 0,
+                    "volume": 0
+                }
+
+            exercise_summary[name]["sets"] += 1
+            exercise_summary[name]["volume"] += s.weight * s.reps
+
+        for name, data in exercise_summary.items():
+            exercise_cards.append({
+                "exercise": name,
+                "sets": data["sets"],
+                "volume": int(data["volume"])
+            })
 
     top_users = (
         db.session.query(
@@ -556,19 +661,22 @@ def dashboard():
     )
 
     return render_template(
-    'dashboard.html',
-    user=user,
-    today=today,
-    greeting=greeting,
-    emoji=emoji,
-    weekly_volume=weekly_volume,
-    workouts_count=workouts_count,
-    streak=12,
-    rank=rank,
-    total_users=total_users,
-    top_users=top_users,
-)
-
+        'dashboard.html',
+        user=user,
+        today=today,
+        greeting=greeting,
+        emoji=emoji,
+        weekly_volume=weekly_volume,
+        workouts_count=workouts_count,
+        streak=get_current_streak(session['user_id']),
+        rank=rank,
+        total_users=total_users,
+        weekly_chart_data=weekly_chart_data,
+        volume_change=volume_change,
+        exercise_cards=exercise_cards,
+        latest_workout=latest_workout,
+        top_users=top_users,
+    )
 
 # LOGOUT
 @app.route('/logout')
@@ -740,20 +848,13 @@ def leaderboard():
         .all()
     )
 
-    all_prs = PersonalRecord.query.all()
-    user_group_pts = {}
-    for pr in all_prs:
-        uid = pr.user_id
-        group = EXERCISE_MUSCLE_MAP.get(pr.exercise.lower().strip())
-        if group:
-            user_group_pts.setdefault(uid, {g: 0 for g in MUSCLE_GROUPS})
-            user_group_pts[uid][group] += int(pr.best_weight * pr.best_reps)
     tier_map = {
-        uid: get_tier(sum(gpts.values()) / len(MUSCLE_GROUPS))
-        for uid, gpts in user_group_pts.items()
+        item.id: get_tier(item.weekly_volume or 0)
+        for item in leaderboard_data
     }
 
     # PR count and strength score per user
+    all_prs = PersonalRecord.query.all()
     pr_count_map = {}
     for pr in all_prs:
         pr_count_map[pr.user_id] = pr_count_map.get(pr.user_id, 0) + 1
