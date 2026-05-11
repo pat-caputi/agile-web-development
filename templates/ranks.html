@@ -23,6 +23,8 @@
       --r-gold:      #EF9F27;
       --r-platinum:  #4DD0C4;
       --r-diamond:   #8AB4F8;
+      --r-emerald:   #50C878;
+      --r-champion:  #C77DFF;
 
       --r-unranked-bg: rgba(107,106,100,0.12);
       --r-bronze-bg:   rgba(205,127,50,0.13);
@@ -30,6 +32,8 @@
       --r-gold-bg:     rgba(239,159,39,0.13);
       --r-platinum-bg: rgba(77,208,196,0.13);
       --r-diamond-bg:  rgba(138,180,248,0.14);
+      --r-emerald-bg:  rgba(80,200,120,0.13);
+      --r-champion-bg: rgba(199,125,255,0.14);
     }
 
     /* ── Rank badge ── */
@@ -44,6 +48,8 @@
     .rb-gold     { background: var(--r-gold-bg);     color: var(--r-gold); }
     .rb-platinum { background: var(--r-platinum-bg); color: var(--r-platinum); }
     .rb-diamond  { background: var(--r-diamond-bg);  color: var(--r-diamond); }
+    .rb-emerald  { background: var(--r-emerald-bg);  color: var(--r-emerald); }
+    .rb-champion { background: var(--r-champion-bg); color: var(--r-champion); font-weight: 700; }
 
     /* ── Overall hero banner ── */
     .rank-hero {
@@ -101,6 +107,8 @@
     .fill-gold     { fill: #7A5010; }
     .fill-platinum { fill: #145E5A; }
     .fill-diamond  { fill: #1E3A6A; }
+    .fill-emerald  { fill: #0A3D1E; }
+    .fill-champion { fill: #2D0A5A; }
 
     /* Legend row */
     .legend {
@@ -517,6 +525,8 @@
           <div class="legend-item"><div class="legend-dot" style="background:var(--r-gold);"></div>Gold</div>
           <div class="legend-item"><div class="legend-dot" style="background:var(--r-platinum);"></div>Platinum</div>
           <div class="legend-item"><div class="legend-dot" style="background:var(--r-diamond);"></div>Diamond</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--r-emerald);"></div>Emerald</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--r-champion);"></div>Champion</div>
         </div>
       </div>
 
@@ -584,12 +594,14 @@
               </tr>
             </thead>
             {% set tiers = [
-              ('Unranked', '—',  'rb-unranked', 0,     'Just getting started'),
-              ('Bronze',   '🥉', 'rb-bronze',   500,   'Building the habit'),
-              ('Silver',   '🥈', 'rb-silver',   2000,  'Consistent trainer'),
-              ('Gold',     '🥇', 'rb-gold',     5000,  'Dedicated lifter'),
-              ('Platinum', '🔷', 'rb-platinum', 12000, 'Elite athlete'),
-              ('Diamond',  '💎', 'rb-diamond',  25000, 'World-class lifter'),
+              ('Unranked', '—',  'rb-unranked', 0,      'Just getting started'),
+              ('Bronze',   '🥉', 'rb-bronze',   500,    'Building the habit'),
+              ('Silver',   '🥈', 'rb-silver',   2000,   'Consistent trainer'),
+              ('Gold',     '🥇', 'rb-gold',     5000,   'Dedicated lifter'),
+              ('Platinum', '🔷', 'rb-platinum', 12000,  'Elite athlete'),
+              ('Diamond',  '💎', 'rb-diamond',  25000,  'World-class lifter'),
+              ('Emerald',  '💚', 'rb-emerald',  50000,  'Legendary strength'),
+              ('Champion', '🏆', 'rb-champion', 100000, 'Pinnacle of the sport'),
             ] %}
             <tbody>
               {% for t_name, t_icon, t_css, t_pts, t_desc in tiers %}
@@ -721,7 +733,7 @@ document.querySelectorAll('.muscle-region').forEach(el => {
 });
 
 // Apply tier fill colours to SVG body diagram
-const ALL_FILL_CLASSES = ['fill-unranked','fill-bronze','fill-silver','fill-gold','fill-platinum','fill-diamond'];
+const ALL_FILL_CLASSES = ['fill-unranked','fill-bronze','fill-silver','fill-gold','fill-platinum','fill-diamond','fill-emerald','fill-champion'];
 Object.entries(MUSCLE_DATA).forEach(([muscle, d]) => {
   const fillClass = d.badgeClass.replace('rb-', 'fill-');
   (MUSCLE_REGIONS[muscle] || []).forEach(id => {

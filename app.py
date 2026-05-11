@@ -124,12 +124,14 @@ with app.app_context():
 
 # ── Rank tier thresholds ──
 TIER_THRESHOLDS = [
-    (25000, 'Diamond',  '💎', 'rb-diamond'),
-    (12000, 'Platinum', '🔷', 'rb-platinum'),
-    (5000,  'Gold',     '🥇', 'rb-gold'),
-    (2000,  'Silver',   '🥈', 'rb-silver'),
-    (500,   'Bronze',   '🥉', 'rb-bronze'),
-    (0,     'Unranked', '—',  'rb-unranked'),
+    (100000, 'Champion', '🏆', 'rb-champion'),
+    (50000,  'Emerald',  '💚', 'rb-emerald'),
+    (25000,  'Diamond',  '💎', 'rb-diamond'),
+    (12000,  'Platinum', '🔷', 'rb-platinum'),
+    (5000,   'Gold',     '🥇', 'rb-gold'),
+    (2000,   'Silver',   '🥈', 'rb-silver'),
+    (500,    'Bronze',   '🥉', 'rb-bronze'),
+    (0,      'Unranked', '—',  'rb-unranked'),
 ]
 
 MUSCLE_GROUPS = ['chest', 'back', 'legs', 'shoulders', 'arms', 'core']
