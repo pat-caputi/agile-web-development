@@ -9,6 +9,9 @@
       'data-theme',
       localStorage.getItem('liftlab-theme') || 'light'
     );
+    if (localStorage.getItem('liftlab-sidebar') === 'collapsed') {
+      document.documentElement.setAttribute('data-sidebar', 'collapsed');
+    }
   </script>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
@@ -253,6 +256,36 @@
         </div>
       </div>
 
+      <!-- ── Personal Records preview ── -->
+      {% if personal_records %}
+      <div class="pp-pr-section">
+        <div class="pp-pr-section-header">
+          <span class="pp-pr-section-title">Personal Records</span>
+          <span class="pp-pr-section-sub">Best lifts · {{ personal_records | length }} exercise{{ 's' if personal_records | length != 1 else '' }}</span>
+        </div>
+        <div class="pp-pr-grid">
+          {% for pr in personal_records[:6] %}
+          <div class="pp-pr-card">
+            <div class="pp-pr-top-row">
+              <span class="pp-pr-badge-label">PR</span>
+              {% if pr.date_set %}
+              <span class="pp-pr-date">{{ pr.date_set.day }} {{ pr.date_set.strftime('%b') }}</span>
+              {% endif %}
+            </div>
+            <div class="pp-pr-exercise">{{ (pr.exercise or '').title() }}</div>
+            <div class="pp-pr-weight">
+              {{ pr.best_weight | int }}kg
+              <span class="pp-pr-reps">× {{ pr.best_reps }} rep{{ 's' if pr.best_reps != 1 else '' }}</span>
+            </div>
+            {% if pr.e1rm and pr.best_reps > 1 %}
+            <div class="pp-pr-e1rm">~{{ pr.e1rm | int }}kg est. 1RM</div>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
       <!-- ── Tabs ── -->
       <div class="pp-tabs">
         <a href="{{ url_for('public_profile', username=profile_user.username, tab='plans') }}"
@@ -362,13 +395,62 @@
 
       <!-- ═══ ACHIEVEMENTS TAB ═══ -->
       {% elif active_tab == 'achievements' %}
-        <div class="pp-badges-grid">
-          {% for label, icon, css_class in badges %}
-            <div class="pp-badge {{ css_class }}">
-              <span class="pp-badge-icon">{{ icon }}</span>
-              <span class="pp-badge-label">{{ label }}</span>
+
+        <!-- Top PRs inside Achievements -->
+        <div class="card" style="margin-bottom:14px;">
+          <div class="card-title">🎯 Personal Records</div>
+          {% if personal_records %}
+            <div class="pp-pr-grid pp-pr-grid--sm">
+              {% for pr in personal_records[:3] %}
+              <div class="pp-pr-card">
+                <div class="pp-pr-top-row">
+                  <span class="pp-pr-badge-label">PR</span>
+                  {% if pr.date_set %}
+                  <span class="pp-pr-date">{{ pr.date_set.day }} {{ pr.date_set.strftime('%b') }}</span>
+                  {% endif %}
+                </div>
+                <div class="pp-pr-exercise">{{ (pr.exercise or '').title() }}</div>
+                <div class="pp-pr-weight">
+                  {{ pr.best_weight | int }}kg
+                  <span class="pp-pr-reps">× {{ pr.best_reps }} rep{{ 's' if pr.best_reps != 1 else '' }}</span>
+                </div>
+                {% if pr.e1rm and pr.best_reps > 1 %}
+                <div class="pp-pr-e1rm">~{{ pr.e1rm | int }}kg est. 1RM</div>
+                {% endif %}
+              </div>
+              {% endfor %}
             </div>
-          {% endfor %}
+            {% if personal_records | length > 3 %}
+            <p style="font-size:12px;color:var(--text-tertiary);margin-top:10px;margin-bottom:0;">
+              +{{ personal_records | length - 3 }} more PR{{ 's' if personal_records | length - 3 != 1 else '' }} — see Personal Records section above.
+            </p>
+            {% endif %}
+          {% else %}
+            <div class="pp-pr-empty">
+              <div class="pp-pr-empty-icon">🎯</div>
+              {% if is_own_profile %}
+                <div class="pp-pr-empty-title">No personal records yet</div>
+                <div class="pp-pr-empty-sub">Log workouts to start building your PR history.</div>
+                <a href="{{ url_for('log_workout') }}" class="btn btn-primary" style="margin-top:14px;font-size:13px;">Log a Workout</a>
+              {% else %}
+                <div class="pp-pr-empty-title">No personal records yet</div>
+                <div class="pp-pr-empty-sub">This user hasn't logged any PRs yet.</div>
+              {% endif %}
+            </div>
+          {% endif %}
+        </div>
+
+        <!-- Badges -->
+        <div class="card" style="margin-bottom:14px;">
+          <div class="card-title">🏅 Badges</div>
+          <div class="pp-badges-grid">
+            {% for label, icon, css_class in badges %}
+              <div class="pp-badge {{ css_class }}">
+                <span class="pp-badge-icon">{{ icon }}</span>
+                <span class="pp-badge-label">{{ label }}</span>
+              </div>
+            {% endfor %}
+          </div>
         </div>
 
         <!-- Milestones progress -->

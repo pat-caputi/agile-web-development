@@ -9,6 +9,9 @@
       'data-theme',
       localStorage.getItem('liftlab-theme') || 'light'
     );
+    if (localStorage.getItem('liftlab-sidebar') === 'collapsed') {
+      document.documentElement.setAttribute('data-sidebar', 'collapsed');
+    }
   </script>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   <style>
@@ -252,22 +255,16 @@
   </nav>
 
   <main class="main">
-    <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;">
-      <div>
-        <h1 class="page-title">My plans</h1>
-        <p class="page-sub">{{ user_plans | length }} saved routine{{ 's' if user_plans | length != 1 else '' }}</p>
-      </div>
-      <button class="btn btn-primary" onclick="openModal()">
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-        New plan
-      </button>
+    <div class="page-header">
+      <h1 class="page-title">My plans</h1>
+      <p class="page-sub">{{ user_plans | length }} saved routine{{ 's' if user_plans | length != 1 else '' }}</p>
     </div>
 
     <div class="plans-grid">
 
       {% for plan in user_plans %}
         {% set tags = tags_map.get(plan.id, ['Workout Plan']) %}
-        <div class="plan-card card">
+        <div class="plan-card card" id="plan-card-{{ plan.id }}">
           <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;">
             <div>
               <div class="plan-card-title">{{ plan.title }}</div>
@@ -275,20 +272,32 @@
                 {{ 'Public' if plan.is_public else 'Private' }}
               </span>
             </div>
-            <form action="{{ url_for('toggle_plan_visibility', plan_id=plan.id) }}" method="POST" style="flex-shrink:0;">
+            <div style="display:flex;gap:6px;flex-shrink:0;">
+              <button class="btn btn-secondary edit-plan-btn" style="padding:4px 10px;font-size:12px;"
+                      data-plan-id="{{ plan.id }}"
+                      data-plan-title="{{ plan.title | e }}"
+                      data-plan-exercises="{{ (plan.description or '') | e }}">Edit</button>
+              <button class="delete-btn delete-plan-btn"
+                      data-plan-id="{{ plan.id }}"
+                      data-plan-title="{{ plan.title | e }}">Delete</button>
+            </div>
+          </div>
+          <div style="margin-bottom:6px;">
+            <form action="{{ url_for('toggle_plan_visibility', plan_id=plan.id) }}" method="POST" style="display:inline;">
               <input type="hidden" name="next" value="{{ url_for('plans') }}">
               <button class="vis-toggle-btn {% if plan.is_public %}vis-toggle-private{% else %}vis-toggle-public{% endif %}" type="submit">
                 {{ 'Make Private' if plan.is_public else 'Make Public' }}
               </button>
             </form>
           </div>
-          {% if plan.description %}
-            <div class="plan-card-meta">{{ plan.description[:120] }}{% if plan.description | length > 120 %}…{% endif %}</div>
-          {% endif %}
           <div style="margin-bottom:12px;">
             {% for tag in tags %}<span class="plan-tag">{{ tag }}</span>{% endfor %}
           </div>
-          <div style="margin-top:auto;padding-top:12px;border-top:0.5px solid var(--border);">
+          <div style="margin-top:auto;padding-top:12px;border-top:0.5px solid var(--border);display:flex;flex-direction:column;gap:8px;">
+            <a href="{{ url_for('log_workout') }}" class="btn btn-primary btn-block" style="font-size:12px;padding:6px 14px;">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M2 8h2m8 0h2M4 8V5.5a1.5 1.5 0 013 0v5a1.5 1.5 0 003 0V5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              Start this plan
+            </a>
             <a href="{{ url_for('workout_detail', plan_id=plan.id) }}" class="btn btn-secondary btn-block" style="font-size:12px;padding:6px 14px;">View Plan</a>
           </div>
         </div>
@@ -296,21 +305,206 @@
         <div class="card" style="grid-column:1/-1;text-align:center;padding:48px 24px;">
           <div style="font-size:2rem;margin-bottom:10px;">📋</div>
           <div style="font-size:14px;font-weight:600;margin-bottom:6px;">No plans yet</div>
-          <div style="font-size:13px;color:var(--text-tertiary);margin-bottom:16px;">Create your first workout plan to get started.</div>
-          <button class="btn btn-primary" onclick="openModal()">Create a plan</button>
+          <div style="font-size:13px;color:var(--text-tertiary);">Create your first workout plan to get started.</div>
         </div>
       {% endfor %}
 
       <button onclick="openModal()"
-              style="display:flex;flex-direction:column;align-items:center;justify-content:center;
-                     gap:10px;min-height:220px;border:0.5px dashed var(--border-md);
-                     border-radius:var(--radius-lg);color:var(--text-tertiary);background:none;
+              style="display:flex;flex-direction:row;align-items:center;justify-content:center;
+                     gap:8px;grid-column:1/-1;width:100%;padding:16px 24px;
+                     border:0.5px dashed var(--border-md);border-radius:var(--radius-lg);
+                     color:var(--text-tertiary);background:none;
                      cursor:pointer;transition:border-color 0.14s,color 0.14s;font-family:var(--font);">
-        <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M14 5v18M5 14h18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <svg width="16" height="16" viewBox="0 0 28 28" fill="none"><path d="M14 5v18M5 14h18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
         <span style="font-size:13px;">Create new plan</span>
       </button>
 
     </div>
+
+    <!-- ── Available plans (starter templates) ── -->
+    <div style="margin-top:48px;">
+      <div style="margin-bottom:20px;">
+        <h2 style="font-size:16px;font-weight:600;letter-spacing:-0.2px;margin-bottom:4px;">Available plans</h2>
+        <p style="font-size:13px;color:var(--text-secondary);">Premade routines you can start right away.</p>
+      </div>
+      <div class="plans-grid">
+
+        <!-- Push day -->
+        <div class="plan-card card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <div class="plan-card-title">Push day</div>
+          </div>
+          <div class="plan-card-meta">6 exercises · ~60 min</div>
+          <div style="margin-bottom:12px;">
+            <span class="plan-tag">Chest</span><span class="plan-tag">Shoulders</span><span class="plan-tag">Triceps</span>
+          </div>
+          <div style="padding-top:12px;border-top:0.5px solid var(--border);">
+            <div style="font-size:11px;color:var(--text-tertiary);margin-bottom:6px;letter-spacing:0.02em;">EXERCISES <span style="font-weight:400;opacity:0.7;">· drag to reorder</span></div>
+            <div class="exercise-list-dnd" id="dnd-push">
+              <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-chest" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">B</div><span class="dnd-item-name">Bench press</span></div>
+              <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-chest" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">I</div><span class="dnd-item-name">Incline bench press</span></div>
+              <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-shoulders" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">O</div><span class="dnd-item-name">Overhead press</span></div>
+              <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-shoulders" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">L</div><span class="dnd-item-name">Lateral raises</span></div>
+              <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-arms" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">T</div><span class="dnd-item-name">Tricep pushdown</span></div>
+              <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-chest" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">C</div><span class="dnd-item-name">Cable fly</span></div>
+            </div>
+          </div>
+          <div style="margin-top:14px;">
+            <a href="{{ url_for('log_workout', plan='push') }}" class="btn btn-primary btn-block">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M2 8h2m8 0h2M4 8V5.5a1.5 1.5 0 013 0v5a1.5 1.5 0 003 0V5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              Start this plan
+            </a>
+          </div>
+        </div>
+
+        <!-- Pull day -->
+        <div class="plan-card card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <div class="plan-card-title">Pull day</div>
+          </div>
+          <div class="plan-card-meta">6 exercises · ~55 min</div>
+          <div style="margin-bottom:12px;">
+            <span class="plan-tag">Back</span><span class="plan-tag">Biceps</span><span class="plan-tag">Rear delts</span>
+          </div>
+          <div style="padding-top:12px;border-top:0.5px solid var(--border);">
+            <div style="font-size:11px;color:var(--text-tertiary);margin-bottom:6px;letter-spacing:0.02em;">EXERCISES <span style="font-weight:400;opacity:0.7;">· drag to reorder</span></div>
+            <div class="exercise-list-dnd" id="dnd-pull">
+              <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-back" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">P</div><span class="dnd-item-name">Pull up</span></div>
+              <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-back" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">R</div><span class="dnd-item-name">Barbell row</span></div>
+              <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-back" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">L</div><span class="dnd-item-name">Lat pulldown</span></div>
+              <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-arms" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">B</div><span class="dnd-item-name">Bicep curl</span></div>
+              <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-arms" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">H</div><span class="dnd-item-name">Hammer curl</span></div>
+              <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-back" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">F</div><span class="dnd-item-name">Face pull</span></div>
+            </div>
+          </div>
+          <div style="margin-top:14px;">
+            <a href="{{ url_for('log_workout', plan='pull') }}" class="btn btn-primary btn-block">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M2 8h2m8 0h2M4 8V5.5a1.5 1.5 0 013 0v5a1.5 1.5 0 003 0V5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              Start this plan
+            </a>
+          </div>
+        </div>
+
+        <!-- Leg day -->
+        <div class="plan-card card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <div class="plan-card-title">Leg day</div>
+          </div>
+          <div class="plan-card-meta">7 exercises · ~65 min</div>
+          <div style="margin-bottom:12px;">
+            <span class="plan-tag">Quads</span><span class="plan-tag">Hamstrings</span><span class="plan-tag">Glutes</span><span class="plan-tag">Calves</span>
+          </div>
+          <div style="padding-top:12px;border-top:0.5px solid var(--border);">
+            <div style="font-size:11px;color:var(--text-tertiary);margin-bottom:6px;letter-spacing:0.02em;">EXERCISES <span style="font-weight:400;opacity:0.7;">· drag to reorder</span></div>
+            <div class="exercise-list-dnd" id="dnd-legs">
+              <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-legs" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">S</div><span class="dnd-item-name">Barbell squat</span></div>
+              <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-legs" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">L</div><span class="dnd-item-name">Leg press</span></div>
+              <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-legs" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">R</div><span class="dnd-item-name">Romanian deadlift</span></div>
+              <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-legs" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">L</div><span class="dnd-item-name">Leg curl</span></div>
+              <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-legs" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">L</div><span class="dnd-item-name">Leg extension</span></div>
+              <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-legs" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">H</div><span class="dnd-item-name">Hip thrust</span></div>
+              <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-legs" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">C</div><span class="dnd-item-name">Calf raise</span></div>
+            </div>
+          </div>
+          <div style="margin-top:14px;">
+            <a href="{{ url_for('log_workout', plan='legs') }}" class="btn btn-primary btn-block">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M2 8h2m8 0h2M4 8V5.5a1.5 1.5 0 013 0v5a1.5 1.5 0 003 0V5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              Start this plan
+            </a>
+          </div>
+        </div>
+
+        <!-- Upper body -->
+        <div class="plan-card card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <div class="plan-card-title">Upper body</div>
+          </div>
+          <div class="plan-card-meta">8 exercises · ~70 min</div>
+          <div style="margin-bottom:12px;">
+            <span class="plan-tag">Chest</span><span class="plan-tag">Back</span><span class="plan-tag">Shoulders</span><span class="plan-tag">Arms</span>
+          </div>
+          <div style="padding-top:12px;border-top:0.5px solid var(--border);">
+            <div style="font-size:11px;color:var(--text-tertiary);margin-bottom:6px;letter-spacing:0.02em;">EXERCISES <span style="font-weight:400;opacity:0.7;">· drag to reorder</span></div>
+            <div class="exercise-list-dnd" id="dnd-upper">
+              <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-chest" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">B</div><span class="dnd-item-name">Bench press</span></div>
+              <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-back" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">R</div><span class="dnd-item-name">Barbell row</span></div>
+              <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-shoulders" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">O</div><span class="dnd-item-name">Overhead press</span></div>
+              <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-back" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">L</div><span class="dnd-item-name">Lat pulldown</span></div>
+              <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-arms" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">B</div><span class="dnd-item-name">Bicep curl</span></div>
+              <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-arms" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">T</div><span class="dnd-item-name">Tricep pushdown</span></div>
+              <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-shoulders" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">L</div><span class="dnd-item-name">Lateral raises</span></div>
+              <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-back" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">F</div><span class="dnd-item-name">Face pull</span></div>
+            </div>
+          </div>
+          <div style="margin-top:14px;">
+            <a href="{{ url_for('log_workout', plan='upper') }}" class="btn btn-primary btn-block">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M2 8h2m8 0h2M4 8V5.5a1.5 1.5 0 013 0v5a1.5 1.5 0 003 0V5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              Start this plan
+            </a>
+          </div>
+        </div>
+
+        <!-- Arms & Core -->
+        <div class="plan-card card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <div class="plan-card-title">Arms &amp; core</div>
+          </div>
+          <div class="plan-card-meta">6 exercises · ~45 min</div>
+          <div style="margin-bottom:12px;">
+            <span class="plan-tag">Biceps</span><span class="plan-tag">Triceps</span><span class="plan-tag">Core</span>
+          </div>
+          <div style="padding-top:12px;border-top:0.5px solid var(--border);">
+            <div style="font-size:11px;color:var(--text-tertiary);margin-bottom:6px;letter-spacing:0.02em;">EXERCISES <span style="font-weight:400;opacity:0.7;">· drag to reorder</span></div>
+            <div class="exercise-list-dnd" id="dnd-arms">
+              <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-arms" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">B</div><span class="dnd-item-name">Barbell curl</span></div>
+              <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-arms" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">S</div><span class="dnd-item-name">Skull crusher</span></div>
+              <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-arms" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">H</div><span class="dnd-item-name">Hammer curl</span></div>
+              <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-arms" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">T</div><span class="dnd-item-name">Tricep pushdown</span></div>
+              <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-core" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">P</div><span class="dnd-item-name">Plank</span></div>
+              <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-core" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">C</div><span class="dnd-item-name">Cable crunch</span></div>
+            </div>
+          </div>
+          <div style="margin-top:14px;">
+            <a href="{{ url_for('log_workout', plan='arms_core') }}" class="btn btn-primary btn-block">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M2 8h2m8 0h2M4 8V5.5a1.5 1.5 0 013 0v5a1.5 1.5 0 003 0V5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              Start this plan
+            </a>
+          </div>
+        </div>
+
+        <!-- Full body -->
+        <div class="plan-card card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <div class="plan-card-title">Full body</div>
+          </div>
+          <div class="plan-card-meta">8 exercises · ~75 min</div>
+          <div style="margin-bottom:12px;">
+            <span class="plan-tag">Chest</span><span class="plan-tag">Back</span><span class="plan-tag">Legs</span><span class="plan-tag">Shoulders</span>
+          </div>
+          <div style="padding-top:12px;border-top:0.5px solid var(--border);">
+            <div style="font-size:11px;color:var(--text-tertiary);margin-bottom:6px;letter-spacing:0.02em;">EXERCISES <span style="font-weight:400;opacity:0.7;">· drag to reorder</span></div>
+            <div class="exercise-list-dnd" id="dnd-full">
+              <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-legs" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">S</div><span class="dnd-item-name">Barbell squat</span></div>
+              <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-chest" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">B</div><span class="dnd-item-name">Bench press</span></div>
+              <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-back" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">D</div><span class="dnd-item-name">Deadlift</span></div>
+              <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-back" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">P</div><span class="dnd-item-name">Pull up</span></div>
+              <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-shoulders" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">O</div><span class="dnd-item-name">Overhead press</span></div>
+              <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-legs" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">L</div><span class="dnd-item-name">Leg press</span></div>
+              <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-arms" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">B</div><span class="dnd-item-name">Bicep curl</span></div>
+              <div class="dnd-item" draggable="true"><div class="dnd-handle"><span></span><span></span><span></span></div><div class="ex-icon cat-core" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">P</div><span class="dnd-item-name">Plank</span></div>
+            </div>
+          </div>
+          <div style="margin-top:14px;">
+            <a href="{{ url_for('log_workout', plan='full_body') }}" class="btn btn-primary btn-block">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M2 8h2m8 0h2M4 8V5.5a1.5 1.5 0 013 0v5a1.5 1.5 0 003 0V5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              Start this plan
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -382,7 +576,8 @@
 
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 <script>
-const SAVE_URL = "{{ url_for('create_plan') }}";
+const CREATE_URL = "{{ url_for('create_plan') }}";
+let editPlanId = null;
 
 function showModalError(msg) {
   const el = document.getElementById('modalError');
@@ -396,6 +591,7 @@ function clearModalError() {
 }
 
 function openModal() {
+  editPlanId = null;
   clearModalError();
   document.getElementById('modalTitle').textContent = 'Create new plan';
   document.getElementById('modalSub').textContent = 'Choose a name and pick exercises';
@@ -406,9 +602,26 @@ function openModal() {
   document.getElementById('planModal').classList.add('show');
 }
 
+function openEditModal(planId, planTitle, planExercises) {
+  editPlanId = planId;
+  clearModalError();
+  document.getElementById('modalTitle').textContent = 'Edit plan';
+  document.getElementById('modalSub').textContent = 'Update the name or exercises';
+  document.getElementById('planName').value = planTitle;
+  document.getElementById('planDuration').value = '';
+
+  const exercises = planExercises ? planExercises.split(', ').map(e => e.trim().toLowerCase()) : [];
+  document.querySelectorAll('#modalExPicker input[type=checkbox]').forEach(cb => {
+    cb.checked = exercises.includes(cb.value.toLowerCase());
+  });
+  updateSelectedCount();
+  document.getElementById('planModal').classList.add('show');
+}
+
 function closeModal() {
   document.getElementById('planModal').classList.remove('show');
   clearModalError();
+  editPlanId = null;
 }
 
 async function savePlan() {
@@ -430,12 +643,16 @@ async function savePlan() {
   btn.disabled = true;
   btn.textContent = 'Saving…';
 
+  const url = editPlanId
+    ? `/plans/${editPlanId}/edit`
+    : CREATE_URL;
+
   const body = new FormData();
   body.append('title', name);
   checked.forEach(cb => body.append('exercises', cb.value));
 
   try {
-    const res = await fetch(SAVE_URL, { method: 'POST', body });
+    const res = await fetch(url, { method: 'POST', body });
     const data = await res.json();
     if (data.ok) {
       window.location.reload();
@@ -448,6 +665,23 @@ async function savePlan() {
     showModalError('Network error — please try again.');
     btn.disabled = false;
     btn.textContent = 'Save plan';
+  }
+}
+
+async function deletePlan(planId, planTitle) {
+  if (!confirm(`Delete "${planTitle}"? This cannot be undone.`)) return;
+
+  try {
+    const res = await fetch(`/plans/${planId}/delete`, { method: 'POST' });
+    const data = await res.json();
+    if (data.ok) {
+      const card = document.getElementById(`plan-card-${planId}`);
+      if (card) card.remove();
+    } else {
+      alert(data.error || 'Could not delete plan.');
+    }
+  } catch {
+    alert('Network error — please try again.');
   }
 }
 
@@ -470,6 +704,85 @@ function updateSelectedCount() {
 document.getElementById('planModal').addEventListener('click', function(e) {
   if (e.target === this) closeModal();
 });
+
+document.querySelectorAll('.edit-plan-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    openEditModal(
+      parseInt(btn.dataset.planId),
+      btn.dataset.planTitle,
+      btn.dataset.planExercises
+    );
+  });
+});
+
+document.querySelectorAll('.delete-plan-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    deletePlan(parseInt(btn.dataset.planId), btn.dataset.planTitle);
+  });
+});
+
+// ── Drag and drop for available plans ──
+let dragSrc = null;
+let placeholder = null;
+
+function initDnd(listId) {
+  const list = document.getElementById(listId);
+  if (!list) return;
+
+  list.addEventListener('dragstart', e => {
+    const item = e.target.closest('.dnd-item');
+    if (!item) return;
+    dragSrc = item;
+    placeholder = document.createElement('div');
+    placeholder.className = 'dnd-placeholder';
+    placeholder.style.height = item.offsetHeight + 'px';
+    requestAnimationFrame(() => item.classList.add('dragging'));
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', '');
+  });
+
+  list.addEventListener('dragend', e => {
+    const item = e.target.closest('.dnd-item');
+    if (!item) return;
+    item.classList.remove('dragging');
+    placeholder?.remove();
+    placeholder = null;
+    dragSrc = null;
+    list.querySelectorAll('.dnd-item').forEach(i => i.classList.remove('drag-over'));
+  });
+
+  list.addEventListener('dragover', e => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (!dragSrc || !placeholder) return;
+    const target = e.target.closest('.dnd-item');
+    if (!target || target === dragSrc) return;
+    const rect = target.getBoundingClientRect();
+    const after = e.clientY > rect.top + rect.height / 2;
+    list.querySelectorAll('.dnd-item').forEach(i => i.classList.remove('drag-over'));
+    target.classList.add('drag-over');
+    if (after) { target.after(placeholder); } else { target.before(placeholder); }
+  });
+
+  list.addEventListener('dragleave', e => {
+    if (!list.contains(e.relatedTarget)) {
+      list.querySelectorAll('.dnd-item').forEach(i => i.classList.remove('drag-over'));
+    }
+  });
+
+  list.addEventListener('drop', e => {
+    e.preventDefault();
+    if (!dragSrc || !placeholder) return;
+    list.insertBefore(dragSrc, placeholder);
+    placeholder.remove();
+    placeholder = null;
+    dragSrc.classList.remove('dragging');
+    list.querySelectorAll('.dnd-item').forEach(i => i.classList.remove('drag-over'));
+    dragSrc = null;
+  });
+}
+
+['dnd-push', 'dnd-pull', 'dnd-legs', 'dnd-upper', 'dnd-arms', 'dnd-full'].forEach(initDnd);
 </script>
 </body>
 </html>

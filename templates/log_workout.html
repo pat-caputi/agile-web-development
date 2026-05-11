@@ -9,6 +9,9 @@
       'data-theme',
       localStorage.getItem('liftlab-theme') || 'light'
     );
+    if (localStorage.getItem('liftlab-sidebar') === 'collapsed') {
+      document.documentElement.setAttribute('data-sidebar', 'collapsed');
+    }
   </script>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   
@@ -354,7 +357,7 @@
         <!-- Workout name -->
         <div class="card" style="padding:14px 18px;">
           <div style="font-size:10px;color:var(--text-tertiary);letter-spacing:0.05em;margin-bottom:4px;">WORKOUT NAME</div>
-          <input type="text" id="workoutName" value="Push day"
+          <input type="text" id="workoutName" value="{{ selected_plan.name }}"
                  style="width:100%;border:none;background:none;font-family:var(--font);
                         font-size:16px;font-weight:500;color:var(--text-primary);outline:none;"
                  oninput="updateProgressChips()">
@@ -546,6 +549,8 @@
 
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 <script>
+  
+const selectedPlan = JSON.parse('{{ selected_plan | tojson | safe }}');
 let setCounters = {1:3, 2:3};
 let timerSecs = 0, timerRunning = true;
 
@@ -725,7 +730,34 @@ function submitWorkout() {
 }
 
 // Init progress on load
-updateProgress();
+function loadSelectedPlan() {
+  document.getElementById('workoutName').value = selectedPlan.name;
+
+  document.querySelectorAll('.exercise-block').forEach(block => block.remove());
+
+  document.querySelectorAll('.exercise-pick-item').forEach(item => {
+    item.classList.remove('selected');
+  });
+
+  const planKey = new URLSearchParams(window.location.search).get('plan') || 'push';
+  const savedOrder = JSON.parse(localStorage.getItem(`plan-order-${planKey}`));
+
+  const exercisesToLoad = savedOrder || selectedPlan.exercises;
+
+  exercisesToLoad.forEach(exerciseName => {
+    const target = [...document.querySelectorAll('.exercise-pick-item')].find(item => {
+      const label = item.querySelector('div:last-child > div:first-child');
+      return label && label.textContent.trim().toLowerCase() === exerciseName.toLowerCase();
+    });
+
+    if (target) {
+      togglePick(target);
+    }
+  });
+
+  updateProgress();
+}
+loadSelectedPlan();
 </script>
 </body>
 </html>

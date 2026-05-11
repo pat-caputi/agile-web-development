@@ -9,6 +9,9 @@
       'data-theme',
       localStorage.getItem('liftlab-theme') || 'light'
     );
+    if (localStorage.getItem('liftlab-sidebar') === 'collapsed') {
+      document.documentElement.setAttribute('data-sidebar', 'collapsed');
+    }
   </script>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
@@ -205,8 +208,8 @@
       </div>
       <div class="stat-card">
         <div class="stat-label">Leaderboard rank</div>
-        <div class="stat-value">#{{ rank }}</div>
-        <div class="stat-meta">of 24 users</div>
+        <div class="stat-value">{% if rank %}#{{ rank }}{% else %}—{% endif %}</div>
+        <div class="stat-meta">of {{ total_users }} user{{ 's' if total_users != 1 else '' }}</div>
       </div>
     </div>
 

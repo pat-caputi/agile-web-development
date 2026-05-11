@@ -337,6 +337,70 @@ def get_user_rank(user_id):
     return None
 
 
+def get_pr_list(user_id):
+    """Best set per exercise for a user. Uses PersonalRecord if populated; falls back to WorkoutSet."""
+    prs = (
+        PersonalRecord.query
+        .filter_by(user_id=user_id)
+        .order_by(PersonalRecord.best_weight.desc())
+        .all()
+    )
+
+    if prs:
+        result = []
+        for pr in prs:
+            reps = pr.best_reps or 0
+            e1rm = round(pr.best_weight * (1 + reps / 30), 1) if reps > 1 else pr.best_weight
+            result.append({
+                'exercise':    pr.exercise,
+                'best_weight': pr.best_weight,
+                'best_reps':   reps,
+                'date_set':    pr.date_set,
+                'e1rm':        e1rm,
+            })
+        return result
+
+    # Fallback: derive best set per exercise directly from WorkoutSet data
+    all_sets = (
+        db.session.query(WorkoutSet, Workout.date)
+        .join(Workout, Workout.id == WorkoutSet.workout_id)
+        .filter(Workout.user_id == user_id)
+        .all()
+    )
+
+    best = {}
+    for ws, date in all_sets:
+        key = (ws.exercise or '').lower().strip()
+        if not key:
+            continue
+        existing = best.get(key)
+        if existing is None:
+            best[key] = (ws, date)
+        else:
+            ews, edate = existing
+            w,  ew = ws.weight or 0, ews.weight or 0
+            r,  er = ws.reps   or 0, ews.reps   or 0
+            if (w > ew
+                    or (w == ew and r > er)
+                    or (w == ew and r == er and date and edate and date > edate)):
+                best[key] = (ws, date)
+
+    result = []
+    for ws, date in sorted(best.values(), key=lambda x: (x[0].weight or 0), reverse=True):
+        w = ws.weight or 0
+        r = ws.reps   or 0
+        e1rm = round(w * (1 + r / 30), 1) if r > 1 else w
+        result.append({
+            'exercise':    ws.exercise,
+            'best_weight': w,
+            'best_reps':   r,
+            'date_set':    date,
+            'e1rm':        e1rm,
+        })
+
+    return result
+
+
 # ── Routes ──
 @app.route('/')
 def home():
@@ -461,6 +525,7 @@ def dashboard():
 
     weekly_volume = sum(ws.weight * ws.reps for ws in weekly_sets)
     rank = get_user_rank(session['user_id'])
+    total_users = User.query.count()
 
     top_users = (
         db.session.query(
@@ -486,6 +551,7 @@ def dashboard():
         workouts_count=workouts_count,
         streak=12,
         rank=rank,
+        total_users=total_users,
         top_users=top_users,
     )
 
@@ -498,6 +564,32 @@ def logout():
 
 
 # LOG WORKOUT
+PLANS_DATA = {
+    "push": {
+        "name": "Push day",
+        "exercises": ["Bench press", "Incline bench press", "Overhead press", "Lateral raises", "Tricep pushdown", "Cable fly"]
+    },
+    "pull": {
+        "name": "Pull day",
+        "exercises": ["Pull up", "Barbell row", "Lat pulldown", "Bicep curl", "Hammer curl", "Face pull"]
+    },
+    "legs": {
+        "name": "Leg day",
+        "exercises": ["Barbell squat", "Leg press", "Romanian deadlift", "Leg curl", "Leg extension", "Hip thrust", "Calf raise"]
+    },
+    "upper": {
+        "name": "Upper body",
+        "exercises": ["Bench press", "Barbell row", "Overhead press", "Lat pulldown", "Bicep curl", "Tricep pushdown", "Lateral raises", "Face pull"]
+    },
+    "arms_core": {
+        "name": "Arms & core",
+        "exercises": ["Barbell curl", "Skull crusher", "Hammer curl", "Tricep pushdown", "Plank", "Cable crunch"]
+    },
+    "full_body": {
+        "name": "Full body",
+        "exercises": ["Barbell squat", "Bench press", "Deadlift", "Pull up", "Overhead press", "Leg press", "Bicep curl", "Plank"]
+    }
+}
 @app.route('/log_workout', methods=['GET', 'POST'])
 def log_workout():
     if 'user_id' not in session:
@@ -564,11 +656,15 @@ def log_workout():
 
     today = datetime.utcnow()
 
+    selected_plan_key = request.args.get("plan", "push")
+    selected_plan = PLANS_DATA.get(selected_plan_key, PLANS_DATA["push"])
+
     return render_template(
         'log_workout.html',
         today=today,
         user=user,
-        rank=get_user_rank(session['user_id'])
+        rank=get_user_rank(session['user_id']),
+        selected_plan=selected_plan
     )
 
 
@@ -711,6 +807,47 @@ def create_plan():
     return jsonify({"ok": True, "plan_id": plan.id})
 
 
+@app.route('/plans/<int:plan_id>/edit', methods=['POST'])
+def edit_plan(plan_id):
+    user, err = _require_login()
+    if err:
+        return jsonify({"ok": False, "error": "Not logged in"}), 401
+
+    plan = db.session.get(WorkoutPlan, plan_id)
+    if plan is None or plan.user_id != user.id:
+        return jsonify({"ok": False, "error": "Not found"}), 404
+
+    title = request.form.get('title', '').strip()
+    exercises = request.form.getlist('exercises')
+
+    if not title:
+        return jsonify({"ok": False, "error": "Plan name is required."}), 400
+    if not exercises:
+        return jsonify({"ok": False, "error": "Please select at least one exercise."}), 400
+    if len(title) > 120:
+        return jsonify({"ok": False, "error": "Plan name must be 120 characters or fewer."}), 400
+
+    plan.title = title
+    plan.description = ', '.join(exercises)
+    db.session.commit()
+    return jsonify({"ok": True})
+
+
+@app.route('/plans/<int:plan_id>/delete', methods=['POST'])
+def delete_plan(plan_id):
+    user, err = _require_login()
+    if err:
+        return jsonify({"ok": False, "error": "Not logged in"}), 401
+
+    plan = db.session.get(WorkoutPlan, plan_id)
+    if plan is None or plan.user_id != user.id:
+        return jsonify({"ok": False, "error": "Not found"}), 404
+
+    db.session.delete(plan)
+    db.session.commit()
+    return jsonify({"ok": True})
+
+
 @app.route('/calendar')
 def calendar():
     if 'user_id' not in session:
@@ -734,6 +871,8 @@ def calendar():
         user=user,
         rank=get_user_rank(session['user_id'])
     )
+
+
 
 
 # PROFILE
@@ -978,17 +1117,18 @@ def public_profile(username):
     profile_visible = profile_user.profile_public or is_own_profile
 
     # Defaults — safe fallbacks used when profile is private or data is absent
-    public_plans      = []
+    public_plans       = []
     public_plans_count = 0
-    total_workouts    = 0
-    total_volume      = 0
-    pr_count          = 0
+    total_workouts     = 0
+    total_volume       = 0
+    pr_count           = 0
+    personal_records   = []
     workouts_this_week = 0
-    likes_map         = {}
-    comments_map      = {}
-    tags_map          = {}
-    badges            = []
-    activity          = []
+    likes_map          = {}
+    comments_map       = {}
+    tags_map           = {}
+    badges             = []
+    activity           = []
 
     if profile_visible:
         public_plans = (
@@ -1010,6 +1150,7 @@ def public_profile(username):
         total_volume = int(vol_row or 0)
 
         pr_count = PersonalRecord.query.filter_by(user_id=profile_user.id).count()
+        personal_records = get_pr_list(profile_user.id)
 
         start_of_week = get_start_of_week()
         workouts_this_week = Workout.query.filter(
@@ -1038,14 +1179,21 @@ def public_profile(username):
 
         tags_map = {p.id: get_plan_tags(p) for p in public_plans}
 
-        # Achievement badges (thresholds are lenient on purpose)
-        badges.append(('New Member',        '👋', 'badge-new'))
+        # Achievement badges
+        if total_workouts == 0:
+            badges.append(('Getting Started',   '🌱', 'badge-new'))
+        else:
+            badges.append(('New Member',        '👋', 'badge-new'))
         if public_plans_count >= 1:
             badges.append(('Community Sharer',  '📤', 'badge-share'))
-        if total_workouts >= 10:
+        if total_workouts >= 10 or workouts_this_week >= 2:
             badges.append(('Consistent Trainer','🗓️',  'badge-consistent'))
-        if pr_count >= 5:
+        if (pr_count >= 3) or (len(personal_records) >= 3):
             badges.append(('PR Machine',        '🏆', 'badge-pr'))
+        if any(r['best_weight'] >= 100 for r in personal_records):
+            badges.append(('100kg Club',        '💯', 'badge-100kg'))
+        if total_volume >= 5000:
+            badges.append(('Strength Builder',  '🔩', 'badge-strength'))
         if total_volume >= 10000:
             badges.append(('Volume Builder',    '💪', 'badge-volume'))
         if total_workouts >= 50:
@@ -1131,6 +1279,7 @@ def public_profile(username):
         total_workouts=total_workouts,
         total_volume=total_volume,
         pr_count=pr_count,
+        personal_records=personal_records,
         workouts_this_week=workouts_this_week,
         likes_map=likes_map,
         comments_map=comments_map,
