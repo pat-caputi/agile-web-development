@@ -328,6 +328,36 @@ def inject_logged_in_user():
     }
 
 
+def get_day_streak(user_id):
+    """Return the number of consecutive calendar days the user has logged at least one workout."""
+    from datetime import date, timedelta
+    workout_dates = (
+        db.session.query(func.date(Workout.date))
+        .filter(Workout.user_id == user_id)
+        .distinct()
+        .all()
+    )
+    days = {row[0] for row in workout_dates}
+    if not days:
+        return 0
+    # Normalise to date objects (SQLite may return strings)
+    normalised = set()
+    for d in days:
+        if isinstance(d, str):
+            normalised.add(date.fromisoformat(d))
+        elif isinstance(d, datetime):
+            normalised.add(d.date())
+        else:
+            normalised.add(d)
+    today = date.today()
+    streak = 0
+    check = today if today in normalised else today - timedelta(days=1)
+    while check in normalised:
+        streak += 1
+        check -= timedelta(days=1)
+    return streak
+
+
 def get_user_rank(user_id):
     start_of_week = get_start_of_week()
 
@@ -1049,6 +1079,8 @@ def profile():
     )
 
     rank = get_user_rank(session['user_id'])
+    _, overall_tier = get_muscle_group_data(session['user_id'])
+    day_streak = get_day_streak(session['user_id'])
 
     recent_workouts = (
         Workout.query
@@ -1098,6 +1130,8 @@ def profile():
         user=user,
         workouts_count=workouts_count,
         rank=rank,
+        overall_tier=overall_tier,
+        day_streak=day_streak,
         recent_workouts=workout_cards,
         pr_list=pr_list,
     )
@@ -1238,6 +1272,7 @@ def public_profile(username):
     profile_user = User.query.filter_by(username=username).first_or_404()
     is_own_profile = profile_user.id == user.id
     profile_user_rank = get_user_rank(profile_user.id)
+    _, profile_user_tier = get_muscle_group_data(profile_user.id)
     nav_rank = get_user_rank(user.id)
     active_tab = request.args.get("tab", "plans")
 
@@ -1421,6 +1456,7 @@ def public_profile(username):
         badges=badges,
         activity=activity,
         profile_user_rank=profile_user_rank,
+        profile_user_tier=profile_user_tier,
         nav_rank=nav_rank,
     )
 
