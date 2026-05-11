@@ -259,11 +259,20 @@
 
               <div>
                 <strong>{% if rank %}#{{ rank }}{% else %}-{% endif %}</strong>
-                <span>Rank</span>
+                <span>Leaderboard</span>
               </div>
 
               <div>
-                <strong>12</strong>
+                <strong>
+                  <span class="rank-badge {{ overall_tier.css }}" style="font-size:11px;padding:2px 7px;">
+                    {{ overall_tier.icon }} {{ overall_tier.name }}
+                  </span>
+                </strong>
+                <span>Tier</span>
+              </div>
+
+              <div>
+                <strong>{{ day_streak }}</strong>
                 <span>Day streak</span>
               </div>
             </div>
