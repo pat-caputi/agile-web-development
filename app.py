@@ -670,8 +670,24 @@ def log_workout():
 
     today = datetime.now()
 
-    selected_plan_key = request.args.get("plan", "push")
-    selected_plan = PLANS_DATA.get(selected_plan_key, PLANS_DATA["push"])
+    custom_plan_id = request.args.get("custom_plan_id")
+
+    if custom_plan_id:
+        custom_plan = WorkoutPlan.query.filter_by(
+            id=custom_plan_id,
+            user_id=session['user_id']
+        ).first()
+
+        if custom_plan:
+            selected_plan = {
+                "name": custom_plan.title,
+                "exercises": [e.strip() for e in custom_plan.description.split(",") if e.strip()]
+            }
+        else:
+            selected_plan = PLANS_DATA["push"]
+    else:
+        selected_plan_key = request.args.get("plan", "push")
+        selected_plan = PLANS_DATA.get(selected_plan_key, PLANS_DATA["push"])
 
     return render_template(
         'log_workout.html',
