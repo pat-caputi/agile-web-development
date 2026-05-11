@@ -7,6 +7,13 @@
      - Flash message auto-dismiss
 ════════════════════════════════════════════ */
 
+// Remove the preloading class after the first paint so CSS transitions
+// are suppressed during initial theme/sidebar application but work normally
+// for all subsequent user interactions.
+requestAnimationFrame(() => requestAnimationFrame(() => {
+  document.documentElement.classList.remove('preloading');
+}));
+
 document.addEventListener('DOMContentLoaded', () => {
 
   // ── 1. DARK MODE ─────────────────────────────

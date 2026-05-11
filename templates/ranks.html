@@ -12,6 +12,7 @@
     if (localStorage.getItem('liftlab-sidebar') === 'collapsed') {
       document.documentElement.setAttribute('data-sidebar', 'collapsed');
     }
+    document.documentElement.classList.add('preloading');
   </script>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   <style>
@@ -560,22 +561,22 @@
 
         </div>
 
-        <!-- Detail panel -->
-        <div class="detail-panel" id="detailPanel">
+        <!-- Detail panel (hidden until selectMuscle() populates it) -->
+        <div class="detail-panel" id="detailPanel" style="visibility:hidden;">
           <div class="detail-top">
-            <div class="ex-icon" id="detailIcon" style="background:#E1F5EE;color:#085041;width:36px;height:36px;font-size:14px;flex-shrink:0;">B</div>
+            <div class="ex-icon" id="detailIcon" style="width:36px;height:36px;font-size:14px;flex-shrink:0;"></div>
             <div style="flex:1;min-width:0;">
-              <div style="font-size:15px;font-weight:600;" id="detailName">Back</div>
-              <div style="font-size:12px;color:var(--text-tertiary);" id="detailSub">Diamond · 26,200 pts</div>
+              <div style="font-size:15px;font-weight:600;" id="detailName"></div>
+              <div style="font-size:12px;color:var(--text-tertiary);" id="detailSub"></div>
             </div>
-            <span class="rank-badge rb-diamond" id="detailBadge">💎 Diamond</span>
+            <span class="rank-badge" id="detailBadge"></span>
           </div>
 
           <div style="font-size:11.5px;color:var(--text-tertiary);margin-bottom:6px;">Progress to next tier</div>
           <div class="detail-track">
-            <div class="detail-fill" id="detailBar" style="width:55%;background:var(--r-diamond);"></div>
+            <div class="detail-fill" id="detailBar" style="width:0%;"></div>
           </div>
-          <div style="font-size:11.5px;color:var(--text-tertiary);margin-bottom:14px;" id="detailProg">Max tier reached — keep climbing!</div>
+          <div style="font-size:11.5px;color:var(--text-tertiary);margin-bottom:14px;" id="detailProg"></div>
 
           <div style="font-size:11.5px;color:var(--text-tertiary);margin-bottom:8px;">Top contributing exercises</div>
           <div id="detailExercises"></div>
@@ -672,6 +673,7 @@ function selectMuscle(key) {
   if (!MUSCLE_DATA[key]) return;
   activeMuscle = key;
   const d = MUSCLE_DATA[key];
+  document.getElementById('detailPanel').style.visibility = 'visible';
 
   // Highlight card
   document.querySelectorAll('.muscle-card').forEach(c => c.classList.remove('active'));

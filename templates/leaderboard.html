@@ -12,6 +12,7 @@
     if (localStorage.getItem('liftlab-sidebar') === 'collapsed') {
       document.documentElement.setAttribute('data-sidebar', 'collapsed');
     }
+    document.documentElement.classList.add('preloading');
   </script>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   <style>

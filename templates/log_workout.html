@@ -12,6 +12,7 @@
     if (localStorage.getItem('liftlab-sidebar') === 'collapsed') {
       document.documentElement.setAttribute('data-sidebar', 'collapsed');
     }
+    document.documentElement.classList.add('preloading');
   </script>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   
@@ -693,22 +694,28 @@ function saveWorkout() {
   const name   = document.getElementById('workoutName').value || 'Workout';
   const blocks = document.querySelectorAll('.exercise-block');
   const mins   = Math.floor(timerSecs / 60);
+  const secs = timerSecs % 60;
   _workoutSets = [];
   let vol = 0, lines = '';
   blocks.forEach(b => {
     const exName = b.dataset.exname || 'Exercise';
     let sets = 0, v = 0;
     b.querySelectorAll('.set-row').forEach(r => {
-      const w    = parseFloat(r.querySelectorAll('input')[0]?.value) || 0;
-      const reps = parseInt(r.querySelectorAll('input')[1]?.value)   || 0;
-      if (w > 0 && reps > 0) { _workoutSets.push({exercise: exName, weight: w, reps: reps}); }
-      v += w * reps; if (w > 0 || reps > 0) sets++;
-    });
+    const isDone = r.classList.contains('done');
+    const w = parseFloat(r.querySelectorAll('input')[0]?.value) || 0;
+    const reps = parseInt(r.querySelectorAll('input')[1]?.value) || 0;
+
+    if (isDone && w > 0 && reps > 0) {
+      _workoutSets.push({exercise: exName, weight: w, reps: reps});
+      v += w * reps;
+      sets++;
+    }
+  });
     vol += v;
     lines += `<div class="summary-row"><span>${exName}</span><span style="color:var(--text-secondary);font-size:12px;">${sets} set${sets !== 1 ? 's' : ''} · ${v.toLocaleString()} kg</span></div>`;
   });
   document.getElementById('summaryName').textContent    = name;
-  document.getElementById('sumDuration').textContent    = `${mins}m`;
+  document.getElementById('sumDuration').textContent = `${mins}m ${secs}s`;
   document.getElementById('sumExercises').textContent   = blocks.length;
   document.getElementById('sumVolume').textContent      = vol.toLocaleString();
   document.getElementById('sumExList').innerHTML        = lines || `<div style="font-size:13px;color:var(--text-tertiary);">No sets logged</div>`;
