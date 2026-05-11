@@ -416,6 +416,39 @@ def dashboard():
         for index, day in enumerate(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"])
     ]
 
+    latest_workout = (
+        Workout.query
+        .filter_by(user_id=session['user_id'])
+        .order_by(Workout.date.desc())
+        .first()
+    )
+
+    exercise_cards = []
+
+    if latest_workout:
+        latest_sets = WorkoutSet.query.filter_by(workout_id=latest_workout.id).all()
+
+        exercise_summary = {}
+
+        for s in latest_sets:
+            name = s.exercise.title()
+
+            if name not in exercise_summary:
+                exercise_summary[name] = {
+                    "sets": 0,
+                    "volume": 0
+                }
+
+            exercise_summary[name]["sets"] += 1
+            exercise_summary[name]["volume"] += s.weight * s.reps
+
+        for name, data in exercise_summary.items():
+            exercise_cards.append({
+                "exercise": name,
+                "sets": data["sets"],
+                "volume": int(data["volume"])
+            })
+
     return render_template(
         'dashboard.html',
         user=user,
@@ -426,7 +459,9 @@ def dashboard():
         rank=rank,
         total_users=total_users,
         weekly_chart_data=weekly_chart_data,
-        volume_change=volume_change
+        volume_change=volume_change,
+        exercise_cards=exercise_cards,
+        latest_workout=latest_workout
     )
 
 

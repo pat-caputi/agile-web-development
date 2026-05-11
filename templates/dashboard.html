@@ -184,7 +184,6 @@
       <!-- Left: chart + session -->
       <div class="card">
         <div class="card-title">Weekly volume (kg)</div>
-
         <div class="bar-chart">
           {% for item in weekly_chart_data %}
             <div class="bar-col">
@@ -198,43 +197,38 @@
           {% endfor %}
         </div>
         <hr class="card-divider">
-
-        <div class="card-title">Today's session · Push day</div>
-        <div class="exercise-list">
-          <div class="exercise-item">
-            <div class="ex-icon" style="background:#EEEDFE;color:#534AB7;">B</div>
-            <div class="ex-info">
-              <div class="ex-name">Bench press</div>
-              <div class="ex-meta">4 sets · 80 kg</div>
-            </div>
-            <span class="badge badge-pr">PR</span>
-          </div>
-          <div class="exercise-item">
-            <div class="ex-icon" style="background:#E1F5EE;color:#085041;">O</div>
-            <div class="ex-info">
-              <div class="ex-name">Overhead press</div>
-              <div class="ex-meta">3 sets · 55 kg</div>
-            </div>
-            <span class="badge badge-success">Done</span>
-          </div>
-          <div class="exercise-item">
-            <div class="ex-icon" style="background:#F1EFE8;color:#5F5E5A;">T</div>
-            <div class="ex-info">
-              <div class="ex-name">Tricep pushdown</div>
-              <div class="ex-meta">3 sets · 30 kg</div>
-            </div>
-            <span class="badge badge-warning">Up next</span>
-          </div>
-          <div class="exercise-item">
-            <div class="ex-icon" style="background:#FAEEDA;color:#633806;">L</div>
-            <div class="ex-info">
-              <div class="ex-name">Lateral raises</div>
-              <div class="ex-meta">3 sets · 12 kg</div>
-            </div>
-            <span class="badge" style="background:var(--gray-100);color:var(--gray-600);">Pending</span>
-          </div>
+        <div class="card-title">
+          Today's session
+          {% if latest_workout %}
+            · {{ latest_workout.date.strftime("%d %b") }}
+          {% endif %}
         </div>
-      </div>
+
+        <div class="exercise-list">
+          {% if exercise_cards %}
+            {% for s in exercise_cards %}
+              <div class="exercise-item">
+                <div class="ex-icon" style="background:#EEEDFE;color:#534AB7;">
+                  {{ s.exercise[0] }}
+                </div>
+
+                <div class="ex-info">
+                  <div class="ex-name">{{ s.exercise }}</div>
+                  <div class="ex-meta">
+                    {{ s.sets }} sets · {{ s.volume }} kg
+                  </div>
+                </div>
+
+                <span class="badge badge-success">Logged</span>
+              </div>
+            {% endfor %}
+          {% else %}
+            <div style="font-size:13px;color:var(--text-tertiary);">
+              No workout logged yet.
+            </div>
+          {% endif %}
+        </div>
+        </div>
 
       <!-- Right: mini leaderboard + CTA -->
       <div style="display:flex;flex-direction:column;gap:14px;">
