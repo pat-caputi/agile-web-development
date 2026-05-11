@@ -294,7 +294,7 @@
             {% for tag in tags %}<span class="plan-tag">{{ tag }}</span>{% endfor %}
           </div>
           <div style="margin-top:auto;padding-top:12px;border-top:0.5px solid var(--border);display:flex;flex-direction:column;gap:8px;">
-            <a href="{{ url_for('log_workout') }}" class="btn btn-primary btn-block" style="font-size:12px;padding:6px 14px;">
+            <a href="{{ url_for('log_workout', custom_plan_id=plan.id) }}" class="btn btn-primary btn-block" style="font-size:12px;padding:6px 14px;">
               <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M2 8h2m8 0h2M4 8V5.5a1.5 1.5 0 013 0v5a1.5 1.5 0 003 0V5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
               Start this plan
             </a>
@@ -350,7 +350,7 @@
             </div>
           </div>
           <div style="margin-top:14px;">
-            <a href="{{ url_for('log_workout', plan='push') }}" class="btn btn-primary btn-block">
+            <a href="{{ url_for('log_workout', plan='push') }}" class="btn btn-primary btn-block" onclick="savePlanOrder('push', 'dnd-push')">
               <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M2 8h2m8 0h2M4 8V5.5a1.5 1.5 0 013 0v5a1.5 1.5 0 003 0V5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
               Start this plan
             </a>
@@ -378,7 +378,7 @@
             </div>
           </div>
           <div style="margin-top:14px;">
-            <a href="{{ url_for('log_workout', plan='pull') }}" class="btn btn-primary btn-block">
+            <a href="{{ url_for('log_workout', plan='pull') }}" class="btn btn-primary btn-block" onclick="savePlanOrder('pull', 'dnd-pull')">
               <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M2 8h2m8 0h2M4 8V5.5a1.5 1.5 0 013 0v5a1.5 1.5 0 003 0V5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
               Start this plan
             </a>
@@ -407,7 +407,7 @@
             </div>
           </div>
           <div style="margin-top:14px;">
-            <a href="{{ url_for('log_workout', plan='legs') }}" class="btn btn-primary btn-block">
+            <a href="{{ url_for('log_workout', plan='legs') }}" class="btn btn-primary btn-block" onclick="savePlanOrder('legs', 'dnd-legs')">
               <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M2 8h2m8 0h2M4 8V5.5a1.5 1.5 0 013 0v5a1.5 1.5 0 003 0V5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
               Start this plan
             </a>
@@ -437,7 +437,7 @@
             </div>
           </div>
           <div style="margin-top:14px;">
-            <a href="{{ url_for('log_workout', plan='upper') }}" class="btn btn-primary btn-block">
+            <a href="{{ url_for('log_workout', plan='upper') }}" class="btn btn-primary btn-block" onclick="savePlanOrder('upper', 'dnd-upper')">
               <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M2 8h2m8 0h2M4 8V5.5a1.5 1.5 0 013 0v5a1.5 1.5 0 003 0V5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
               Start this plan
             </a>
@@ -465,7 +465,7 @@
             </div>
           </div>
           <div style="margin-top:14px;">
-            <a href="{{ url_for('log_workout', plan='arms_core') }}" class="btn btn-primary btn-block">
+            <a href="{{ url_for('log_workout', plan='arms_core') }}" class="btn btn-primary btn-block" onclick="savePlanOrder('arms_core', 'dnd-arms')">
               <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M2 8h2m8 0h2M4 8V5.5a1.5 1.5 0 013 0v5a1.5 1.5 0 003 0V5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
               Start this plan
             </a>
@@ -495,7 +495,7 @@
             </div>
           </div>
           <div style="margin-top:14px;">
-            <a href="{{ url_for('log_workout', plan='full_body') }}" class="btn btn-primary btn-block">
+            <a href="{{ url_for('log_workout', plan='full_body') }}" class="btn btn-primary btn-block" onclick="savePlanOrder('full_body', 'dnd-full')">
               <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M2 8h2m8 0h2M4 8V5.5a1.5 1.5 0 013 0v5a1.5 1.5 0 003 0V5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
               Start this plan
             </a>
@@ -780,6 +780,17 @@ function initDnd(listId) {
     list.querySelectorAll('.dnd-item').forEach(i => i.classList.remove('drag-over'));
     dragSrc = null;
   });
+}
+
+function savePlanOrder(planKey, listId) {
+  const list = document.getElementById(listId);
+
+  if (!list) return;
+
+  const exercises = [...list.querySelectorAll('.dnd-item-name')]
+    .map(item => item.textContent.trim());
+
+  localStorage.setItem(`plan-order-${planKey}`, JSON.stringify(exercises));
 }
 
 ['dnd-push', 'dnd-pull', 'dnd-legs', 'dnd-upper', 'dnd-arms', 'dnd-full'].forEach(initDnd);

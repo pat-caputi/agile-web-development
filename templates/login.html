@@ -31,7 +31,8 @@
       {% with messages = get_flashed_messages() %}
         {% if messages %}
           <div class="error-msg">
-            {{ messages[0] }}
+            <span>⚠️</span>
+            <span>{{ messages[0] }}</span>
           </div>
         {% endif %}
       {% endwith %}

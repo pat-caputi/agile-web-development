@@ -184,7 +184,7 @@
     {% endwith %}
     <div class="page-header">
       <h1 class="page-title">
-        Good morning, {{ nav_user.username.title() if nav_user else "User" }}
+        {{ greeting }} {{ emoji }}, {{ nav_user.username.title() if nav_user else "User" }}
       </h1>
       <p class="page-sub">{{ today.strftime("%A, %d %B") }} · Week {{ today.strftime("%U") }} · {{ workouts_count }} workouts this week</p>
     </div>
