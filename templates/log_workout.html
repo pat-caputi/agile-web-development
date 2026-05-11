@@ -693,7 +693,12 @@ function loadSelectedPlan() {
     item.classList.remove('selected');
   });
 
-  selectedPlan.exercises.forEach(exerciseName => {
+  const planKey = new URLSearchParams(window.location.search).get('plan') || 'push';
+  const savedOrder = JSON.parse(localStorage.getItem(`plan-order-${planKey}`));
+
+  const exercisesToLoad = savedOrder || selectedPlan.exercises;
+
+  exercisesToLoad.forEach(exerciseName => {
     const target = [...document.querySelectorAll('.exercise-pick-item')].find(item => {
       const label = item.querySelector('div:last-child > div:first-child');
       return label && label.textContent.trim().toLowerCase() === exerciseName.toLowerCase();
