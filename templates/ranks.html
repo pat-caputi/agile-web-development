@@ -5,14 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>My Ranks · LiftAGILE</title>
   <script>
-    document.documentElement.setAttribute(
-      'data-theme',
-      localStorage.getItem('liftlab-theme') || 'light'
-    );
-    if (localStorage.getItem('liftlab-sidebar') === 'collapsed') {
-      document.documentElement.setAttribute('data-sidebar', 'collapsed');
-    }
-    document.documentElement.classList.add('preloading');
+    (function(){
+      var t = localStorage.getItem('liftlab-theme') || 'light';
+      document.documentElement.setAttribute('data-theme', t);
+      if (t === 'dark') {
+        document.documentElement.style.background  = '#0F0F0E';
+        document.documentElement.style.colorScheme = 'dark';
+      }
+      if (localStorage.getItem('liftlab-sidebar') === 'collapsed')
+        document.documentElement.setAttribute('data-sidebar', 'collapsed');
+      document.documentElement.classList.add('preloading');
+    })();
   </script>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   <style>
@@ -397,21 +400,21 @@
               <rect x="49" y="33" width="10" height="9" rx="2" fill="#222220" stroke="#383836" stroke-width="0.5"/>
 
               <!-- CHEST (pectorals) -->
-              <path class="muscle-region fill-gold" id="f-chest" data-muscle="chest"
+              <path class="muscle-region fill-{{ muscle_data['chest'].tier_name | lower }}" id="f-chest" data-muscle="chest"
                     d="M31 48 Q54 44 77 48 L75 70 Q54 74 33 70 Z"/>
 
               <!-- SHOULDERS front left -->
-              <ellipse class="muscle-region fill-platinum" id="f-shl" data-muscle="shoulders"
+              <ellipse class="muscle-region fill-{{ muscle_data['shoulders'].tier_name | lower }}" id="f-shl" data-muscle="shoulders"
                        cx="24" cy="57" rx="9" ry="13"/>
               <!-- SHOULDERS front right -->
-              <ellipse class="muscle-region fill-platinum" id="f-shr" data-muscle="shoulders"
+              <ellipse class="muscle-region fill-{{ muscle_data['shoulders'].tier_name | lower }}" id="f-shr" data-muscle="shoulders"
                        cx="84" cy="57" rx="9" ry="13"/>
 
               <!-- BICEPS left -->
-              <path class="muscle-region fill-silver" id="f-arml" data-muscle="arms"
+              <path class="muscle-region fill-{{ muscle_data['arms'].tier_name | lower }}" id="f-arml" data-muscle="arms"
                     d="M17 66 Q13 79 15 95 Q21 99 25 95 Q27 79 25 66 Z"/>
               <!-- BICEPS right -->
-              <path class="muscle-region fill-silver" id="f-armr" data-muscle="arms"
+              <path class="muscle-region fill-{{ muscle_data['arms'].tier_name | lower }}" id="f-armr" data-muscle="arms"
                     d="M91 66 Q95 79 93 95 Q87 99 83 95 Q81 79 83 66 Z"/>
 
               <!-- Forearms + hands (neutral, no rank) -->
@@ -421,7 +424,7 @@
               <ellipse cx="91" cy="127" rx="6" ry="8" fill="#222220" stroke="#383836" stroke-width="0.5"/>
 
               <!-- CORE / ABS -->
-              <path class="muscle-region fill-bronze" id="f-core" data-muscle="core"
+              <path class="muscle-region fill-{{ muscle_data['core'].tier_name | lower }}" id="f-core" data-muscle="core"
                     d="M35 72 Q54 76 73 72 L71 116 Q54 120 37 116 Z"/>
               <!-- Six-pack dividers -->
               <line x1="54" y1="76" x2="54" y2="116" stroke="#0A0A08" stroke-width="0.7" opacity="0.5"/>
@@ -432,10 +435,10 @@
               <path d="M37 116 Q54 120 71 116 L73 130 Q54 134 35 130 Z" fill="#222220" stroke="#383836" stroke-width="0.5"/>
 
               <!-- QUADS left -->
-              <path class="muscle-region fill-gold" id="f-legl" data-muscle="legs"
+              <path class="muscle-region fill-{{ muscle_data['legs'].tier_name | lower }}" id="f-legl" data-muscle="legs"
                     d="M35 132 Q31 152 33 172 Q41 176 49 172 Q51 152 49 132 Z"/>
               <!-- QUADS right -->
-              <path class="muscle-region fill-gold" id="f-legr" data-muscle="legs"
+              <path class="muscle-region fill-{{ muscle_data['legs'].tier_name | lower }}" id="f-legr" data-muscle="legs"
                     d="M59 132 Q57 152 59 172 Q67 176 73 172 Q75 152 73 132 Z"/>
 
               <!-- Knees -->
@@ -463,25 +466,25 @@
               <rect x="49" y="33" width="10" height="9" rx="2" fill="#222220" stroke="#383836" stroke-width="0.5"/>
 
               <!-- TRAPS (upper back) -->
-              <path class="muscle-region fill-diamond" id="b-backtop" data-muscle="back"
+              <path class="muscle-region fill-{{ muscle_data['back'].tier_name | lower }}" id="b-backtop" data-muscle="back"
                     d="M34 46 Q54 42 74 46 L76 62 Q54 66 32 62 Z"/>
 
               <!-- SHOULDERS back left -->
-              <ellipse class="muscle-region fill-platinum" id="b-shl" data-muscle="shoulders"
+              <ellipse class="muscle-region fill-{{ muscle_data['shoulders'].tier_name | lower }}" id="b-shl" data-muscle="shoulders"
                        cx="24" cy="55" rx="9" ry="13"/>
               <!-- SHOULDERS back right -->
-              <ellipse class="muscle-region fill-platinum" id="b-shr" data-muscle="shoulders"
+              <ellipse class="muscle-region fill-{{ muscle_data['shoulders'].tier_name | lower }}" id="b-shr" data-muscle="shoulders"
                        cx="84" cy="55" rx="9" ry="13"/>
 
               <!-- LATS -->
-              <path class="muscle-region fill-diamond" id="b-lats" data-muscle="back"
+              <path class="muscle-region fill-{{ muscle_data['back'].tier_name | lower }}" id="b-lats" data-muscle="back"
                     d="M32 62 Q26 74 28 92 Q41 98 54 96 Q67 98 80 92 Q82 74 76 62 Q54 66 32 62 Z"/>
 
               <!-- TRICEPS left -->
-              <path class="muscle-region fill-silver" id="b-arml" data-muscle="arms"
+              <path class="muscle-region fill-{{ muscle_data['arms'].tier_name | lower }}" id="b-arml" data-muscle="arms"
                     d="M17 64 Q13 77 15 93 Q21 97 25 93 Q27 77 25 64 Z"/>
               <!-- TRICEPS right -->
-              <path class="muscle-region fill-silver" id="b-armr" data-muscle="arms"
+              <path class="muscle-region fill-{{ muscle_data['arms'].tier_name | lower }}" id="b-armr" data-muscle="arms"
                     d="M91 64 Q95 77 93 93 Q87 97 83 93 Q81 77 83 64 Z"/>
 
               <!-- Forearms + hands (back, neutral) -->
@@ -497,10 +500,10 @@
               <path d="M34 116 Q54 120 74 116 L76 136 Q54 140 32 136 Z" fill="#222220" stroke="#383836" stroke-width="0.5"/>
 
               <!-- HAMSTRINGS left -->
-              <path class="muscle-region fill-gold" id="b-legl" data-muscle="legs"
+              <path class="muscle-region fill-{{ muscle_data['legs'].tier_name | lower }}" id="b-legl" data-muscle="legs"
                     d="M34 138 Q30 158 32 176 Q40 180 48 176 Q50 158 48 138 Z"/>
               <!-- HAMSTRINGS right -->
-              <path class="muscle-region fill-gold" id="b-legr" data-muscle="legs"
+              <path class="muscle-region fill-{{ muscle_data['legs'].tier_name | lower }}" id="b-legr" data-muscle="legs"
                     d="M58 138 Q56 158 58 176 Q66 180 72 176 Q74 158 72 138 Z"/>
 
               <!-- Knees back -->
