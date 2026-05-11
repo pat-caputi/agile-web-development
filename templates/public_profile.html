@@ -259,7 +259,16 @@
         <div class="pp-stat-card">
           <div class="pp-stat-icon">🏆</div>
           <div class="pp-stat-val">{% if profile_user_rank %}#{{ profile_user_rank }}{% else %}—{% endif %}</div>
-          <div class="pp-stat-lbl">Rank</div>
+          <div class="pp-stat-lbl">Leaderboard</div>
+        </div>
+        <div class="pp-stat-card">
+          <div class="pp-stat-icon">{{ profile_user_tier.icon }}</div>
+          <div class="pp-stat-val">
+            <span class="rank-badge {{ profile_user_tier.css }}" style="font-size:11px;padding:2px 7px;">
+              {{ profile_user_tier.name }}
+            </span>
+          </div>
+          <div class="pp-stat-lbl">Tier</div>
         </div>
       </div>
 
