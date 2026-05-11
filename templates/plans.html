@@ -437,6 +437,7 @@ async function savePlan() {
   try {
     const res = await fetch(SAVE_URL, { method: 'POST', body });
     const data = await res.json();
+
     if (data.ok) {
       window.location.reload();
     } else {
@@ -448,6 +449,23 @@ async function savePlan() {
     showModalError('Network error — please try again.');
     btn.disabled = false;
     btn.textContent = 'Save plan';
+  }
+}
+
+function savePlanOrder(planKey, listId) {
+  const list = document.getElementById(listId);
+
+  if (!list) return;
+
+  const exercises = [...list.querySelectorAll('.dnd-item-name')]
+    .map(item => item.textContent.trim());
+
+  localStorage.setItem(`plan-order-${planKey}`, JSON.stringify(exercises));
+}
+
+function confirmDelete(btn, name) {
+  if (confirm(`Delete "${name}"? This cannot be undone.`)) {
+    btn.closest('.plan-card').remove();
   }
 }
 
