@@ -1237,6 +1237,8 @@ def public_profile(username):
 
     profile_user = User.query.filter_by(username=username).first_or_404()
     is_own_profile = profile_user.id == user.id
+    profile_user_rank = get_user_rank(profile_user.id)
+    nav_rank = get_user_rank(user.id)
     active_tab = request.args.get("tab", "plans")
 
     is_following = Follow.query.filter_by(
@@ -1418,6 +1420,8 @@ def public_profile(username):
         tags_map=tags_map,
         badges=badges,
         activity=activity,
+        profile_user_rank=profile_user_rank,
+        nav_rank=nav_rank,
     )
 
 

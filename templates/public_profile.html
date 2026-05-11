@@ -146,7 +146,9 @@
       {% include "_sidebar_avatar.html" %}
       <div class="nav-user-info">
         <div class="nav-user-name">{{ nav_user.username.title() if nav_user else "Profile" }}</div>
-        <div class="nav-user-rank">View profile</div>
+        <div class="nav-user-rank">
+          {% if nav_rank %}Rank #{{ nav_rank }}{% else %}View profile{% endif %}
+        </div>
       </div>
     </a>
 
@@ -246,13 +248,18 @@
         </div>
         <div class="pp-stat-card">
           <div class="pp-stat-icon">🎯</div>
-          <div class="pp-stat-val">{{ pr_count }}</div>
+          <div class="pp-stat-val">{{ personal_records | length }}</div>
           <div class="pp-stat-lbl">PRs Set</div>
         </div>
         <div class="pp-stat-card">
           <div class="pp-stat-icon">📅</div>
           <div class="pp-stat-val">{{ workouts_this_week }}</div>
           <div class="pp-stat-lbl">This Week</div>
+        </div>
+        <div class="pp-stat-card">
+          <div class="pp-stat-icon">🏆</div>
+          <div class="pp-stat-val">{% if profile_user_rank %}#{{ profile_user_rank }}{% else %}—{% endif %}</div>
+          <div class="pp-stat-lbl">Rank</div>
         </div>
       </div>
 
