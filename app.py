@@ -251,7 +251,7 @@ def get_muscle_group_data(user_id):
 
 # ── Helpers ──
 def get_start_of_week():
-    today = datetime.utcnow()
+    today = datetime.now()
     start_of_week = today - timedelta(days=today.weekday())
     return start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
 
@@ -505,7 +505,19 @@ def dashboard():
         session.clear()
         return redirect('/login')
 
-    today = datetime.utcnow()
+    today = datetime.now()
+    current_hour = today.hour
+
+    if current_hour < 12:
+        greeting = "Good morning"
+        emoji = "☀️"
+    elif current_hour < 18:
+        greeting = "Good afternoon"
+        emoji = "🌤️"
+    else:
+        greeting = "Good evening"
+        emoji = "🌙"
+    
     start_of_week = get_start_of_week()
 
     workouts_count = (
@@ -544,16 +556,18 @@ def dashboard():
     )
 
     return render_template(
-        'dashboard.html',
-        user=user,
-        today=today,
-        weekly_volume=weekly_volume,
-        workouts_count=workouts_count,
-        streak=12,
-        rank=rank,
-        total_users=total_users,
-        top_users=top_users,
-    )
+    'dashboard.html',
+    user=user,
+    today=today,
+    greeting=greeting,
+    emoji=emoji,
+    weekly_volume=weekly_volume,
+    workouts_count=workouts_count,
+    streak=12,
+    rank=rank,
+    total_users=total_users,
+    top_users=top_users,
+)
 
 
 # LOGOUT
@@ -654,7 +668,7 @@ def log_workout():
         flash("Workout saved successfully!")
         return redirect('/dashboard')
 
-    today = datetime.utcnow()
+    today = datetime.now()
 
     selected_plan_key = request.args.get("plan", "push")
     selected_plan = PLANS_DATA.get(selected_plan_key, PLANS_DATA["push"])
