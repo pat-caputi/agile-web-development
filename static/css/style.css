@@ -2827,3 +2827,18 @@ img.nav-user-avatar {
 
 [data-theme="dark"] .badge-100kg    { color: #fbbf24; }
 [data-theme="dark"] .badge-strength { color: #a5b4fc; }
+
+/* Error Message  */
+.error-msg {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #fca5a5;
+  padding: 12px 14px;
+  border-radius: 12px;
+  margin-bottom: 18px;
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}

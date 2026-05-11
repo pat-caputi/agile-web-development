@@ -745,10 +745,17 @@ function loadSelectedPlan() {
     item.classList.remove('selected');
   });
 
-  const planKey = new URLSearchParams(window.location.search).get('plan') || 'push';
-  const savedOrder = JSON.parse(localStorage.getItem(`plan-order-${planKey}`));
+  const params = new URLSearchParams(window.location.search);
+  const planKey = params.get('plan');
+  const customPlanId = params.get('custom_plan_id');
 
-  const exercisesToLoad = savedOrder || selectedPlan.exercises;
+  let savedOrder = null;
+
+  if (planKey && !customPlanId) {
+    savedOrder = JSON.parse(localStorage.getItem(`plan-order-${planKey}`));
+  }
+
+const exercisesToLoad = savedOrder || selectedPlan.exercises;
 
   exercisesToLoad.forEach(exerciseName => {
     const target = [...document.querySelectorAll('.exercise-pick-item')].find(item => {
