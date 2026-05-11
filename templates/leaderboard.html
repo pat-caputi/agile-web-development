@@ -5,14 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Leaderboard · LiftAGILE</title>
   <script>
-    document.documentElement.setAttribute(
-      'data-theme',
-      localStorage.getItem('liftlab-theme') || 'light'
-    );
-    if (localStorage.getItem('liftlab-sidebar') === 'collapsed') {
-      document.documentElement.setAttribute('data-sidebar', 'collapsed');
-    }
-    document.documentElement.classList.add('preloading');
+    (function(){
+      var t = localStorage.getItem('liftlab-theme') || 'light';
+      document.documentElement.setAttribute('data-theme', t);
+      if (t === 'dark') {
+        document.documentElement.style.background  = '#0F0F0E';
+        document.documentElement.style.colorScheme = 'dark';
+      }
+      if (localStorage.getItem('liftlab-sidebar') === 'collapsed')
+        document.documentElement.setAttribute('data-sidebar', 'collapsed');
+      document.documentElement.classList.add('preloading');
+    })();
   </script>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   <style>
@@ -163,7 +166,7 @@
         <path d="M13.5 9.5A5.5 5.5 0 016.5 2.5a5.5 5.5 0 100 11 5.5 5.5 0 007-4z"
               stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
       </svg>
-      <span class="theme-toggle-text" id="themeToggleLabel">Dark mode</span>
+      <span class="theme-toggle-text" id="themeToggleLabel"></span>
     </button>
 
     <a href="{{ url_for('profile') }}"
