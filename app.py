@@ -822,7 +822,7 @@ def log_workout():
 
     today = datetime.now()
 
-    plan_id_param = request.args.get('plan_id')
+    plan_id_param = request.args.get('custom_plan_id')
     if plan_id_param:
         try:
             wp = db.session.get(WorkoutPlan, int(plan_id_param))
