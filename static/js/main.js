@@ -28,8 +28,30 @@ requestAnimationFrame(() => requestAnimationFrame(() => {
 }));
 
 document.addEventListener('DOMContentLoaded', () => {
+   // ── 1. RANK ACCENT THEME ─────────────────────
+  (function applyRankTheme() {
+    const tier = document.body.dataset.userTier || 'unranked';
 
-  // ── 1. DARK MODE ─────────────────────────────
+    const themes = {
+      unranked: { accent: '#534AB7', hover: '#3C3489', light: '#EEEDFE', dark: '#3C3489' },
+      bronze:   { accent: '#CD7F32', hover: '#9A5A20', light: 'rgba(205,127,50,0.13)', dark: '#8A4F1D' },
+      silver:   { accent: '#A8A9AD', hover: '#7E8085', light: 'rgba(168,169,173,0.14)', dark: '#66686D' },
+      gold:     { accent: '#EF9F27', hover: '#C77D12', light: 'rgba(239,159,39,0.14)', dark: '#A9650C' },
+      platinum: { accent: '#4DD0C4', hover: '#2AA99E', light: 'rgba(77,208,196,0.14)', dark: '#1C8078' },
+      diamond:  { accent: '#8AB4F8', hover: '#5C8FE0', light: 'rgba(138,180,248,0.16)', dark: '#3F6EB8' },
+      emerald:  { accent: '#22C55E', hover: '#16A34A', light: 'rgba(34,197,94,0.14)', dark: '#15803D' },
+      champion: { accent: '#F59E0B', hover: '#D97706', light: 'rgba(245,158,11,0.15)', dark: '#B45309' }
+    };
+
+    const selected = themes[tier] || themes.unranked;
+    const root = document.documentElement;
+
+    root.style.setProperty('--accent', selected.accent);
+    root.style.setProperty('--accent-hover', selected.hover);
+    root.style.setProperty('--accent-light', selected.light);
+    root.style.setProperty('--accent-dark', selected.dark);
+  })();
+  // ── 2. DARK MODE ─────────────────────────────
   const THEME_KEY = 'liftlab-theme';
 
   function applyTheme(theme) {

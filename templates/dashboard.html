@@ -19,7 +19,7 @@
   </script>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
-<body>
+<body data-user-tier="{{ nav_user_tier }}">
 <div class="app-shell">
 
   <!-- Sidebar -->
@@ -198,7 +198,7 @@
         <div class="stat-label">Weekly volume</div>
         <div class="stat-value">{{ weekly_volume }}<span class="stat-unit"> kg</span></div>
         <div class="stat-meta">
-          <span class="badge badge-success">
+          <span class="badge badge-accent">
             {% if volume_change > 0 %}
               +{{ volume_change }}%
             {% elif volume_change < 0 %}
@@ -237,7 +237,12 @@
             <div class="bar-col">
               <span class="bar-day">{{ item.day }}</span>
 
-              <div class="bar-fill {% if item.volume == 0 %}rest{% endif %}" 
+              <div class="bar-fill
+              {% if item.is_today %}
+                today
+              {% elif item.volume == 0 %}
+                rest
+              {% endif %}"
                   style="height:{{ item.height }}%"
                   title="{{ item.volume }} kg">
               </div>

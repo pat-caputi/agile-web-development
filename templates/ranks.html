@@ -192,7 +192,7 @@
     }
   </style>
 </head>
-<body>
+<body data-user-tier="{{ nav_user_tier }}">
 <div class="app-shell">
 
   <!-- Sidebar -->
@@ -639,6 +639,7 @@
 <div class="muscle-tooltip" id="muscleTooltip"></div>
 
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
 <script>
 // ── Muscle data injected from Flask ──
 const MUSCLE_DATA = {

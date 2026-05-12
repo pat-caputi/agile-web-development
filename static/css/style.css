@@ -337,12 +337,12 @@ html, body {
 
 /* Active profile chip - used when the user is on the profile page */
 .nav-user-active {
-  background: rgba(127, 119, 221, 0.16) !important;
-  border-color: rgba(127, 119, 221, 0.35) !important;
+  background: var(--accent-light) !important;
+  border-color: var(--accent) !important;
 }
 
 .nav-user-active:hover {
-  background: rgba(127, 119, 221, 0.22) !important;
+  background: var(--accent-light) !important;
 }
 
 .nav-user-name {
@@ -582,7 +582,7 @@ img.nav-user-avatar {
 ══════════════════════════════════════════ */
 .bar-chart { display: flex; align-items: flex-end; gap: 10px; height: 220px; margin-bottom: 12px; }
 .bar-col   { flex: 1; height: 180px; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
-.bar-fill  { width: 100%; border-radius: 8px 8px 0 0; background: var(--purple-200); min-height: 12px; transition: height 0.3s ease; }
+.bar-fill  { width: 100%; border-radius: 8px 8px 0 0; background: var(--accent); min-height: 12px; transition: height 0.3s ease; }
 .bar-fill.today { background: var(--accent); }
 .bar-fill.rest  { background: var(--gray-100); }
 .bar-day   { font-size: 10px; color: var(--text-tertiary); margin-top: 8px; }
@@ -1376,13 +1376,13 @@ img.nav-user-avatar {
 
 .leaderboard-row:hover {
   transform: translateY(-2px);
-  background: rgba(127, 119, 221, 0.08);
+  background: var(--accent-light);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
 }
 
 .leaderboard-row.current-user {
-  background: rgba(127, 119, 221, 0.13);
-  border-color: rgba(127, 119, 221, 0.45);
+  background: var(--accent-light);
+  border-color: var(--accent);
 }
 
 .leaderboard-rank-badge {
@@ -1438,15 +1438,13 @@ img.nav-user-avatar {
 }
 
 .leaderboard-tab:hover {
-  transform: translateY(-1px);
-  color: var(--text-primary);
-  border-color: rgba(127, 119, 221, 0.35);
+  border-color: var(--accent);
 }
 
 .leaderboard-tab.active {
-  background: rgba(127, 119, 221, 0.16);
-  color: var(--accent);
-  border-color: rgba(127, 119, 221, 0.45);
+  background: var(--accent-light);
+  color: var(--accent-dark);
+  border-color: var(--accent);
 }
 
 .leaderboard-table-fade {
@@ -2507,7 +2505,7 @@ img.nav-user-avatar {
 }
 
 .pp-tab.active .pp-tab-count {
-  background: rgba(127, 119, 221, 0.12);
+  background: var(--accent-light);
   color: var(--accent);
 }
 
@@ -2609,7 +2607,7 @@ img.nav-user-avatar {
 }
 
 .badge-new        { background: var(--surface-2); color: var(--text-secondary); border-color: var(--border-md); }
-.badge-share      { background: rgba(127,119,221,0.10); color: var(--purple-600); border-color: rgba(127,119,221,0.25); }
+.badge-share {background: var(--accent-light);color: var(--accent);border-color: var(--accent);}
 .badge-consistent { background: rgba(34,197,94,0.10);  color: #15803d; border-color: rgba(34,197,94,0.25); }
 .badge-pr         { background: rgba(251,191,36,0.12); color: #92400e; border-color: rgba(251,191,36,0.3); }
 .badge-volume     { background: rgba(59,130,246,0.10); color: #1d4ed8; border-color: rgba(59,130,246,0.25); }

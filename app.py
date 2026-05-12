@@ -315,17 +315,18 @@ def get_plan_tags(plan):
 
 
 @app.context_processor
-def inject_logged_in_user():
-    if "user_id" in session:
-        return {
-            "nav_user": db.session.get(User, session["user_id"]),
-            "initials": initials,
-        }
+def inject_nav_data():
+    if 'user_id' not in session:
+        return {}
 
-    return {
-        "nav_user": None,
-        "initials": initials,
-    }
+    user = User.query.get(session['user_id'])
+
+    muscle_data, overall_tier = get_muscle_group_data(user.id)
+
+    return dict(
+        nav_user=user,
+        nav_user_tier=overall_tier['name'].lower()
+    )
 
 
 def get_day_streak(user_id):
@@ -647,11 +648,15 @@ def dashboard():
 
     max_volume = max(daily_volumes) if max(daily_volumes) > 0 else 1
 
+    today_index = today.weekday()
+
+
     weekly_chart_data = [
         {
             "day": day,
             "volume": int(daily_volumes[index]),
-            "height": 0 if daily_volumes[index] == 0 else max(8, int((daily_volumes[index] / max_volume) * 100))
+            "height": 0 if daily_volumes[index] == 0 else max(8, int((daily_volumes[index] / max_volume) * 100)),
+            "is_today": index == today_index
         }
         for index, day in enumerate(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"])
     ]
