@@ -822,6 +822,7 @@ def log_workout():
 
     today = datetime.now()
 
+    from_calendar = False
     plan_id_param = request.args.get('custom_plan_id')
     if plan_id_param:
         try:
@@ -844,17 +845,19 @@ def log_workout():
             if wp:
                 exercises = [e.strip() for e in (wp.description or '').split(',') if e.strip()]
                 selected_plan = {'name': wp.title, 'exercises': exercises}
+                from_calendar = True
             else:
-                selected_plan = PLANS_DATA['push']
+                selected_plan = None
         else:
-            selected_plan = PLANS_DATA['push']
+            selected_plan = None
 
     return render_template(
         'log_workout.html',
         today=today,
         user=user,
         rank=get_user_rank(session['user_id']),
-        selected_plan=selected_plan
+        selected_plan=selected_plan,
+        from_calendar=from_calendar
     )
 
 
