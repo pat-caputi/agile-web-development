@@ -5,13 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Leaderboard · LiftAGILE</title>
   <script>
-    document.documentElement.setAttribute(
-      'data-theme',
-      localStorage.getItem('liftlab-theme') || 'light'
-    );
-    if (localStorage.getItem('liftlab-sidebar') === 'collapsed') {
-      document.documentElement.setAttribute('data-sidebar', 'collapsed');
-    }
+    (function(){
+      var t = localStorage.getItem('liftlab-theme') || 'light';
+      document.documentElement.setAttribute('data-theme', t);
+      if (t === 'dark') {
+        document.documentElement.style.background  = '#0F0F0E';
+        document.documentElement.style.colorScheme = 'dark';
+      }
+      if (localStorage.getItem('liftlab-sidebar') === 'collapsed')
+        document.documentElement.setAttribute('data-sidebar', 'collapsed');
+      document.documentElement.classList.add('preloading');
+    })();
   </script>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   <style>
@@ -22,6 +26,8 @@
       --r-gold:      #EF9F27; --r-gold-bg:     rgba(239,159,39,0.13);
       --r-platinum:  #4DD0C4; --r-platinum-bg: rgba(77,208,196,0.13);
       --r-diamond:   #8AB4F8; --r-diamond-bg:  rgba(138,180,248,0.14);
+      --r-emerald:   #50C878; --r-emerald-bg:  rgba(80,200,120,0.13);
+      --r-champion:  #C77DFF; --r-champion-bg: rgba(199,125,255,0.14);
     }
     .rank-badge {
       display: inline-flex; align-items: center; gap: 5px;
@@ -34,6 +40,8 @@
     .rb-gold     { background: var(--r-gold-bg);     color: var(--r-gold); }
     .rb-platinum { background: var(--r-platinum-bg); color: var(--r-platinum); }
     .rb-diamond  { background: var(--r-diamond-bg);  color: var(--r-diamond); }
+    .rb-emerald  { background: var(--r-emerald-bg);  color: var(--r-emerald); }
+    .rb-champion { background: var(--r-champion-bg); color: var(--r-champion); font-weight: 700; }
   </style>
 </head>
 <body>
@@ -158,7 +166,7 @@
         <path d="M13.5 9.5A5.5 5.5 0 016.5 2.5a5.5 5.5 0 100 11 5.5 5.5 0 007-4z"
               stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
       </svg>
-      <span class="theme-toggle-text" id="themeToggleLabel">Dark mode</span>
+      <span class="theme-toggle-text" id="themeToggleLabel"></span>
     </button>
 
     <a href="{{ url_for('profile') }}"
@@ -300,6 +308,8 @@
       <!-- Tier filter tabs -->
       <div class="leaderboard-tabs">
         <button class="leaderboard-tab active" data-filter="all">Overall</button>
+        <button class="leaderboard-tab" data-filter="champion">🏆 Champion</button>
+        <button class="leaderboard-tab" data-filter="emerald">💚 Emerald</button>
         <button class="leaderboard-tab" data-filter="diamond">💎 Diamond</button>
         <button class="leaderboard-tab" data-filter="platinum">🔷 Platinum</button>
         <button class="leaderboard-tab" data-filter="gold">🥇 Gold</button>
