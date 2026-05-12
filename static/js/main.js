@@ -10,11 +10,14 @@
 document.addEventListener('DOMContentLoaded', () => {
 
   // ── 1. DARK MODE ─────────────────────────────
-  const THEME_KEY = 'liftlab-theme';
+  const THEME_KEY = 'liftlab-theme'; // sessionStorage — survives navigation, not reload
+
+  // Clean up old localStorage keys from previous implementation
+  localStorage.removeItem('liftlab-theme');
+  localStorage.removeItem('liftlab-theme-os-at-save');
 
   function applyTheme(theme) {
     document.documentElement.setAttribute('data-theme', theme);
-    // Swap the icon in the toggle button
     const iconLight = document.getElementById('themeIconLight');
     const iconDark  = document.getElementById('themeIconDark');
     if (iconLight && iconDark) {
@@ -28,19 +31,20 @@ document.addEventListener('DOMContentLoaded', () => {
   function toggleTheme() {
     const current = document.documentElement.getAttribute('data-theme') || 'light';
     const next    = current === 'dark' ? 'light' : 'dark';
-    localStorage.setItem(THEME_KEY, next);
+    sessionStorage.setItem(THEME_KEY, next);
     applyTheme(next);
   }
 
-  // Apply saved theme immediately (before paint to avoid flash)
-  const savedTheme = localStorage.getItem(THEME_KEY) || 'light';
-  applyTheme(savedTheme);
+  // Inline script already set data-theme; just sync the icons/label
+  applyTheme(document.documentElement.getAttribute('data-theme') || 'light');
 
-  // Wire up toggle button
+  // Live OS tracking — only fires when user has no active session override
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+    if (!sessionStorage.getItem(THEME_KEY)) applyTheme(e.matches ? 'dark' : 'light');
+  });
+
   const themeBtn = document.getElementById('themeToggleBtn');
   if (themeBtn) themeBtn.addEventListener('click', toggleTheme);
-
-  // Expose globally so inline onclick handlers also work
   window.toggleTheme = toggleTheme;
 
 

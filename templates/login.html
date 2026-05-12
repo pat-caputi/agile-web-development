@@ -4,6 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sign in · LiftAGILE</title>
+  <script>
+    if (performance.navigation && performance.navigation.type === 1) {
+      sessionStorage.removeItem('liftlab-theme');
+    }
+    document.documentElement.setAttribute(
+      'data-theme',
+      sessionStorage.getItem('liftlab-theme') ||
+      (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+    );
+  </script>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   <style>
     body { display:flex; align-items:center; justify-content:center; min-height:100vh; }
