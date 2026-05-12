@@ -757,6 +757,8 @@ function loadSelectedPlan() {
 
   if (planKey && !customPlanId) {
     savedOrder = JSON.parse(localStorage.getItem(`plan-order-${planKey}`));
+  } else if (customPlanId) {
+    savedOrder = JSON.parse(localStorage.getItem(`plan-order-custom-${customPlanId}`));
   }
 
 const exercisesToLoad = savedOrder || selectedPlan.exercises;
