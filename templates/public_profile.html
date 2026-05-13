@@ -195,12 +195,14 @@
               </a>
             {% elif is_following %}
               <form action="{{ url_for('unfollow_user', user_id=profile_user.id) }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button class="btn btn-secondary" type="submit" style="font-size:12px;padding:6px 16px;">
                   Unfollow
                 </button>
               </form>
             {% else %}
               <form action="{{ url_for('follow_user', user_id=profile_user.id) }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button class="btn btn-primary" type="submit" style="font-size:12px;padding:6px 16px;">
                   Follow
                 </button>

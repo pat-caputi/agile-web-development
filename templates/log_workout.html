@@ -726,15 +726,27 @@ function saveWorkout() {
 }
 
 function submitWorkout() {
-  if (_workoutSets.length === 0) { alert('No sets logged yet.'); return; }
+  if (_workoutSets.length === 0) {
+    alert('No sets logged yet.');
+    return;
+  }
+
   const form = document.createElement('form');
   form.method = 'POST';
   form.action = '';
+
   const input = document.createElement('input');
   input.type = 'hidden';
   input.name = 'workout_data';
   input.value = JSON.stringify(_workoutSets);
   form.appendChild(input);
+
+  const csrf = document.createElement('input');
+  csrf.type = 'hidden';
+  csrf.name = 'csrf_token';
+  csrf.value = "{{ csrf_token() }}";
+  form.appendChild(csrf);
+
   document.body.appendChild(form);
   form.submit();
 }
