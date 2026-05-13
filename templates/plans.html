@@ -298,9 +298,34 @@
           <div style="margin-bottom:12px;">
             {% for tag in tags %}<span class="plan-tag">{{ tag }}</span>{% endfor %}
           </div>
+          {% set plan_exercises = (plan.description or '').split(', ') | reject('equalto', '') | list %}
+          {% if plan_exercises %}
+          <div style="padding-top:12px;border-top:0.5px solid var(--border);margin-bottom:12px;">
+            <div style="font-size:11px;color:var(--text-tertiary);margin-bottom:6px;letter-spacing:0.02em;">EXERCISES <span style="font-weight:400;opacity:0.7;">· drag to reorder</span></div>
+            <div class="exercise-list-dnd" id="dnd-custom-{{ plan.id }}">
+              {% for ex in plan_exercises %}
+              <div class="dnd-item" draggable="true">
+                <div class="dnd-handle"><span></span><span></span><span></span></div>
+                <div class="ex-icon cat-arms" style="width:20px;height:20px;font-size:9px;border-radius:4px;flex-shrink:0;">{{ ex[0] | upper }}</div>
+                <span class="dnd-item-name">{{ ex }}</span>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          <div style="margin-top:auto;display:flex;flex-direction:column;gap:8px;">
+          {% else %}
           <div style="margin-top:auto;padding-top:12px;border-top:0.5px solid var(--border);display:flex;flex-direction:column;gap:8px;">
-            <a href="{{ url_for('log_workout', plan_id=plan.id) }}" class="btn btn-primary btn-block" style="font-size:12px;padding:6px 14px;">
-              <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M2 8h2m8 0h2M4 8V5.5a1.5 1.5 0 013 0v5a1.5 1.5 0 003 0V5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          {% endif %}
+            <a href="{{ url_for('log_workout', custom_plan_id=plan.id) }}"
+               class="btn btn-primary btn-block"
+               style="font-size:12px;padding:6px 14px;"
+               onclick="savePlanOrder('custom-{{ plan.id }}', 'dnd-custom-{{ plan.id }}')">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                <path d="M2 8h2m8 0h2M4 8V5.5a1.5 1.5 0 013 0v5a1.5 1.5 0 003 0V5.5"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                      stroke-linecap="round"/>
+              </svg>
               Start this plan
             </a>
             <a href="{{ url_for('workout_detail', plan_id=plan.id) }}" class="btn btn-secondary btn-block" style="font-size:12px;padding:6px 14px;">View Plan</a>
@@ -810,6 +835,7 @@ function savePlanOrder(planKey, listId) {
 }
 
 ['dnd-push', 'dnd-pull', 'dnd-legs', 'dnd-upper', 'dnd-arms', 'dnd-full'].forEach(initDnd);
+document.querySelectorAll('.exercise-list-dnd[id^="dnd-custom-"]').forEach(el => initDnd(el.id));
 </script>
 </body>
 </html>
