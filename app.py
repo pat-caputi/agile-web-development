@@ -4,6 +4,7 @@ from flask_wtf.csrf import CSRFProtect
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from dotenv import load_dotenv
+from werkzeug.exceptions import TooManyRequests
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from sqlalchemy import func, or_
@@ -1801,6 +1802,13 @@ def search_page():
         )
 
     return render_template("search.html", query=query, users=users, plans=plans)
+
+@app.errorhandler(429)
+def ratelimit_handler(e):
+    return render_template(
+        "429.html",
+        message="Too many login attempts. Please wait 1 minute before trying again."
+    ), 429
 
 
 # ── Run app ──
