@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>Calendar · LiftAGILE</title>
   <script>
     if (performance.navigation && performance.navigation.type === 1) {
@@ -86,6 +87,7 @@
     }
 
     .cal-cell.has-workout { border-color: var(--success-text); }
+    .cal-cell.has-plan    { border-color: var(--accent); }
 
     .cal-cell.selected {
       border-color: var(--accent);
@@ -114,13 +116,8 @@
       text-overflow: ellipsis;
     }
 
-    .chip-push     { background: rgba(83,74,183,0.15);  color: var(--accent); }
-    .chip-pull     { background: rgba(8,80,65,0.15);    color: var(--teal-800); }
-    .chip-legs     { background: rgba(113,43,19,0.15);  color: var(--coral-800); }
-    .chip-upper    { background: rgba(99,56,6,0.15);    color: var(--amber-800); }
-    .chip-full     { background: rgba(39,80,10,0.15);   color: #27500A; }
-    .chip-rest     { background: var(--gray-100);        color: var(--gray-600); }
-    .chip-planned  { border: 0.5px dashed var(--border-md); background: none; color: var(--text-tertiary); }
+    .chip-rest   { background: var(--gray-100);        color: var(--gray-600); }
+    .chip-logged { background: rgba(16,185,129,0.15); color: var(--success-text); }
 
     .cal-dot {
       width: 5px; height: 5px;
@@ -314,7 +311,7 @@
       <svg id="themeIconLight" width="16" height="16" viewBox="0 0 16 16" fill="none">
         <path d="M13.5 9.5A5.5 5.5 0 016.5 2.5a5.5 5.5 0 100 11 5.5 5.5 0 007-4z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
       </svg>
-      <span class="theme-toggle-text" id="themeToggleLabel">Dark mode</span>
+      <span class="theme-toggle-text" id="themeToggleLabel"></span>
     </button>
 
     <!-- User profile chip -->
@@ -347,7 +344,7 @@
         <h1 class="page-title">Calendar</h1>
         <p class="page-sub">Schedule and track your workout week</p>
       </div>
-      <button class="btn btn-primary" onclick="openModal(null)">
+      <button class="btn btn-primary" onclick="openModal(fmtDate(new Date()))">
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
         Schedule workout
       </button>
@@ -391,42 +388,23 @@
           <div class="card-title">Your plans</div>
           <p style="font-size:12px;color:var(--text-tertiary);margin-bottom:12px;">Click a plan then click a day to schedule it</p>
 
-          <div class="plan-pick-item active" id="plan-push" onclick="selectPlan('push')" data-color="#534AB7">
-            <div class="plan-pick-dot" style="background:#534AB7;"></div>
-            <div>
-              <div style="font-size:13px;font-weight:500;">Push day</div>
-              <div style="font-size:11px;color:var(--text-tertiary);">Chest · Shoulders · Triceps</div>
+          {% if user_plans %}
+            {% for plan in user_plans %}
+            {% set color = plan_color_map[plan.id] %}
+            <div class="plan-pick-item" id="plan-{{ plan.id }}" data-plan-id="{{ plan.id }}" onclick="selectPlan(this.dataset.planId)" data-color="{{ color }}">
+              <div class="plan-pick-dot" data-color="{{ color }}"></div>
+              <div style="min-width:0;">
+                <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ plan.title }}</div>
+                <div style="font-size:11px;color:var(--text-tertiary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ plan.description }}</div>
+              </div>
             </div>
-          </div>
-          <div class="plan-pick-item" id="plan-pull" onclick="selectPlan('pull')" data-color="#085041">
-            <div class="plan-pick-dot" style="background:#085041;"></div>
-            <div>
-              <div style="font-size:13px;font-weight:500;">Pull day</div>
-              <div style="font-size:11px;color:var(--text-tertiary);">Back · Biceps</div>
-            </div>
-          </div>
-          <div class="plan-pick-item" id="plan-legs" onclick="selectPlan('legs')" data-color="#712B13">
-            <div class="plan-pick-dot" style="background:#712B13;"></div>
-            <div>
-              <div style="font-size:13px;font-weight:500;">Leg day</div>
-              <div style="font-size:11px;color:var(--text-tertiary);">Quads · Hamstrings · Glutes</div>
-            </div>
-          </div>
-          <div class="plan-pick-item" id="plan-upper" onclick="selectPlan('upper')" data-color="#633806">
-            <div class="plan-pick-dot" style="background:#633806;"></div>
-            <div>
-              <div style="font-size:13px;font-weight:500;">Upper body</div>
-              <div style="font-size:11px;color:var(--text-tertiary);">Chest · Back · Shoulders</div>
-            </div>
-          </div>
-          <div class="plan-pick-item" id="plan-full" onclick="selectPlan('full')" data-color="#27500A">
-            <div class="plan-pick-dot" style="background:#27500A;"></div>
-            <div>
-              <div style="font-size:13px;font-weight:500;">Full body</div>
-              <div style="font-size:11px;color:var(--text-tertiary);">All muscle groups</div>
-            </div>
-          </div>
-          <div class="plan-pick-item" id="plan-rest" onclick="selectPlan('rest')" data-color="#888780">
+            {% endfor %}
+          {% else %}
+            <p style="font-size:12px;color:var(--text-tertiary);margin-bottom:8px;">No plans yet.</p>
+            <a href="{{ url_for('plans') }}" class="btn btn-secondary btn-block" style="font-size:12px;">Create a plan</a>
+          {% endif %}
+
+          <div class="plan-pick-item" id="plan-rest" onclick="selectPlan('rest')" data-color="#888780" style="margin-top:6px;">
             <div class="plan-pick-dot" style="background:var(--gray-400);"></div>
             <div>
               <div style="font-size:13px;font-weight:500;">Rest day</div>
@@ -435,7 +413,7 @@
           </div>
 
           <button class="btn btn-secondary btn-block" style="margin-top:10px;font-size:12px;"
-                  onclick="selectedPlan=null;document.querySelectorAll('.plan-pick-item').forEach(e=>e.classList.remove('active'))">
+                  onclick="deselectPlan()">
             Deselect
           </button>
         </div>
@@ -464,22 +442,19 @@
     <div class="modal-date" id="modalDateLabel"></div>
 
     <div id="modalPlanList">
-      <div class="modal-plan-option" onclick="modalSelectPlan('push')" data-plan="push">
-        <div class="modal-plan-dot" style="background:#534AB7;"></div>Push day
-      </div>
-      <div class="modal-plan-option" onclick="modalSelectPlan('pull')" data-plan="pull">
-        <div class="modal-plan-dot" style="background:#085041;"></div>Pull day
-      </div>
-      <div class="modal-plan-option" onclick="modalSelectPlan('legs')" data-plan="legs">
-        <div class="modal-plan-dot" style="background:#712B13;"></div>Leg day
-      </div>
-      <div class="modal-plan-option" onclick="modalSelectPlan('upper')" data-plan="upper">
-        <div class="modal-plan-dot" style="background:#633806;"></div>Upper body
-      </div>
-      <div class="modal-plan-option" onclick="modalSelectPlan('full')" data-plan="full">
-        <div class="modal-plan-dot" style="background:#27500A;"></div>Full body
-      </div>
-      <div class="modal-plan-option" onclick="modalSelectPlan('rest')" data-plan="rest">
+      {% if user_plans %}
+        {% for plan in user_plans %}
+        {% set color = plan_color_map[plan.id] %}
+        <div class="modal-plan-option" data-plan-id="{{ plan.id }}" onclick="modalSelectPlan(this.dataset.planId)">
+          <div class="modal-plan-dot" data-color="{{ color }}"></div>{{ plan.title }}
+        </div>
+        {% endfor %}
+      {% else %}
+        <p style="font-size:13px;color:var(--text-tertiary);margin-bottom:8px;">
+          No plans yet — <a href="{{ url_for('plans') }}" style="color:var(--accent);">create one first</a>.
+        </p>
+      {% endif %}
+      <div class="modal-plan-option" data-plan-id="rest" onclick="modalSelectPlan('rest')">
         <div class="modal-plan-dot" style="background:var(--gray-400);"></div>Rest day
       </div>
     </div>
@@ -493,27 +468,33 @@
   </div>
 </div>
 
+<script id="__cal_plans__"  type="application/json">{{ plan_map      | tojson }}</script>
+<script id="__cal_sched__"  type="application/json">{{ schedule_data | tojson }}</script>
+<script id="__cal_logged__" type="application/json">{{ logged_dates  | tojson }}</script>
+
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 <script>
-// ── Plan definitions ──
-const PLANS = {
-  push:  { label: 'Push day',   chipClass: 'chip-push',  color: '#534AB7', dot: '#534AB7' },
-  pull:  { label: 'Pull day',   chipClass: 'chip-pull',  color: '#085041', dot: '#085041' },
-  legs:  { label: 'Leg day',    chipClass: 'chip-legs',  color: '#712B13', dot: '#712B13' },
-  upper: { label: 'Upper body', chipClass: 'chip-upper', color: '#633806', dot: '#633806' },
-  full:  { label: 'Full body',  chipClass: 'chip-full',  color: '#27500A', dot: '#27500A' },
-  rest:  { label: 'Rest day',   chipClass: 'chip-rest',  color: '#888780', dot: '#888780' },
-};
+// ── Server data ──
+const PLANS        = JSON.parse(document.getElementById('__cal_plans__').textContent);
+const SCHEDULE     = JSON.parse(document.getElementById('__cal_sched__').textContent);
+const LOGGED_DATES = new Set(JSON.parse(document.getElementById('__cal_logged__').textContent));
+
+// Augment SCHEDULE entries with colour (looked up from PLANS)
+Object.values(SCHEDULE).forEach(entry => {
+  const key = entry.is_rest ? 'rest' : String(entry.plan_id);
+  entry.color = (PLANS[key] || PLANS['rest']).color;
+});
+
+// Apply data-color attributes to dots rendered by Jinja
+document.querySelectorAll('[data-color]').forEach(el => {
+  el.style.background = el.dataset.color;
+});
 
 // ── State ──
-// schedule: { 'YYYY-MM-DD': planKey }
-const schedule = {{ schedule_data | tojson }};
-
-
 let viewYear  = new Date().getFullYear();
-let viewMonth = new Date().getMonth(); // 0-indexed
-let selectedPlan = 'push';
-let modalDateKey = null;
+let viewMonth = new Date().getMonth();
+let selectedPlan  = null;   // plan_id (int|string) or 'rest' or null
+let modalDateKey  = null;
 let modalSelectedPlan = null;
 
 // ── Date helpers ──
@@ -521,16 +502,9 @@ function fmtDate(d) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
-function offsetDate(d, days) {
-  const r = new Date(d);
-  r.setDate(r.getDate() + days);
-  return r;
-}
-
 function friendlyDate(dateKey) {
   const [y, m, d] = dateKey.split('-').map(Number);
-  const date = new Date(y, m - 1, d);
-  return date.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' });
+  return new Date(y, m-1, d).toLocaleDateString('en-AU', { weekday:'short', day:'numeric', month:'short' });
 }
 
 const MONTH_NAMES = ['January','February','March','April','May','June',
@@ -539,65 +513,64 @@ const DAY_ABBR = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
 // ── Render calendar ──
 function renderCalendar() {
-  document.getElementById('calMonthLabel').textContent =
-    `${MONTH_NAMES[viewMonth]} ${viewYear}`;
+  document.getElementById('calMonthLabel').textContent = `${MONTH_NAMES[viewMonth]} ${viewYear}`;
 
-  const grid = document.getElementById('calGrid');
+  const grid   = document.getElementById('calGrid');
   grid.innerHTML = '';
+  const today  = fmtDate(new Date());
 
-  const today = fmtDate(new Date());
+  const firstDay  = new Date(viewYear, viewMonth, 1);
+  let   startDow  = firstDay.getDay();
+  startDow = startDow === 0 ? 6 : startDow - 1;
 
-  // First day of month; adjust so Monday = 0
-  const firstDay = new Date(viewYear, viewMonth, 1);
-  let startDow = firstDay.getDay(); // 0=Sun
-  startDow = startDow === 0 ? 6 : startDow - 1; // convert to Mon=0
-
-  const daysInMonth  = new Date(viewYear, viewMonth + 1, 0).getDate();
-  const daysInPrev   = new Date(viewYear, viewMonth, 0).getDate();
-  const totalCells   = Math.ceil((startDow + daysInMonth) / 7) * 7;
+  const daysInMonth = new Date(viewYear, viewMonth+1, 0).getDate();
+  const daysInPrev  = new Date(viewYear, viewMonth, 0).getDate();
+  const totalCells  = Math.ceil((startDow + daysInMonth) / 7) * 7;
 
   for (let i = 0; i < totalCells; i++) {
     let day, month, year, isOther = false;
-
     if (i < startDow) {
-      // Previous month
-      day   = daysInPrev - startDow + i + 1;
+      day = daysInPrev - startDow + i + 1;
       month = viewMonth === 0 ? 11 : viewMonth - 1;
       year  = viewMonth === 0 ? viewYear - 1 : viewYear;
       isOther = true;
     } else if (i >= startDow + daysInMonth) {
-      // Next month
       day   = i - startDow - daysInMonth + 1;
       month = viewMonth === 11 ? 0 : viewMonth + 1;
       year  = viewMonth === 11 ? viewYear + 1 : viewYear;
       isOther = true;
     } else {
-      day   = i - startDow + 1;
-      month = viewMonth;
-      year  = viewYear;
+      day = i - startDow + 1; month = viewMonth; year = viewYear;
     }
 
-    const dateKey = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-    const isToday = dateKey === today;
-    const planKey = schedule[dateKey];
+    const dateKey  = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    const isToday  = dateKey === today;
+    const entry    = SCHEDULE[dateKey];
+    const isLogged = LOGGED_DATES.has(dateKey);
 
     const cell = document.createElement('div');
     cell.className = 'cal-cell' +
-      (isOther    ? ' other-month' : '') +
-      (isToday    ? ' today'       : '') +
-      (planKey    ? ' has-workout' : '');
+      (isOther  ? ' other-month' : '') +
+      (isToday  ? ' today'       : '') +
+      (entry    ? ' has-plan'    : '') +
+      (isLogged ? ' has-workout' : '');
     cell.dataset.datekey = dateKey;
 
-    cell.innerHTML = `
-      <span class="cal-date">${day}</span>
-      ${planKey ? `
-        <div class="cal-workout-chip ${PLANS[planKey].chipClass}">
-          <div class="cal-dot" style="background:${PLANS[planKey].dot};"></div>
-          ${PLANS[planKey].label}
-        </div>` : ''}
-      <span class="cal-add-hint">+ Add</span>
-    `;
+    let chips = '';
+    if (entry) {
+      const color = entry.color || '#888780';
+      chips += `<div class="cal-workout-chip" style="background:${color}26;color:${color};">
+        <div class="cal-dot" style="background:${color};"></div>
+        ${entry.label}
+      </div>`;
+    }
+    if (isLogged) {
+      chips += `<div class="cal-workout-chip chip-logged">
+        <div class="cal-dot" style="background:var(--success-text);"></div>Logged
+      </div>`;
+    }
 
+    cell.innerHTML = `<span class="cal-date">${day}</span>${chips}<span class="cal-add-hint">+ Schedule</span>`;
     cell.addEventListener('click', () => handleCellClick(dateKey));
     grid.appendChild(cell);
   }
@@ -606,11 +579,10 @@ function renderCalendar() {
   renderWeekSummary();
 }
 
-// ── Cell click — either quick-assign if plan selected, or open modal ──
+// ── Cell click ──
 function handleCellClick(dateKey) {
-  if (selectedPlan) {
-    schedule[dateKey] = selectedPlan;
-    renderCalendar();
+  if (selectedPlan !== null) {
+    saveSchedule(dateKey, selectedPlan);
   } else {
     openModal(dateKey);
   }
@@ -631,23 +603,75 @@ function selectPlan(key) {
   document.getElementById(`plan-${key}`)?.classList.add('active');
 }
 
+function deselectPlan() {
+  selectedPlan = null;
+  document.querySelectorAll('.plan-pick-item').forEach(el => el.classList.remove('active'));
+}
+
+// ── Persist schedule to server ──
+async function saveSchedule(dateKey, planIdOrRest) {
+  const isRest = planIdOrRest === 'rest';
+  const body = { date: dateKey };
+  if (isRest) {
+    body.is_rest = true;
+  } else {
+    body.plan_id = Number(planIdOrRest);
+  }
+
+  const resp = await fetch('/calendar/schedule', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+    },
+    body: JSON.stringify(body),
+  });
+  const data = await resp.json();
+  if (!data.ok) return;
+
+  const planKey = isRest ? 'rest' : String(planIdOrRest);
+  const plan    = PLANS[planKey] || PLANS['rest'];
+  SCHEDULE[dateKey] = {
+    plan_id: isRest ? null : Number(planIdOrRest),
+    label:   plan.label,
+    color:   plan.color,
+    is_rest: isRest,
+  };
+  renderCalendar();
+}
+
+async function deleteSchedule(dateKey) {
+  const resp = await fetch(`/calendar/schedule/${dateKey}`, {
+  method: 'DELETE',
+  headers: {
+    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+  }
+});
+  const data = await resp.json();
+  if (!data.ok) return;
+  delete SCHEDULE[dateKey];
+  renderCalendar();
+}
+
 // ── Modal ──
 function openModal(dateKey) {
   modalDateKey = dateKey;
-  modalSelectedPlan = dateKey ? (schedule[dateKey] || null) : null;
+  const existing = dateKey ? SCHEDULE[dateKey] : null;
+  modalSelectedPlan = existing
+    ? (existing.is_rest ? 'rest' : String(existing.plan_id))
+    : null;
 
   document.getElementById('modalDateLabel').textContent =
-    dateKey ? friendlyDate(dateKey) : 'Pick a date';
+    dateKey ? friendlyDate(dateKey) : 'Schedule workout';
 
-  // Reset selections
   document.querySelectorAll('.modal-plan-option').forEach(el => el.classList.remove('selected'));
   if (modalSelectedPlan) {
-    document.querySelector(`.modal-plan-option[data-plan="${modalSelectedPlan}"]`)
+    document.querySelector(`.modal-plan-option[data-plan-id="${modalSelectedPlan}"]`)
       ?.classList.add('selected');
   }
 
-  const removeBtn = document.getElementById('modalRemoveBtn');
-  removeBtn.style.display = (dateKey && schedule[dateKey]) ? 'inline-flex' : 'none';
+  document.getElementById('modalRemoveBtn').style.display =
+    (dateKey && SCHEDULE[dateKey]) ? 'inline-flex' : 'none';
 
   document.getElementById('scheduleModal').classList.add('show');
 }
@@ -661,101 +685,98 @@ function closeModal() {
 function modalSelectPlan(key) {
   modalSelectedPlan = key;
   document.querySelectorAll('.modal-plan-option').forEach(el => el.classList.remove('selected'));
-  document.querySelector(`.modal-plan-option[data-plan="${key}"]`)?.classList.add('selected');
+  document.querySelector(`.modal-plan-option[data-plan-id="${key}"]`)?.classList.add('selected');
 }
 
 function saveModalSchedule() {
-  if (!modalDateKey || !modalSelectedPlan) return;
-  schedule[modalDateKey] = modalSelectedPlan;
+  if (!modalDateKey || modalSelectedPlan === null) return;
+  saveSchedule(modalDateKey, modalSelectedPlan);
   closeModal();
-  renderCalendar();
 }
 
 function removeSchedule() {
-  if (modalDateKey) delete schedule[modalDateKey];
+  if (modalDateKey) deleteSchedule(modalDateKey);
   closeModal();
-  renderCalendar();
 }
 
-// Click outside modal to close
 document.getElementById('scheduleModal').addEventListener('click', function(e) {
   if (e.target === this) closeModal();
 });
 
-// ── Upcoming workouts list ──
+// ── Upcoming ──
 function renderUpcoming() {
-  const today = new Date();
-  today.setHours(0,0,0,0);
+  const today = new Date(); today.setHours(0,0,0,0);
 
-  const upcoming = Object.entries(schedule)
-    .filter(([k]) => {
-      const [y,m,d] = k.split('-').map(Number);
-      return new Date(y, m-1, d) >= today;
-    })
+  const upcoming = Object.entries(SCHEDULE)
+    .filter(([k]) => { const [y,m,d] = k.split('-').map(Number); return new Date(y,m-1,d) >= today; })
     .sort(([a],[b]) => a.localeCompare(b))
     .slice(0, 5);
 
   const el = document.getElementById('upcomingList');
-  if (upcoming.length === 0) {
+  if (!upcoming.length) {
     el.innerHTML = `<p style="font-size:13px;color:var(--text-tertiary);">No upcoming workouts scheduled.</p>`;
     return;
   }
 
-  el.innerHTML = upcoming.map(([dateKey, planKey]) => {
+  el.innerHTML = upcoming.map(([dateKey, entry]) => {
     const [y,m,d] = dateKey.split('-').map(Number);
     const date = new Date(y, m-1, d);
-    const dayNum   = date.getDate();
-    const monthAbb = date.toLocaleDateString('en-AU', { month: 'short' });
-    const p = PLANS[planKey];
+    const color = entry.color || '#888780';
+    const logUrl = entry.plan_id ? `/log_workout?plan_id=${entry.plan_id}` : '/log_workout';
     return `
       <div class="upcoming-item">
         <div class="upcoming-date-badge">
-          <div class="upcoming-date-day">${dayNum}</div>
-          <div class="upcoming-date-month">${monthAbb}</div>
+          <div class="upcoming-date-day">${date.getDate()}</div>
+          <div class="upcoming-date-month">${date.toLocaleDateString('en-AU',{month:'short'})}</div>
         </div>
-        <div style="flex:1;">
-          <div style="font-size:13px;font-weight:500;">${p.label}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:500;">${entry.label}</div>
           <div style="font-size:11px;color:var(--text-tertiary);">${date.toLocaleDateString('en-AU',{weekday:'long'})}</div>
         </div>
-        <button onclick="event.stopPropagation();openModal('${dateKey}')"
-                style="font-size:11px;padding:4px 8px;border-radius:var(--radius-sm);
-                       border:0.5px solid var(--border-md);background:none;
-                       color:var(--text-tertiary);cursor:pointer;">Edit</button>
+        <div style="display:flex;gap:6px;">
+          ${!entry.is_rest ? `<a href="${logUrl}" style="font-size:11px;padding:4px 8px;border-radius:var(--radius-sm);border:0.5px solid var(--border-md);background:none;color:var(--accent);text-decoration:none;cursor:pointer;">Start</a>` : ''}
+          <button onclick="event.stopPropagation();openModal('${dateKey}')"
+                  style="font-size:11px;padding:4px 8px;border-radius:var(--radius-sm);border:0.5px solid var(--border-md);background:none;color:var(--text-tertiary);cursor:pointer;">Edit</button>
+        </div>
       </div>`;
   }).join('');
 }
 
 // ── This week summary ──
 function renderWeekSummary() {
-  const today = new Date();
-  today.setHours(0,0,0,0);
-  const dow = today.getDay() === 0 ? 6 : today.getDay() - 1; // Mon=0
+  const today = new Date(); today.setHours(0,0,0,0);
+  const dow   = today.getDay() === 0 ? 6 : today.getDay() - 1;
   const weekStart = new Date(today); weekStart.setDate(today.getDate() - dow);
 
-  const days = Array.from({length:7}, (_, i) => {
+  const days = Array.from({length:7}, (_,i) => {
     const d = new Date(weekStart); d.setDate(weekStart.getDate() + i);
     return { date: d, key: fmtDate(d), label: DAY_ABBR[i] };
   });
 
   const el = document.getElementById('weekSummary');
   el.innerHTML = days.map(({ date, key, label }) => {
-    const planKey = schedule[key];
-    const isToday = fmtDate(new Date()) === key;
-    const isPast  = date < new Date(new Date().setHours(0,0,0,0));
+    const entry    = SCHEDULE[key];
+    const isLogged = LOGGED_DATES.has(key);
+    const isToday  = fmtDate(new Date()) === key;
+    const isPast   = date < today;
+    const color    = entry?.color || '#888780';
     return `
       <div style="display:flex;align-items:center;gap:10px;">
         <span style="font-size:12px;font-weight:${isToday?'600':'400'};
                      color:${isToday?'var(--accent)':'var(--text-tertiary)'};
                      width:28px;flex-shrink:0;">${label}</span>
-        ${planKey
-          ? `<div class="cal-workout-chip ${PLANS[planKey].chipClass}" style="flex:1;">
-               <div class="cal-dot" style="background:${PLANS[planKey].dot};"></div>
-               ${PLANS[planKey].label}
+        ${entry
+          ? `<div class="cal-workout-chip" style="flex:1;background:${color}26;color:${color};">
+               <div class="cal-dot" style="background:${color};flex-shrink:0;"></div>
+               ${entry.label}
              </div>`
-          : `<span style="font-size:12px;color:var(--text-tertiary);
-                          ${isPast?'text-decoration:line-through;':''}">
-               ${isPast ? 'No workout' : 'Rest / unscheduled'}
-             </span>`}
+          : isLogged
+            ? `<div class="cal-workout-chip chip-logged" style="flex:1;">
+                 <div class="cal-dot" style="background:var(--success-text);"></div>Logged
+               </div>`
+            : `<span style="font-size:12px;color:var(--text-tertiary);${isPast?'text-decoration:line-through;':''}">
+                 ${isPast ? 'No workout' : 'Rest / unscheduled'}
+               </span>`}
       </div>`;
   }).join('');
 }

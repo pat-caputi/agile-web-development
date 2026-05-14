@@ -73,6 +73,24 @@
   /* Sidebar dimensions */
   --sidebar-w:           196px;
   --sidebar-w-collapsed: 56px;
+
+  /* Rank tier colours */
+  --r-unranked:     #6B6A64;
+  --r-bronze:       #CD7F32;
+  --r-silver:       #A8A9AD;
+  --r-gold:         #EF9F27;
+  --r-platinum:     #4DD0C4;
+  --r-diamond:      #8AB4F8;
+  --r-emerald:      #50C878;
+  --r-champion:     #C77DFF;
+  --r-unranked-bg:  rgba(107,106,100,0.12);
+  --r-bronze-bg:    rgba(205,127,50,0.13);
+  --r-silver-bg:    rgba(168,169,173,0.12);
+  --r-gold-bg:      rgba(239,159,39,0.13);
+  --r-platinum-bg:  rgba(77,208,196,0.13);
+  --r-diamond-bg:   rgba(138,180,248,0.14);
+  --r-emerald-bg:   rgba(80,200,120,0.13);
+  --r-champion-bg:  rgba(199,125,255,0.14);
 }
 
 /* ══════════════════════════════════════════
@@ -484,7 +502,7 @@ img.nav-user-avatar {
 /* ══════════════════════════════════════════
    PAGE HEADER
 ══════════════════════════════════════════ */
-.page-header { margin-bottom: 24px; }
+.page-header { margin-bottom: 24px; animation: fadeSlideUp 0.35s ease;}
 .page-title  { font-size: 22px; font-weight: 600; letter-spacing: -0.4px; }
 .page-sub    { font-size: 13px; color: var(--text-secondary); margin-top: 3px; }
 
@@ -543,10 +561,17 @@ img.nav-user-avatar {
 ══════════════════════════════════════════ */
 .card {
   background: var(--surface);
-  border: 0.5px solid var(--border-md);
-  border-radius: var(--radius-lg);
-  padding: 20px;
-  transition: background 0.25s, border-color 0.25s;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 24px;
+  animation: fadeSlideUp 0.5s ease;
+  animation-fill-mode: both;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
 }
 
 .card-title   { font-size: 13px; font-weight: 500; color: var(--text-primary); margin-bottom: 14px; }
@@ -575,7 +600,12 @@ img.nav-user-avatar {
   background: var(--surface-2);
   border-radius: var(--radius-md);
   border: 0.5px solid var(--border);
-  transition: background 0.25s;
+  transition: background 0.25s ease, transform 0.2s ease, border-color 0.2s ease;
+}
+
+.exercise-item:hover {
+  transform: translateX(4px);
+  border-color: var(--accent);
 }
 
 .ex-icon { width: 32px; height: 32px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0; }
@@ -614,15 +644,15 @@ img.nav-user-avatar {
   font-weight: 500;
   cursor: pointer;
   border: 0.5px solid transparent;
-  transition: background 0.14s, transform 0.1s;
+  transition: transform 0.15s ease, opacity 0.15s ease;
   text-decoration: none;
   line-height: 1;
 }
 
-.btn:active { transform: scale(0.98); }
+.btn:active { transform: scale(0.98); transform: scale(0.97); }
 
 .btn-primary          { background: var(--accent); color: #fff; border-color: var(--accent); }
-.btn-primary:hover    { background: var(--accent-hover); }
+.btn-primary:hover    { background: var(--accent-hover); transform: translateY(-2px); }
 .btn-secondary        { background: var(--surface); color: var(--text-primary); border-color: var(--border-md); }
 .btn-secondary:hover  { background: var(--surface-2); }
 .btn-block            { width: 100%; }
@@ -708,11 +738,31 @@ img.nav-user-avatar {
   margin-bottom: 12px;
   transition: background 0.25s;
 }
-.exercise-search:focus { outline: none; border-color: var(--accent); }
 
-.exercise-pick-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: var(--radius-md); cursor: pointer; transition: background 0.12s; }
-.exercise-pick-item:hover    { background: var(--surface-2); }
-.exercise-pick-item.selected { background: var(--accent-light); }
+.exercise-search:focus {
+  outline: none;
+  border-color: var(--accent);
+  transform: scale(1.01);
+}
+
+.exercise-pick-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  border: 0.5px solid transparent;
+  transition: background 0.12s ease, border-color 0.2s ease;
+}
+.exercise-pick-item:hover {
+  background: var(--surface-2);
+  transform: none;
+  border-color: var(--accent);
+}
+.exercise-pick-item.selected {
+  background: var(--accent-light);
+}
 
 /* ══════════════════════════════════════════
    PLANS
@@ -2828,6 +2878,28 @@ img.nav-user-avatar {
 [data-theme="dark"] .badge-100kg    { color: #fbbf24; }
 [data-theme="dark"] .badge-strength { color: #a5b4fc; }
 
+/* ── Rank tier badge (shared across profile, public profile, ranks) ── */
+.rank-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 10px; border-radius: 6px;
+  font-size: 11.5px; font-weight: 600; white-space: nowrap;
+}
+.rb-unranked { background: var(--r-unranked-bg); color: var(--r-unranked); }
+.rb-bronze   { background: var(--r-bronze-bg);   color: var(--r-bronze); }
+.rb-silver   { background: var(--r-silver-bg);   color: var(--r-silver); }
+.rb-gold     { background: var(--r-gold-bg);     color: var(--r-gold); }
+.rb-platinum { background: var(--r-platinum-bg); color: var(--r-platinum); }
+.rb-diamond  { background: var(--r-diamond-bg);  color: var(--r-diamond); }
+.rb-emerald  { background: var(--r-emerald-bg);  color: var(--r-emerald); }
+.rb-champion { background: var(--r-champion-bg); color: var(--r-champion); font-weight: 700; }
+
+/* Suppress all transitions during initial page load to prevent theme flash */
+html.preloading, html.preloading * { transition: none !important; }
+
+/* Theme toggle label text — CSS content so it's correct from first paint */
+#themeToggleLabel::after              { content: 'Dark mode'; }
+[data-theme="dark"] #themeToggleLabel::after { content: 'Light mode'; }
+
 /* Error Message  */
 .error-msg {
   background: rgba(239, 68, 68, 0.12);
@@ -2841,4 +2913,16 @@ img.nav-user-avatar {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+/* Page fade animation */
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

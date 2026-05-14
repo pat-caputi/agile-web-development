@@ -7,6 +7,26 @@
      - Flash message auto-dismiss
 ════════════════════════════════════════════ */
 
+// Set theme toggle icons before the first paint.
+// main.js is at the end of <body> so the DOM is already available here,
+// meaning this runs before any frame is rendered — no flash, no CSS cascade delay.
+(function () {
+  var t    = localStorage.getItem('liftlab-theme') || 'light';
+  var sun  = document.getElementById('themeIconDark');   // sun icon → shown in dark mode
+  var moon = document.getElementById('themeIconLight');  // moon icon → shown in light mode
+  if (sun && moon) {
+    sun.style.display  = t === 'dark' ? 'block' : 'none';
+    moon.style.display = t === 'dark' ? 'none'  : 'block';
+  }
+})();
+
+// Remove the preloading class after the first paint so CSS transitions
+// are suppressed during initial theme/sidebar application but work normally
+// for all subsequent user interactions.
+requestAnimationFrame(() => requestAnimationFrame(() => {
+  document.documentElement.classList.remove('preloading');
+}));
+
 document.addEventListener('DOMContentLoaded', () => {
 
   // ── 1. DARK MODE ─────────────────────────────
@@ -18,14 +38,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function applyTheme(theme) {
     document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.style.background  = theme === 'dark' ? '#0F0F0E' : '';
+    document.documentElement.style.colorScheme = theme === 'dark' ? 'dark'    : 'light';
     const iconLight = document.getElementById('themeIconLight');
     const iconDark  = document.getElementById('themeIconDark');
     if (iconLight && iconDark) {
       iconLight.style.display = theme === 'dark' ? 'none'  : 'block';
       iconDark.style.display  = theme === 'dark' ? 'block' : 'none';
     }
-    const label = document.getElementById('themeToggleLabel');
-    if (label) label.textContent = theme === 'dark' ? 'Light mode' : 'Dark mode';
   }
 
   function toggleTheme() {

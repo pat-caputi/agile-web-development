@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>Feed · LiftAGILE</title>
   <script>
     if (performance.navigation && performance.navigation.type === 1) {
@@ -141,7 +142,7 @@
         <path d="M13.5 9.5A5.5 5.5 0 016.5 2.5a5.5 5.5 0 100 11 5.5 5.5 0 007-4z"
               stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
       </svg>
-      <span class="theme-toggle-text" id="themeToggleLabel">Dark mode</span>
+      <span class="theme-toggle-text" id="themeToggleLabel"></span>
     </button>
 
     <a href="{{ url_for('profile') }}"
@@ -330,7 +331,12 @@
       btn.title = newLiked ? 'Unlike' : 'Like';
       countEl.textContent = parseInt(countEl.textContent, 10) + (newLiked ? 1 : -1);
 
-      fetch(`/workout/${planId}/like/json`, { method: 'POST' })
+      fetch(`/workout/${planId}/like/json`, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+        }
+      })
         .then(r => r.json())
         .then(data => {
           if (data.error) {

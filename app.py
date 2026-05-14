@@ -1,5 +1,10 @@
-from flask import Flask, render_template, request, redirect, session, flash, url_for, jsonify
+from flask import Flask, render_template, request, redirect, session, flash, url_for, jsonify, abort
 from flask_sqlalchemy import SQLAlchemy
+from flask_wtf.csrf import CSRFProtect
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from dotenv import load_dotenv
+from werkzeug.exceptions import TooManyRequests
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from sqlalchemy import func, or_
@@ -10,8 +15,25 @@ import re
 import json
 
 # ── App setup ──
+load_dotenv()
+
 app = Flask(__name__)
-app.secret_key = "your_secret_key"
+app.secret_key = os.environ.get("SECRET_KEY", "dev-only-change-me")
+
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=False,  # Keep False for localhost. Use True when deployed with HTTPS.
+    MAX_CONTENT_LENGTH=2 * 1024 * 1024  # 2MB upload limit
+)
+
+csrf = CSRFProtect(app)
+
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["200 per day", "50 per hour"]
+)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -27,6 +49,15 @@ db = SQLAlchemy(app)
 
 def allowed_image_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_IMAGE_EXTENSIONS
+
+
+def allowed_image_mimetype(file):
+    return file.mimetype in {
+        "image/png",
+        "image/jpeg",
+        "image/gif",
+        "image/webp"
+    }
 
 
 # ── Database models ──
@@ -117,19 +148,33 @@ class WorkoutComment(db.Model):
     user = db.relationship("User", backref="workout_comments")
 
 
+class CalendarEntry(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    date = db.Column(db.Date, nullable=False)
+    plan_id = db.Column(db.Integer, db.ForeignKey('workout_plan.id'), nullable=True)
+    is_rest = db.Column(db.Boolean, default=False)
+    plan = db.relationship('WorkoutPlan')
+    __table_args__ = (db.UniqueConstraint('user_id', 'date', name='uq_cal_user_date'),)
+
+
 # ── Create DB ──
 with app.app_context():
     db.create_all()
 
 
+PLAN_COLORS = ['#534AB7', '#085041', '#712B13', '#633806', '#27500A', '#1A5276', '#4A154B', '#6D1A36']
+
 # ── Rank tier thresholds ──
 TIER_THRESHOLDS = [
-    (25000, 'Diamond',  '💎', 'rb-diamond'),
-    (12000, 'Platinum', '🔷', 'rb-platinum'),
-    (5000,  'Gold',     '🥇', 'rb-gold'),
-    (2000,  'Silver',   '🥈', 'rb-silver'),
-    (500,   'Bronze',   '🥉', 'rb-bronze'),
-    (0,     'Unranked', '—',  'rb-unranked'),
+    (100000, 'Champion', '🏆', 'rb-champion'),
+    (50000,  'Emerald',  '💚', 'rb-emerald'),
+    (25000,  'Diamond',  '💎', 'rb-diamond'),
+    (12000,  'Platinum', '🔷', 'rb-platinum'),
+    (5000,   'Gold',     '🥇', 'rb-gold'),
+    (2000,   'Silver',   '🥈', 'rb-silver'),
+    (500,    'Bronze',   '🥉', 'rb-bronze'),
+    (0,      'Unranked', '—',  'rb-unranked'),
 ]
 
 MUSCLE_GROUPS = ['chest', 'back', 'legs', 'shoulders', 'arms', 'core']
@@ -312,6 +357,36 @@ def inject_logged_in_user():
         "nav_user": None,
         "initials": initials,
     }
+
+
+def get_day_streak(user_id):
+    """Return the number of consecutive calendar days the user has logged at least one workout."""
+    from datetime import date, timedelta
+    workout_dates = (
+        db.session.query(func.date(Workout.date))
+        .filter(Workout.user_id == user_id)
+        .distinct()
+        .all()
+    )
+    days = {row[0] for row in workout_dates}
+    if not days:
+        return 0
+    # Normalise to date objects (SQLite may return strings)
+    normalised = set()
+    for d in days:
+        if isinstance(d, str):
+            normalised.add(date.fromisoformat(d))
+        elif isinstance(d, datetime):
+            normalised.add(d.date())
+        else:
+            normalised.add(d)
+    today = date.today()
+    streak = 0
+    check = today if today in normalised else today - timedelta(days=1)
+    while check in normalised:
+        streak += 1
+        check -= timedelta(days=1)
+    return streak
 
 
 def get_user_rank(user_id):
@@ -497,6 +572,7 @@ def register():
 
 # LOGIN
 @app.route('/login', methods=['GET', 'POST'])
+@limiter.limit("5 per minute")
 def login():
     if request.method == 'POST':
         login_input = request.form['username'].strip().lower()
@@ -778,31 +854,42 @@ def log_workout():
 
     today = datetime.now()
 
-    custom_plan_id = request.args.get("custom_plan_id")
-
-    if custom_plan_id:
-        custom_plan = WorkoutPlan.query.filter_by(
-            id=custom_plan_id,
-            user_id=session['user_id']
-        ).first()
-
-        if custom_plan:
-            selected_plan = {
-                "name": custom_plan.title,
-                "exercises": [e.strip() for e in custom_plan.description.split(",") if e.strip()]
-            }
-        else:
-            selected_plan = PLANS_DATA["push"]
+    from_calendar = False
+    plan_id_param = request.args.get('plan_id')
+    if plan_id_param:
+        try:
+            wp = db.session.get(WorkoutPlan, int(plan_id_param))
+            if wp and wp.user_id == user.id:
+                exercises = [e.strip() for e in (wp.description or '').split(',') if e.strip()]
+                selected_plan = {'name': wp.title, 'exercises': exercises}
+            else:
+                selected_plan = PLANS_DATA.get(request.args.get('plan', 'push'), PLANS_DATA['push'])
+        except (ValueError, TypeError):
+            selected_plan = PLANS_DATA.get(request.args.get('plan', 'push'), PLANS_DATA['push'])
+    elif 'plan' in request.args:
+        selected_plan = PLANS_DATA.get(request.args['plan'], PLANS_DATA['push'])
     else:
-        selected_plan_key = request.args.get("plan", "push")
-        selected_plan = PLANS_DATA.get(selected_plan_key, PLANS_DATA["push"])
+        cal_entry = CalendarEntry.query.filter_by(
+            user_id=user.id, date=today.date()
+        ).first()
+        if cal_entry and cal_entry.plan_id:
+            wp = db.session.get(WorkoutPlan, cal_entry.plan_id)
+            if wp:
+                exercises = [e.strip() for e in (wp.description or '').split(',') if e.strip()]
+                selected_plan = {'name': wp.title, 'exercises': exercises}
+                from_calendar = True
+            else:
+                selected_plan = None
+        else:
+            selected_plan = None
 
     return render_template(
         'log_workout.html',
         today=today,
         user=user,
         rank=get_user_rank(session['user_id']),
-        selected_plan=selected_plan
+        selected_plan=selected_plan,
+        from_calendar=from_calendar
     )
 
 
@@ -984,24 +1071,104 @@ def calendar():
     if 'user_id' not in session:
         return redirect('/login')
 
-    schedule_data = {
-        "2026-05-07": "push",
-        "2026-05-08": "legs",
-        "2026-05-10": "pull"
-    }
-
     user = db.session.get(User, session['user_id'])
-
     if user is None:
         session.clear()
         return redirect('/login')
 
+    user_id = session['user_id']
+
+    entries = CalendarEntry.query.filter_by(user_id=user_id).all()
+    schedule_data = {}
+    for e in entries:
+        date_str = e.date.strftime('%Y-%m-%d')
+        schedule_data[date_str] = {
+            'plan_id': e.plan_id,
+            'label': e.plan.title if e.plan else 'Rest day',
+            'is_rest': e.is_rest,
+        }
+
+    logged_dates = list({
+        w.date.strftime('%Y-%m-%d')
+        for w in Workout.query.filter_by(user_id=user_id).all()
+    })
+
+    user_plans = (
+        WorkoutPlan.query
+        .filter_by(user_id=user_id)
+        .order_by(WorkoutPlan.id.asc())
+        .all()
+    )
+    plan_color_map = {
+        p.id: PLAN_COLORS[i % len(PLAN_COLORS)]
+        for i, p in enumerate(user_plans)
+    }
+    plan_map = {
+        str(p.id): {'label': p.title, 'color': plan_color_map[p.id]}
+        for p in user_plans
+    }
+    plan_map['rest'] = {'label': 'Rest day', 'color': '#888780'}
+
     return render_template(
         'calendar.html',
         schedule_data=schedule_data,
+        logged_dates=logged_dates,
+        user_plans=user_plans,
+        plan_color_map=plan_color_map,
+        plan_map=plan_map,
         user=user,
-        rank=get_user_rank(session['user_id'])
+        rank=get_user_rank(user_id)
     )
+
+
+@app.route('/calendar/schedule', methods=['POST'])
+def calendar_schedule_save():
+    user, err = _require_login()
+    if err:
+        return jsonify({'ok': False}), 401
+
+    data = request.get_json()
+    date_str = data.get('date', '')
+    plan_id = data.get('plan_id')
+    is_rest = data.get('is_rest', False)
+
+    try:
+        date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        return jsonify({'ok': False, 'error': 'Invalid date'}), 400
+
+    if plan_id is not None:
+        wp = db.session.get(WorkoutPlan, plan_id)
+        if not wp or wp.user_id != user.id:
+            return jsonify({'ok': False, 'error': 'Plan not found'}), 404
+
+    entry = CalendarEntry.query.filter_by(user_id=user.id, date=date_obj).first()
+    if entry is None:
+        entry = CalendarEntry(user_id=user.id, date=date_obj)
+        db.session.add(entry)
+
+    entry.plan_id = plan_id if not is_rest else None
+    entry.is_rest = is_rest
+    db.session.commit()
+    return jsonify({'ok': True})
+
+
+@app.route('/calendar/schedule/<date_str>', methods=['DELETE'])
+def calendar_schedule_delete(date_str):
+    user, err = _require_login()
+    if err:
+        return jsonify({'ok': False}), 401
+
+    try:
+        date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({'ok': False, 'error': 'Invalid date'}), 400
+
+    entry = CalendarEntry.query.filter_by(user_id=user.id, date=date_obj).first()
+    if entry:
+        db.session.delete(entry)
+        db.session.commit()
+    return jsonify({'ok': True})
 
 
 
@@ -1024,7 +1191,7 @@ def profile():
         photo = request.files.get('profile_photo')
 
         if photo and photo.filename:
-            if not allowed_image_file(photo.filename):
+            if not allowed_image_file(photo.filename) or not allowed_image_mimetype(photo):
                 flash("Please upload a valid image file: png, jpg, jpeg, gif, or webp.")
                 return redirect(url_for('profile'))
 
@@ -1048,6 +1215,8 @@ def profile():
     )
 
     rank = get_user_rank(session['user_id'])
+    _, overall_tier = get_muscle_group_data(session['user_id'])
+    day_streak = get_day_streak(session['user_id'])
 
     recent_workouts = (
         Workout.query
@@ -1097,6 +1266,8 @@ def profile():
         user=user,
         workouts_count=workouts_count,
         rank=rank,
+        overall_tier=overall_tier,
+        day_streak=day_streak,
         recent_workouts=workout_cards,
         pr_list=pr_list,
     )
@@ -1236,6 +1407,9 @@ def public_profile(username):
 
     profile_user = User.query.filter_by(username=username).first_or_404()
     is_own_profile = profile_user.id == user.id
+    profile_user_rank = get_user_rank(profile_user.id)
+    _, profile_user_tier = get_muscle_group_data(profile_user.id)
+    nav_rank = get_user_rank(user.id)
     active_tab = request.args.get("tab", "plans")
 
     is_following = Follow.query.filter_by(
@@ -1417,6 +1591,9 @@ def public_profile(username):
         tags_map=tags_map,
         badges=badges,
         activity=activity,
+        profile_user_rank=profile_user_rank,
+        profile_user_tier=profile_user_tier,
+        nav_rank=nav_rank,
     )
 
 
@@ -1625,6 +1802,13 @@ def search_page():
         )
 
     return render_template("search.html", query=query, users=users, plans=plans)
+
+@app.errorhandler(429)
+def ratelimit_handler(e):
+    return render_template(
+        "429.html",
+        message="Too many login attempts. Please wait 1 minute before trying again."
+    ), 429
 
 
 # ── Run app ──

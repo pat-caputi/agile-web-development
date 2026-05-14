@@ -27,6 +27,8 @@
       --r-gold:      #EF9F27;
       --r-platinum:  #4DD0C4;
       --r-diamond:   #8AB4F8;
+      --r-emerald:   #50C878;
+      --r-champion:  #C77DFF;
 
       --r-unranked-bg: rgba(107,106,100,0.12);
       --r-bronze-bg:   rgba(205,127,50,0.13);
@@ -34,6 +36,8 @@
       --r-gold-bg:     rgba(239,159,39,0.13);
       --r-platinum-bg: rgba(77,208,196,0.13);
       --r-diamond-bg:  rgba(138,180,248,0.14);
+      --r-emerald-bg:  rgba(80,200,120,0.13);
+      --r-champion-bg: rgba(199,125,255,0.14);
     }
 
     /* ── Rank badge ── */
@@ -48,6 +52,8 @@
     .rb-gold     { background: var(--r-gold-bg);     color: var(--r-gold); }
     .rb-platinum { background: var(--r-platinum-bg); color: var(--r-platinum); }
     .rb-diamond  { background: var(--r-diamond-bg);  color: var(--r-diamond); }
+    .rb-emerald  { background: var(--r-emerald-bg);  color: var(--r-emerald); }
+    .rb-champion { background: var(--r-champion-bg); color: var(--r-champion); font-weight: 700; }
 
     /* ── Overall hero banner ── */
     .rank-hero {
@@ -105,6 +111,8 @@
     .fill-gold     { fill: #7A5010; }
     .fill-platinum { fill: #145E5A; }
     .fill-diamond  { fill: #1E3A6A; }
+    .fill-emerald  { fill: #0A3D1E; }
+    .fill-champion { fill: #2D0A5A; }
 
     /* Legend row */
     .legend {
@@ -309,7 +317,7 @@
         <path d="M13.5 9.5A5.5 5.5 0 016.5 2.5a5.5 5.5 0 100 11 5.5 5.5 0 007-4z"
               stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
       </svg>
-      <span class="theme-toggle-text" id="themeToggleLabel">Dark mode</span>
+      <span class="theme-toggle-text" id="themeToggleLabel"></span>
     </button>
   
     <!-- User profile chip -->
@@ -392,21 +400,21 @@
               <rect x="49" y="33" width="10" height="9" rx="2" fill="#222220" stroke="#383836" stroke-width="0.5"/>
 
               <!-- CHEST (pectorals) -->
-              <path class="muscle-region fill-gold" id="f-chest" data-muscle="chest"
+              <path class="muscle-region fill-{{ muscle_data['chest'].tier_name | lower }}" id="f-chest" data-muscle="chest"
                     d="M31 48 Q54 44 77 48 L75 70 Q54 74 33 70 Z"/>
 
               <!-- SHOULDERS front left -->
-              <ellipse class="muscle-region fill-platinum" id="f-shl" data-muscle="shoulders"
+              <ellipse class="muscle-region fill-{{ muscle_data['shoulders'].tier_name | lower }}" id="f-shl" data-muscle="shoulders"
                        cx="24" cy="57" rx="9" ry="13"/>
               <!-- SHOULDERS front right -->
-              <ellipse class="muscle-region fill-platinum" id="f-shr" data-muscle="shoulders"
+              <ellipse class="muscle-region fill-{{ muscle_data['shoulders'].tier_name | lower }}" id="f-shr" data-muscle="shoulders"
                        cx="84" cy="57" rx="9" ry="13"/>
 
               <!-- BICEPS left -->
-              <path class="muscle-region fill-silver" id="f-arml" data-muscle="arms"
+              <path class="muscle-region fill-{{ muscle_data['arms'].tier_name | lower }}" id="f-arml" data-muscle="arms"
                     d="M17 66 Q13 79 15 95 Q21 99 25 95 Q27 79 25 66 Z"/>
               <!-- BICEPS right -->
-              <path class="muscle-region fill-silver" id="f-armr" data-muscle="arms"
+              <path class="muscle-region fill-{{ muscle_data['arms'].tier_name | lower }}" id="f-armr" data-muscle="arms"
                     d="M91 66 Q95 79 93 95 Q87 99 83 95 Q81 79 83 66 Z"/>
 
               <!-- Forearms + hands (neutral, no rank) -->
@@ -416,7 +424,7 @@
               <ellipse cx="91" cy="127" rx="6" ry="8" fill="#222220" stroke="#383836" stroke-width="0.5"/>
 
               <!-- CORE / ABS -->
-              <path class="muscle-region fill-bronze" id="f-core" data-muscle="core"
+              <path class="muscle-region fill-{{ muscle_data['core'].tier_name | lower }}" id="f-core" data-muscle="core"
                     d="M35 72 Q54 76 73 72 L71 116 Q54 120 37 116 Z"/>
               <!-- Six-pack dividers -->
               <line x1="54" y1="76" x2="54" y2="116" stroke="#0A0A08" stroke-width="0.7" opacity="0.5"/>
@@ -427,10 +435,10 @@
               <path d="M37 116 Q54 120 71 116 L73 130 Q54 134 35 130 Z" fill="#222220" stroke="#383836" stroke-width="0.5"/>
 
               <!-- QUADS left -->
-              <path class="muscle-region fill-gold" id="f-legl" data-muscle="legs"
+              <path class="muscle-region fill-{{ muscle_data['legs'].tier_name | lower }}" id="f-legl" data-muscle="legs"
                     d="M35 132 Q31 152 33 172 Q41 176 49 172 Q51 152 49 132 Z"/>
               <!-- QUADS right -->
-              <path class="muscle-region fill-gold" id="f-legr" data-muscle="legs"
+              <path class="muscle-region fill-{{ muscle_data['legs'].tier_name | lower }}" id="f-legr" data-muscle="legs"
                     d="M59 132 Q57 152 59 172 Q67 176 73 172 Q75 152 73 132 Z"/>
 
               <!-- Knees -->
@@ -458,25 +466,25 @@
               <rect x="49" y="33" width="10" height="9" rx="2" fill="#222220" stroke="#383836" stroke-width="0.5"/>
 
               <!-- TRAPS (upper back) -->
-              <path class="muscle-region fill-diamond" id="b-backtop" data-muscle="back"
+              <path class="muscle-region fill-{{ muscle_data['back'].tier_name | lower }}" id="b-backtop" data-muscle="back"
                     d="M34 46 Q54 42 74 46 L76 62 Q54 66 32 62 Z"/>
 
               <!-- SHOULDERS back left -->
-              <ellipse class="muscle-region fill-platinum" id="b-shl" data-muscle="shoulders"
+              <ellipse class="muscle-region fill-{{ muscle_data['shoulders'].tier_name | lower }}" id="b-shl" data-muscle="shoulders"
                        cx="24" cy="55" rx="9" ry="13"/>
               <!-- SHOULDERS back right -->
-              <ellipse class="muscle-region fill-platinum" id="b-shr" data-muscle="shoulders"
+              <ellipse class="muscle-region fill-{{ muscle_data['shoulders'].tier_name | lower }}" id="b-shr" data-muscle="shoulders"
                        cx="84" cy="55" rx="9" ry="13"/>
 
               <!-- LATS -->
-              <path class="muscle-region fill-diamond" id="b-lats" data-muscle="back"
+              <path class="muscle-region fill-{{ muscle_data['back'].tier_name | lower }}" id="b-lats" data-muscle="back"
                     d="M32 62 Q26 74 28 92 Q41 98 54 96 Q67 98 80 92 Q82 74 76 62 Q54 66 32 62 Z"/>
 
               <!-- TRICEPS left -->
-              <path class="muscle-region fill-silver" id="b-arml" data-muscle="arms"
+              <path class="muscle-region fill-{{ muscle_data['arms'].tier_name | lower }}" id="b-arml" data-muscle="arms"
                     d="M17 64 Q13 77 15 93 Q21 97 25 93 Q27 77 25 64 Z"/>
               <!-- TRICEPS right -->
-              <path class="muscle-region fill-silver" id="b-armr" data-muscle="arms"
+              <path class="muscle-region fill-{{ muscle_data['arms'].tier_name | lower }}" id="b-armr" data-muscle="arms"
                     d="M91 64 Q95 77 93 93 Q87 97 83 93 Q81 77 83 64 Z"/>
 
               <!-- Forearms + hands (back, neutral) -->
@@ -492,10 +500,10 @@
               <path d="M34 116 Q54 120 74 116 L76 136 Q54 140 32 136 Z" fill="#222220" stroke="#383836" stroke-width="0.5"/>
 
               <!-- HAMSTRINGS left -->
-              <path class="muscle-region fill-gold" id="b-legl" data-muscle="legs"
+              <path class="muscle-region fill-{{ muscle_data['legs'].tier_name | lower }}" id="b-legl" data-muscle="legs"
                     d="M34 138 Q30 158 32 176 Q40 180 48 176 Q50 158 48 138 Z"/>
               <!-- HAMSTRINGS right -->
-              <path class="muscle-region fill-gold" id="b-legr" data-muscle="legs"
+              <path class="muscle-region fill-{{ muscle_data['legs'].tier_name | lower }}" id="b-legr" data-muscle="legs"
                     d="M58 138 Q56 158 58 176 Q66 180 72 176 Q74 158 72 138 Z"/>
 
               <!-- Knees back -->
@@ -521,6 +529,8 @@
           <div class="legend-item"><div class="legend-dot" style="background:var(--r-gold);"></div>Gold</div>
           <div class="legend-item"><div class="legend-dot" style="background:var(--r-platinum);"></div>Platinum</div>
           <div class="legend-item"><div class="legend-dot" style="background:var(--r-diamond);"></div>Diamond</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--r-emerald);"></div>Emerald</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--r-champion);"></div>Champion</div>
         </div>
       </div>
 
@@ -554,22 +564,22 @@
 
         </div>
 
-        <!-- Detail panel -->
-        <div class="detail-panel" id="detailPanel">
+        <!-- Detail panel (hidden until selectMuscle() populates it) -->
+        <div class="detail-panel" id="detailPanel" style="visibility:hidden;">
           <div class="detail-top">
-            <div class="ex-icon" id="detailIcon" style="background:#E1F5EE;color:#085041;width:36px;height:36px;font-size:14px;flex-shrink:0;">B</div>
+            <div class="ex-icon" id="detailIcon" style="width:36px;height:36px;font-size:14px;flex-shrink:0;"></div>
             <div style="flex:1;min-width:0;">
-              <div style="font-size:15px;font-weight:600;" id="detailName">Back</div>
-              <div style="font-size:12px;color:var(--text-tertiary);" id="detailSub">Diamond · 26,200 pts</div>
+              <div style="font-size:15px;font-weight:600;" id="detailName"></div>
+              <div style="font-size:12px;color:var(--text-tertiary);" id="detailSub"></div>
             </div>
-            <span class="rank-badge rb-diamond" id="detailBadge">💎 Diamond</span>
+            <span class="rank-badge" id="detailBadge"></span>
           </div>
 
           <div style="font-size:11.5px;color:var(--text-tertiary);margin-bottom:6px;">Progress to next tier</div>
           <div class="detail-track">
-            <div class="detail-fill" id="detailBar" style="width:55%;background:var(--r-diamond);"></div>
+            <div class="detail-fill" id="detailBar" style="width:0%;"></div>
           </div>
-          <div style="font-size:11.5px;color:var(--text-tertiary);margin-bottom:14px;" id="detailProg">Max tier reached — keep climbing!</div>
+          <div style="font-size:11.5px;color:var(--text-tertiary);margin-bottom:14px;" id="detailProg"></div>
 
           <div style="font-size:11.5px;color:var(--text-tertiary);margin-bottom:8px;">Top contributing exercises</div>
           <div id="detailExercises"></div>
@@ -588,12 +598,14 @@
               </tr>
             </thead>
             {% set tiers = [
-              ('Unranked', '—',  'rb-unranked', 0,     'Just getting started'),
-              ('Bronze',   '🥉', 'rb-bronze',   500,   'Building the habit'),
-              ('Silver',   '🥈', 'rb-silver',   2000,  'Consistent trainer'),
-              ('Gold',     '🥇', 'rb-gold',     5000,  'Dedicated lifter'),
-              ('Platinum', '🔷', 'rb-platinum', 12000, 'Elite athlete'),
-              ('Diamond',  '💎', 'rb-diamond',  25000, 'World-class lifter'),
+              ('Unranked', '—',  'rb-unranked', 0,      'Just getting started'),
+              ('Bronze',   '🥉', 'rb-bronze',   500,    'Building the habit'),
+              ('Silver',   '🥈', 'rb-silver',   2000,   'Consistent trainer'),
+              ('Gold',     '🥇', 'rb-gold',     5000,   'Dedicated lifter'),
+              ('Platinum', '🔷', 'rb-platinum', 12000,  'Elite athlete'),
+              ('Diamond',  '💎', 'rb-diamond',  25000,  'World-class lifter'),
+              ('Emerald',  '💚', 'rb-emerald',  50000,  'Legendary strength'),
+              ('Champion', '🏆', 'rb-champion', 100000, 'Pinnacle of the sport'),
             ] %}
             <tbody>
               {% for t_name, t_icon, t_css, t_pts, t_desc in tiers %}
@@ -664,6 +676,7 @@ function selectMuscle(key) {
   if (!MUSCLE_DATA[key]) return;
   activeMuscle = key;
   const d = MUSCLE_DATA[key];
+  document.getElementById('detailPanel').style.visibility = 'visible';
 
   // Highlight card
   document.querySelectorAll('.muscle-card').forEach(c => c.classList.remove('active'));
@@ -725,7 +738,7 @@ document.querySelectorAll('.muscle-region').forEach(el => {
 });
 
 // Apply tier fill colours to SVG body diagram
-const ALL_FILL_CLASSES = ['fill-unranked','fill-bronze','fill-silver','fill-gold','fill-platinum','fill-diamond'];
+const ALL_FILL_CLASSES = ['fill-unranked','fill-bronze','fill-silver','fill-gold','fill-platinum','fill-diamond','fill-emerald','fill-champion'];
 Object.entries(MUSCLE_DATA).forEach(([muscle, d]) => {
   const fillClass = d.badgeClass.replace('rb-', 'fill-');
   (MUSCLE_REGIONS[muscle] || []).forEach(id => {

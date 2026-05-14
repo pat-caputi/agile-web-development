@@ -141,7 +141,7 @@
         <path d="M13.5 9.5A5.5 5.5 0 016.5 2.5a5.5 5.5 0 100 11 5.5 5.5 0 007-4z"
               stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
       </svg>
-      <span class="theme-toggle-text" id="themeToggleLabel">Dark mode</span>
+      <span class="theme-toggle-text" id="themeToggleLabel"></span>
     </button>
 
     <a href="{{ url_for('profile') }}"
@@ -150,7 +150,9 @@
       {% include "_sidebar_avatar.html" %}
       <div class="nav-user-info">
         <div class="nav-user-name">{{ nav_user.username.title() if nav_user else "Profile" }}</div>
-        <div class="nav-user-rank">View profile</div>
+        <div class="nav-user-rank">
+          {% if nav_rank %}Rank #{{ nav_rank }}{% else %}View profile{% endif %}
+        </div>
       </div>
     </a>
 
@@ -193,12 +195,14 @@
               </a>
             {% elif is_following %}
               <form action="{{ url_for('unfollow_user', user_id=profile_user.id) }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button class="btn btn-secondary" type="submit" style="font-size:12px;padding:6px 16px;">
                   Unfollow
                 </button>
               </form>
             {% else %}
               <form action="{{ url_for('follow_user', user_id=profile_user.id) }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button class="btn btn-primary" type="submit" style="font-size:12px;padding:6px 16px;">
                   Follow
                 </button>
@@ -250,13 +254,27 @@
         </div>
         <div class="pp-stat-card">
           <div class="pp-stat-icon">🎯</div>
-          <div class="pp-stat-val">{{ pr_count }}</div>
+          <div class="pp-stat-val">{{ personal_records | length }}</div>
           <div class="pp-stat-lbl">PRs Set</div>
         </div>
         <div class="pp-stat-card">
           <div class="pp-stat-icon">📅</div>
           <div class="pp-stat-val">{{ workouts_this_week }}</div>
           <div class="pp-stat-lbl">This Week</div>
+        </div>
+        <div class="pp-stat-card">
+          <div class="pp-stat-icon">🏆</div>
+          <div class="pp-stat-val">{% if profile_user_rank %}#{{ profile_user_rank }}{% else %}—{% endif %}</div>
+          <div class="pp-stat-lbl">Leaderboard</div>
+        </div>
+        <div class="pp-stat-card">
+          <div class="pp-stat-icon">{{ profile_user_tier.icon }}</div>
+          <div class="pp-stat-val">
+            <span class="rank-badge {{ profile_user_tier.css }}" style="font-size:11px;padding:2px 7px;">
+              {{ profile_user_tier.name }}
+            </span>
+          </div>
+          <div class="pp-stat-lbl">Tier</div>
         </div>
       </div>
 
