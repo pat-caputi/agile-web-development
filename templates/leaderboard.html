@@ -216,7 +216,7 @@
     <div class="page-header">
       <h1 class="page-title">Leaderboard</h1>
       <p class="page-sub">
-        Week {{ today.strftime("%U") if today is defined else "" }} ·
+        Week {{ week_num }} ·
         {{ leaderboard_data | length }} athletes this week
       </p>
     </div>
