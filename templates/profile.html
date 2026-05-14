@@ -191,6 +191,7 @@
             enctype="multipart/form-data"
             id="profileUpdateForm"
           >
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
             <!-- Profile photo -->
             <label for="profile_photo" class="profile-photo-edit-wrapper">

@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>{{ plan.title }} · LiftAGILE</title>
   <script>
     (function(){
@@ -187,7 +188,7 @@
             </div>
             {% if is_owner %}
               <form action="{{ url_for('toggle_plan_visibility', plan_id=plan.id) }}" method="POST" style="flex-shrink:0;margin-top:4px;">
-                <input type="hidden" name="next" value="{{ url_for('workout_detail', plan_id=plan.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button class="vis-toggle-btn {% if plan.is_public %}vis-toggle-private{% else %}vis-toggle-public{% endif %}" type="submit">
                   {{ 'Make Private' if plan.is_public else 'Make Public' }}
                 </button>
@@ -213,6 +214,7 @@
 
           <div class="workout-actions" style="margin-top:16px;">
             <form action="{{ url_for('toggle_workout_like', plan_id=plan.id) }}" method="POST">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button class="btn {% if user_has_liked %}btn-primary{% else %}btn-secondary{% endif %}"
                       type="submit" style="font-size:12px;padding:6px 16px;display:flex;align-items:center;gap:6px;">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
@@ -233,6 +235,7 @@
 
         <form action="{{ url_for('add_workout_comment', plan_id=plan.id) }}" method="POST"
               class="comment-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <textarea name="body" rows="3"
                     placeholder="Write a comment…" required></textarea>
           <button class="btn btn-primary" type="submit"

@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>My plans · LiftAGILE</title>
   <script>
     (function(){
@@ -288,7 +289,7 @@
           </div>
           <div style="margin-bottom:6px;">
             <form action="{{ url_for('toggle_plan_visibility', plan_id=plan.id) }}" method="POST" style="display:inline;">
-              <input type="hidden" name="next" value="{{ url_for('plans') }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button class="vis-toggle-btn {% if plan.is_public %}vis-toggle-private{% else %}vis-toggle-public{% endif %}" type="submit">
                 {{ 'Make Private' if plan.is_public else 'Make Public' }}
               </button>
@@ -315,7 +316,7 @@
           {% else %}
           <div style="margin-top:auto;padding-top:12px;border-top:0.5px solid var(--border);display:flex;flex-direction:column;gap:8px;">
           {% endif %}
-            <a href="{{ url_for('log_workout', custom_plan_id=plan.id) }}"
+            <a href="{{ url_for('log_workout', plan_id=plan.id) }}"
                class="btn btn-primary btn-block"
                style="font-size:12px;padding:6px 14px;"
                onclick="savePlanOrder('custom-{{ plan.id }}', 'dnd-custom-{{ plan.id }}')">
@@ -681,7 +682,13 @@ async function savePlan() {
   checked.forEach(cb => body.append('exercises', cb.value));
 
   try {
-    const res = await fetch(url, { method: 'POST', body });
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+      },
+      body
+    });
     const data = await res.json();
     if (data.ok) {
       window.location.reload();
@@ -701,7 +708,12 @@ async function deletePlan(planId, planTitle) {
   if (!confirm(`Delete "${planTitle}"? This cannot be undone.`)) return;
 
   try {
-    const res = await fetch(`/plans/${planId}/delete`, { method: 'POST' });
+    const res = await fetch(`/plans/${planId}/delete`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+      }
+    });
     const data = await res.json();
     if (data.ok) {
       const card = document.getElementById(`plan-card-${planId}`);
@@ -751,7 +763,7 @@ document.querySelectorAll('.delete-plan-btn').forEach(btn => {
 });
 
 // ── Drag and drop for available plans ──
-let dragSrc = null;
+let dragSrc = null; 
 let placeholder = null;
 
 function initDnd(listId) {

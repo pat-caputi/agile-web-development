@@ -1,5 +1,10 @@
-from flask import Flask, render_template, request, redirect, session, flash, url_for, jsonify
+from flask import Flask, render_template, request, redirect, session, flash, url_for, jsonify, abort
 from flask_sqlalchemy import SQLAlchemy
+from flask_wtf.csrf import CSRFProtect
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from dotenv import load_dotenv
+from werkzeug.exceptions import TooManyRequests
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from sqlalchemy import func, or_
@@ -10,8 +15,25 @@ import re
 import json
 
 # ── App setup ──
+load_dotenv()
+
 app = Flask(__name__)
-app.secret_key = "your_secret_key"
+app.secret_key = os.environ.get("SECRET_KEY", "dev-only-change-me")
+
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=False,  # Keep False for localhost. Use True when deployed with HTTPS.
+    MAX_CONTENT_LENGTH=2 * 1024 * 1024  # 2MB upload limit
+)
+
+csrf = CSRFProtect(app)
+
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["200 per day", "50 per hour"]
+)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -27,6 +49,15 @@ db = SQLAlchemy(app)
 
 def allowed_image_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_IMAGE_EXTENSIONS
+
+
+def allowed_image_mimetype(file):
+    return file.mimetype in {
+        "image/png",
+        "image/jpeg",
+        "image/gif",
+        "image/webp"
+    }
 
 
 # ── Database models ──
@@ -541,6 +572,7 @@ def register():
 
 # LOGIN
 @app.route('/login', methods=['GET', 'POST'])
+@limiter.limit("5 per minute")
 def login():
     if request.method == 'POST':
         login_input = request.form['username'].strip().lower()
@@ -823,7 +855,7 @@ def log_workout():
     today = datetime.now()
 
     from_calendar = False
-    plan_id_param = request.args.get('custom_plan_id')
+    plan_id_param = request.args.get('plan_id')
     if plan_id_param:
         try:
             wp = db.session.get(WorkoutPlan, int(plan_id_param))
@@ -1159,7 +1191,7 @@ def profile():
         photo = request.files.get('profile_photo')
 
         if photo and photo.filename:
-            if not allowed_image_file(photo.filename):
+            if not allowed_image_file(photo.filename) or not allowed_image_mimetype(photo):
                 flash("Please upload a valid image file: png, jpg, jpeg, gif, or webp.")
                 return redirect(url_for('profile'))
 
@@ -1770,6 +1802,13 @@ def search_page():
         )
 
     return render_template("search.html", query=query, users=users, plans=plans)
+
+@app.errorhandler(429)
+def ratelimit_handler(e):
+    return render_template(
+        "429.html",
+        message="Too many login attempts. Please wait 1 minute before trying again."
+    ), 429
 
 
 # ── Run app ──

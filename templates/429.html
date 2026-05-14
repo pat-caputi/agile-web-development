@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Too Many Requests</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Inter, sans-serif;
+            background: radial-gradient(circle at top, #141416 0%, #0b0b0d 70%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .card {
+            width: 420px;
+            padding: 36px;
+            border-radius: 22px;
+            background: #141416;
+            border: 1px solid rgba(255,255,255,0.08);
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            animation: fadeInUp 0.5s ease;
+        }
+
+        .icon {
+            font-size: 56px;
+            margin-bottom: 18px;
+            animation: pulse 1.8s infinite;
+        }
+
+        h1 {
+            font-size: 30px;
+            margin-bottom: 12px;
+            font-weight: 700;
+        }
+
+        p {
+            color: #a1a1aa;
+            font-size: 16px;
+            line-height: 1.5;
+            margin-bottom: 28px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 13px 24px;
+            border-radius: 14px;
+            background: #6d5dfc;
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+            transition: transform 0.2s ease, opacity 0.2s ease;
+        }
+
+        .btn:hover {
+            opacity: 0.92;
+            transform: translateY(-2px);
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.08); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="icon">💪</div>
+        <h1>Too Many Attempts</h1>
+        <p>You're going too hard. Take a short rest and try logging in again in 1 minute.</p>
+        <a href="{{ url_for('login') }}" class="btn">Back to Login</a>
+    </div>
+</body>
+</html>
