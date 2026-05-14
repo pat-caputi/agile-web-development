@@ -149,20 +149,24 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 10px 12px;
+      padding: 10px 14px;
       border-radius: var(--radius-md);
       cursor: pointer;
-      border: 0.5px solid var(--border);
-      background: var(--surface-2);
-      transition: border-color 0.14s, background 0.14s;
+      border: 0.5px solid var(--border-md);
+      border-left-width: 3px;
+      background: var(--surface);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      transition: background 0.14s, box-shadow 0.14s;
       margin-bottom: 6px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.05);
     }
-    .plan-pick-item:hover   { border-color: var(--accent); background: var(--surface); }
-    .plan-pick-item.active  { border-color: var(--accent); background: var(--accent-light); }
+    .plan-pick-item:hover   { background: var(--surface-2); box-shadow: 0 3px 12px rgba(83,74,183,0.10); }
+    .plan-pick-item.active  { background: var(--accent-light); box-shadow: 0 3px 14px rgba(83,74,183,0.16); }
 
     .plan-pick-dot {
-      width: 10px; height: 10px;
-      border-radius: 3px; flex-shrink: 0;
+      width: 8px; height: 8px;
+      border-radius: 50%; flex-shrink: 0;
     }
 
     /* ── Upcoming workouts list ── */
@@ -192,11 +196,21 @@
     .modal-backdrop.show { display: flex; }
 
     .modal {
-      background: var(--surface);
+      background: rgba(248, 247, 255, 0.90);
+      backdrop-filter: blur(32px) saturate(160%);
+      -webkit-backdrop-filter: blur(32px) saturate(160%);
+      border: 1px solid rgba(255, 255, 255, 0.88);
+      box-shadow: 0 20px 60px rgba(83,74,183,0.14), 0 4px 16px rgba(0,0,0,0.08),
+                  inset 0 1px 0 rgba(255,255,255,0.95);
       border-radius: var(--radius-xl);
       padding: 26px;
       width: 100%; max-width: 400px;
-      border: 0.5px solid var(--border-md);
+    }
+    [data-theme="dark"] .modal {
+      background: rgba(18, 16, 26, 0.84);
+      border-color: rgba(255, 255, 255, 0.10);
+      box-shadow: 0 20px 64px rgba(0,0,0,0.65), 0 4px 16px rgba(0,0,0,0.30),
+                  inset 0 1px 0 rgba(255,255,255,0.07);
     }
 
     .modal-title { font-size: 17px; font-weight: 600; letter-spacing: -0.3px; margin-bottom: 4px; }
@@ -428,7 +442,7 @@
           {% if user_plans %}
             {% for plan in user_plans %}
             {% set color = plan_color_map[plan.id] %}
-            <div class="plan-pick-item" id="plan-{{ plan.id }}" data-plan-id="{{ plan.id }}" onclick="selectPlan(this.dataset.planId)" data-color="{{ color }}">
+            <div class="plan-pick-item" id="plan-{{ plan.id }}" data-plan-id="{{ plan.id }}" onclick="selectPlan(this.dataset.planId)" style="border-left-color: {{ color }};">
               <div class="plan-pick-dot" data-color="{{ color }}"></div>
               <div style="min-width:0;">
                 <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ plan.title }}</div>
@@ -441,7 +455,7 @@
             <a href="{{ url_for('plans') }}" class="btn btn-secondary btn-block" style="font-size:12px;">Create a plan</a>
           {% endif %}
 
-          <div class="plan-pick-item" id="plan-rest" onclick="selectPlan('rest')" data-color="#888780" style="margin-top:6px;">
+          <div class="plan-pick-item" id="plan-rest" onclick="selectPlan('rest')" style="border-left-color: var(--gray-400); margin-top:6px;">
             <div class="plan-pick-dot" style="background:var(--gray-400);"></div>
             <div>
               <div style="font-size:13px;font-weight:500;">Rest day</div>
