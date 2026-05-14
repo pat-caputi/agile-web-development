@@ -114,6 +114,7 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      min-width: 0;
     }
 
     .chip-rest   { background: var(--gray-100);        color: var(--gray-600); }
@@ -225,8 +226,44 @@
     }
 
     @media (max-width: 900px) {
-      .cal-layout { grid-template-columns: 1fr; }
+      .cal-layout { grid-template-columns: minmax(0, 1fr); }
       .side-panel { position: static; }
+    }
+
+    @media (max-width: 640px) {
+      .cal-page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+
+      .cal-grid { gap: 2px; }
+
+      .cal-cell {
+        min-height: 50px;
+        padding: 4px 3px;
+        gap: 2px;
+        overflow: hidden;
+        border-radius: 8px;
+      }
+
+      /* Collapse chip to just its coloured dot */
+      .cal-workout-chip {
+        font-size: 0;
+        line-height: 0;
+        padding: 0;
+        background: none !important;
+        gap: 0;
+        min-width: 0;
+      }
+
+      .cal-dot { width: 6px; height: 6px; }
+
+      .cal-add-hint  { display: none; }
+      .cal-date      { font-size: 10px; }
+      .cal-day-label { font-size: 9px; padding: 2px 0 4px; letter-spacing: 0; }
+      .cal-header    { margin-bottom: 10px; }
+      .cal-month-label { font-size: 14px; }
     }
   </style>
 </head>
@@ -339,7 +376,7 @@
 
   <!-- Main -->
   <main class="main">
-    <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;">
+    <div class="page-header cal-page-header" style="display:flex;align-items:flex-start;justify-content:space-between;">
       <div>
         <h1 class="page-title">Calendar</h1>
         <p class="page-sub">Schedule and track your workout week</p>

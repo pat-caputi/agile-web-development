@@ -42,6 +42,24 @@
     .rb-diamond  { background: var(--r-diamond-bg);  color: var(--r-diamond); }
     .rb-emerald  { background: var(--r-emerald-bg);  color: var(--r-emerald); }
     .rb-champion { background: var(--r-champion-bg); color: var(--r-champion); font-weight: 700; }
+
+    @media (max-width: 640px) {
+      /* Hide Profile and expand columns — not enough room */
+      .lb-table th:nth-child(6),
+      .lb-table td:nth-child(6),
+      .lb-table th:nth-child(7),
+      .lb-table td:nth-child(7) { display: none; }
+
+      /* Allow athlete badges to wrap */
+      .lb-user-badges { flex-wrap: wrap; }
+
+      /* Tighten table padding */
+      .lb-table td,
+      .lb-table th { padding: 8px 4px; }
+
+      /* Shrink rank badge slightly */
+      .rank-badge { font-size: 10.5px; padding: 2px 7px; }
+    }
   </style>
 </head>
 <body>

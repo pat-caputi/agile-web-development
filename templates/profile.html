@@ -18,6 +18,16 @@
     }
   </script>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <style>
+    .profile-layout {
+      display: grid;
+      grid-template-columns: minmax(0,1fr) minmax(0,1.6fr);
+      gap: 16px;
+    }
+    @media (max-width: 640px) {
+      .profile-layout { grid-template-columns: minmax(0, 1fr); }
+    }
+  </style>
 </head>
 <body>
 <div class="app-shell">
@@ -180,7 +190,7 @@
       <p class="page-sub">Member since June 2026</p>
     </div>
 
-    <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.6fr);gap:16px;">
+    <div class="profile-layout">
 
       <!-- Left: profile card -->
       <div style="display:flex;flex-direction:column;gap:14px;">
