@@ -258,6 +258,7 @@ body::before {
   justify-content: center;
   padding-left: 0;
   padding-right: 0;
+  gap: 0;
 }
 
 /* Collapse toggle button */
@@ -321,6 +322,7 @@ body::before {
 .sidebar.collapsed .nav-link, [data-sidebar="collapsed"] .sidebar .nav-link{
   justify-content: center;
   position: relative;
+  gap: 0;
 }
 
 .sidebar.collapsed .nav-link::after, [data-sidebar="collapsed"] .sidebar .nav-link::after{
@@ -422,6 +424,7 @@ body::before {
 .sidebar.collapsed .nav-user, [data-sidebar="collapsed"] .sidebar .nav-user{
   justify-content: center;
   padding: 9px;
+  gap: 0;
 }
 
 /* ══════════════════════════════════════════
@@ -468,6 +471,7 @@ body::before {
 
 .sidebar.collapsed .theme-toggle, [data-sidebar="collapsed"] .sidebar .theme-toggle{
   justify-content: center;
+  gap: 0;
 }
 
 /* ══════════════════════════════════════════
