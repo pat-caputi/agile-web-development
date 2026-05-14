@@ -6,17 +6,17 @@
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>My plans · LiftAGILE</title>
   <script>
-    (function(){
-      var t = localStorage.getItem('liftlab-theme') || 'light';
-      document.documentElement.setAttribute('data-theme', t);
-      if (t === 'dark') {
-        document.documentElement.style.background  = '#0F0F0E';
-        document.documentElement.style.colorScheme = 'dark';
-      }
-      if (localStorage.getItem('liftlab-sidebar') === 'collapsed')
-        document.documentElement.setAttribute('data-sidebar', 'collapsed');
-      document.documentElement.classList.add('preloading');
-    })();
+    if (performance.navigation && performance.navigation.type === 1) {
+      sessionStorage.removeItem('liftlab-theme');
+    }
+    document.documentElement.setAttribute(
+      'data-theme',
+      sessionStorage.getItem('liftlab-theme') ||
+      (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+    );
+    if (localStorage.getItem('liftlab-sidebar') === 'collapsed') {
+      document.documentElement.setAttribute('data-sidebar', 'collapsed');
+    }
   </script>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   <style>
