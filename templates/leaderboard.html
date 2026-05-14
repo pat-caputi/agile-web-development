@@ -44,11 +44,19 @@
     .rb-champion { background: var(--r-champion-bg); color: var(--r-champion); font-weight: 700; }
 
     @media (max-width: 640px) {
-      /* Hide Profile and expand columns — not enough room */
+      /* Hide avatar, tier, profile link, and expand chevron — keep #, Athlete, Volume */
+      .lb-table th:nth-child(2),
+      .lb-table td:nth-child(2),
+      .lb-table th:nth-child(5),
+      .lb-table td:nth-child(5),
       .lb-table th:nth-child(6),
       .lb-table td:nth-child(6),
       .lb-table th:nth-child(7),
       .lb-table td:nth-child(7) { display: none; }
+
+      /* Narrow rank number column */
+      .lb-table th:nth-child(1),
+      .lb-table td:nth-child(1) { width: 28px; padding: 8px 2px; }
 
       /* Allow athlete badges to wrap */
       .lb-user-badges { flex-wrap: wrap; }

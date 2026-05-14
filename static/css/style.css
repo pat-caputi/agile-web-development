@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Mono:wght@400;500&family=Outfit:wght@700;800&display=swap');
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -210,9 +210,10 @@ body::before {
 
 /* Logo */
 .sidebar-logo {
-  font-size: 17px;
-  font-weight: 600;
-  letter-spacing: -0.4px;
+  font-family: 'Outfit', var(--font);
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
   color: #fff;
   padding: 4px 10px 18px;
   white-space: nowrap;
