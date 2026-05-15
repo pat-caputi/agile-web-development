@@ -227,9 +227,20 @@
 
             <!-- Title + description -->
             <div class="fd-title">{{ plan.title }}</div>
-            {% if plan.description %}
-              <div class="fd-desc">
-                {{ plan.description[:160] }}{% if plan.description | length > 160 %}…{% endif %}
+            {% set fd_exercises = (plan.description or '').split(',') | map('trim') | reject('equalto', '') | list %}
+            {% if fd_exercises %}
+              <div class="fd-desc" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;">
+                {% for ex in fd_exercises[:6] %}
+                  <span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;
+                                padding:2px 7px;border-radius:10px;
+                                background:var(--surface-2);border:0.5px solid var(--border);
+                                color:var(--text-secondary);">
+                    {{ ex }}
+                  </span>
+                {% endfor %}
+                {% if fd_exercises | length > 6 %}
+                  <span style="font-size:11px;color:var(--text-tertiary);padding:2px 4px;">+{{ fd_exercises | length - 6 }} more</span>
+                {% endif %}
               </div>
             {% endif %}
 
