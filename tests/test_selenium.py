@@ -34,7 +34,7 @@ User = app_module.User
 
 TEST_PORT = 5099
 BASE_URL = f"http://127.0.0.1:{TEST_PORT}"
-WAIT = 6  # seconds
+WAIT = 10  # seconds
 
 
 # ---------------------------------------------------------------------------
@@ -86,6 +86,15 @@ def live_server():
         RATELIMIT_ENABLED=False,
     )
 
+    # RATELIMIT_ENABLED=False can be ignored if Flask-Limiter cached its state
+    # at init time. The request_filter API is the guaranteed way to exempt every
+    # request from every limit — including the @limiter.limit("5 per minute")
+    # decorator on /login, which covers both GET and POST. Without this, a full
+    # test run exhausts the limit and all subsequent /login requests get 429.
+    @app_module.limiter.request_filter
+    def _exempt_all_test_requests():
+        return True
+
     server_thread = threading.Thread(
         target=lambda: flask_app.run(
             host="127.0.0.1",
@@ -120,7 +129,6 @@ def driver():
     opts.add_argument("--disable-dev-shm-usage")
     opts.add_argument("--window-size=1280,800")
     d = webdriver.Chrome(options=opts)
-    d.implicitly_wait(5)
     yield d
     d.quit()
 
@@ -220,7 +228,13 @@ def test_successful_login_redirects_to_dashboard(driver, test_user):
 # ---------------------------------------------------------------------------
 
 def test_wrong_password_shows_error(driver, test_user):
-    _login(driver, test_user["username"], "WrongPassword9")
+    driver.get(f"{BASE_URL}/login")
+    WebDriverWait(driver, WAIT).until(EC.presence_of_element_located((By.ID, "username")))
+    old_field = driver.find_element(By.ID, "username")
+    old_field.send_keys(test_user["username"])
+    driver.find_element(By.ID, "password").send_keys("WrongPassword9")
+    driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
+    WebDriverWait(driver, WAIT).until(EC.staleness_of(old_field))
     WebDriverWait(driver, WAIT).until(EC.presence_of_element_located((By.CSS_SELECTOR, ".error-msg")))
     assert "Sign in · LiftAGILE" == driver.title
 
@@ -230,7 +244,13 @@ def test_wrong_password_shows_error(driver, test_user):
 # ---------------------------------------------------------------------------
 
 def test_nonexistent_user_login_shows_error(driver):
-    _login(driver, "ghost_user_xyz_9999", "Password1")
+    driver.get(f"{BASE_URL}/login")
+    WebDriverWait(driver, WAIT).until(EC.presence_of_element_located((By.ID, "username")))
+    old_field = driver.find_element(By.ID, "username")
+    old_field.send_keys("ghost_user_xyz_9999")
+    driver.find_element(By.ID, "password").send_keys("Password1")
+    driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
+    WebDriverWait(driver, WAIT).until(EC.staleness_of(old_field))
     WebDriverWait(driver, WAIT).until(EC.presence_of_element_located((By.CSS_SELECTOR, ".error-msg")))
     assert "Sign in · LiftAGILE" == driver.title
 
@@ -331,6 +351,7 @@ def test_dashboard_loads_after_login(driver, test_user):
 
 def test_plans_page_loads_after_login(driver, test_user):
     _login(driver, test_user["username"], test_user["password"])
+    WebDriverWait(driver, WAIT).until(EC.title_contains("Dashboard"))
     driver.get(f"{BASE_URL}/plans")
     WebDriverWait(driver, WAIT).until(EC.title_contains("My plans"))
     assert "My plans · LiftAGILE" == driver.title
@@ -342,6 +363,7 @@ def test_plans_page_loads_after_login(driver, test_user):
 
 def test_log_workout_page_loads_after_login(driver, test_user):
     _login(driver, test_user["username"], test_user["password"])
+    WebDriverWait(driver, WAIT).until(EC.title_contains("Dashboard"))
     driver.get(f"{BASE_URL}/log_workout")
     WebDriverWait(driver, WAIT).until(EC.title_contains("Log workout"))
     assert "Log workout · LiftAGILE" == driver.title
@@ -353,6 +375,7 @@ def test_log_workout_page_loads_after_login(driver, test_user):
 
 def test_profile_page_loads_after_login(driver, test_user):
     _login(driver, test_user["username"], test_user["password"])
+    WebDriverWait(driver, WAIT).until(EC.title_contains("Dashboard"))
     driver.get(f"{BASE_URL}/profile")
     WebDriverWait(driver, WAIT).until(EC.title_contains("Profile"))
     assert "Profile · LiftAGILE" == driver.title
@@ -364,6 +387,7 @@ def test_profile_page_loads_after_login(driver, test_user):
 
 def test_leaderboard_page_loads_after_login(driver, test_user):
     _login(driver, test_user["username"], test_user["password"])
+    WebDriverWait(driver, WAIT).until(EC.title_contains("Dashboard"))
     driver.get(f"{BASE_URL}/leaderboard")
     WebDriverWait(driver, WAIT).until(EC.title_contains("Leaderboard"))
     assert "Leaderboard · LiftAGILE" == driver.title
