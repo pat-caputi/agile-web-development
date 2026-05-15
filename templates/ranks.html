@@ -171,10 +171,10 @@
     .tier-table { width: 100%; border-collapse: collapse; }
     .tier-table th { font-size: 11px; color: var(--text-tertiary); font-weight: 400; text-align: left; padding: 0 10px 10px; }
     .tier-table td { padding: 10px; border-top: 0.5px solid var(--border); font-size: 13px; vertical-align: middle; }
-    .tier-table tr.current td { background: var(--accent-light); }
-    .tier-table tr.current td:first-child { border-radius: 6px 0 0 6px; }
-    .tier-table tr.current td:last-child  { border-radius: 0 6px 6px 0; }
-    .tier-table tr.current td { border-top-color: transparent; }
+    /* Current-tier row: accent top border + highlight bg; remove gap below by hiding next row's top border */
+    .tier-table tr.current td { background: var(--accent-light); border-top: 2px solid var(--accent, #534AB7) !important; }
+    .tier-table tr.current td:first-child { border-left: 3px solid var(--accent, #534AB7); }
+    .tier-table tr.current + tr td { border-top-color: transparent; }
 
     /* ── Tooltip ── */
     .muscle-tooltip {

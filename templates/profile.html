@@ -194,6 +194,47 @@
 
       <!-- Left: profile card -->
       <div style="display:flex;flex-direction:column;gap:14px;">
+
+        {% if pending_requests %}
+        <div class="card follow-req-section">
+          <div class="card-title">Follow Requests <span class="follow-req-badge">{{ pending_requests | length }}</span></div>
+          {% for fr in pending_requests %}
+            {% set requester = requesters.get(fr.id) %}
+            {% if requester %}
+            <div class="follow-req-card">
+              <div class="follow-req-avatar">
+                {% if requester.profile_photo %}
+                  <img src="{{ url_for('static', filename=requester.profile_photo) }}"
+                       alt="{{ requester.username }}"
+                       class="follow-req-avatar-img">
+                {% else %}
+                  <div class="follow-req-avatar-init">{{ requester.username[:2].upper() }}</div>
+                {% endif %}
+              </div>
+              <div class="follow-req-info">
+                <a href="{{ url_for('public_profile', username=requester.username) }}"
+                   class="follow-req-username">{{ requester.username }}</a>
+                {% if requester.bio %}
+                  <p class="follow-req-bio">{{ requester.bio }}</p>
+                {% endif %}
+              </div>
+              <div class="follow-req-actions">
+                <form action="{{ url_for('accept_follow_request', request_id=fr.id) }}" method="POST" style="display:inline;">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button class="btn btn-primary follow-req-btn" type="submit">Accept</button>
+                </form>
+                <form action="{{ url_for('decline_follow_request', request_id=fr.id) }}" method="POST" style="display:inline;">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button class="btn btn-req-decline follow-req-btn" type="submit">Decline</button>
+                </form>
+              </div>
+            </div>
+            {% if not loop.last %}<div class="card-divider"></div>{% endif %}
+            {% endif %}
+          {% endfor %}
+        </div>
+        {% endif %}
+
         <div class="card profile-overview-card">
           <form
             method="POST"
@@ -315,6 +356,39 @@
             No PRs yet — log a workout to start tracking.
           </div>
           {% endif %}
+        </div>
+
+        <!-- Privacy settings -->
+        <div class="card">
+          <div class="card-title">Privacy settings</div>
+          <form method="POST" action="{{ url_for('profile') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="form_action" value="privacy">
+            <div class="privacy-toggle-row">
+              <div class="privacy-toggle-info">
+                <div class="privacy-toggle-label">Private profile</div>
+                <div class="privacy-toggle-sub">Hide your profile and stats from others</div>
+              </div>
+              <label class="privacy-toggle">
+                <input type="checkbox" name="profile_private" {% if not user.profile_public %}checked{% endif %}>
+                <span class="privacy-toggle-slider"></span>
+              </label>
+            </div>
+            <div class="card-divider"></div>
+            <div class="privacy-toggle-row">
+              <div class="privacy-toggle-info">
+                <div class="privacy-toggle-label">Show followers &amp; following</div>
+                <div class="privacy-toggle-sub">Your followers can always view your lists — this controls visibility for everyone else</div>
+              </div>
+              <label class="privacy-toggle">
+                <input type="checkbox" name="show_follow_lists" {% if user.show_follow_lists %}checked{% endif %}>
+                <span class="privacy-toggle-slider"></span>
+              </label>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block" style="margin-top:16px;">
+              Save settings
+            </button>
+          </form>
         </div>
 
         <a href="{{ url_for('logout') }}" class="btn btn-secondary btn-block">Sign out</a>

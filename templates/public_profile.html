@@ -200,6 +200,13 @@
                   Unfollow
                 </button>
               </form>
+            {% elif has_pending_request %}
+              <form action="{{ url_for('cancel_follow_request', user_id=profile_user.id) }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-requested" type="submit" style="font-size:12px;padding:6px 16px;">
+                  Requested
+                </button>
+              </form>
             {% else %}
               <form action="{{ url_for('follow_user', user_id=profile_user.id) }}" method="POST">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -212,21 +219,35 @@
         </div>
 
         <div class="pp-hero-stats">
+          {% set follow_lists_visible = is_own_profile or is_following or (profile_user.profile_public and profile_user.show_follow_lists) %}
           <div class="pp-hero-stat">
+            {% if follow_lists_visible %}
+              <a href="{{ url_for('user_followers', username=profile_user.username) }}" class="pp-hero-stat-link">
+            {% endif %}
             <span class="pp-hero-stat-val">{{ followers_count }}</span>
             <span class="pp-hero-stat-lbl">followers</span>
+            {% if follow_lists_visible %}</a>{% endif %}
           </div>
           <div class="pp-hero-stat-divider"></div>
           <div class="pp-hero-stat">
+            {% if follow_lists_visible %}
+              <a href="{{ url_for('user_following', username=profile_user.username) }}" class="pp-hero-stat-link">
+            {% endif %}
             <span class="pp-hero-stat-val">{{ following_count }}</span>
             <span class="pp-hero-stat-lbl">following</span>
+            {% if follow_lists_visible %}</a>{% endif %}
           </div>
           <div class="pp-hero-stat-divider"></div>
           <div class="pp-hero-stat">
+            <a href="{{ url_for('user_plans', username=profile_user.username) }}" class="pp-hero-stat-link">
             <span class="pp-hero-stat-val">{{ public_plans_count }}</span>
             <span class="pp-hero-stat-lbl">public plans</span>
+            </a>
           </div>
         </div>
+        {% if not is_own_profile and not follow_lists_visible %}
+          <div class="pp-follow-hidden-notice">🔒 This user only shares their followers and following lists with followers.</div>
+        {% endif %}
       </div>
     </div>
 

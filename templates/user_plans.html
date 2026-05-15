@@ -3,8 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="csrf-token" content="{{ csrf_token() }}">
-  <title>{{ plan.title }} · LiftAGILE</title>
+  <title>{{ profile_user.username.title() }}'s Plans · LiftAGILE</title>
   <script>
     if (performance.navigation && performance.navigation.type === 1) {
       sessionStorage.removeItem('liftlab-theme');
@@ -19,17 +18,6 @@
     }
   </script>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-  <style>
-    .detail-layout {
-      display: grid;
-      grid-template-columns: minmax(0,1.4fr) minmax(0,1fr);
-      gap: 16px;
-      align-items: start;
-    }
-    @media (max-width: 640px) {
-      .detail-layout { grid-template-columns: minmax(0, 1fr); }
-    }
-  </style>
 </head>
 <body>
 <div class="app-shell">
@@ -131,7 +119,7 @@
 
     {% if nav_user %}
     <a href="{{ url_for('public_profile', username=nav_user.username) }}"
-       class="nav-link {% if request.endpoint == 'public_profile' %}active{% endif %}"
+       class="nav-link {% if request.endpoint in ('public_profile', 'user_followers', 'user_following', 'user_plans') %}active{% endif %}"
        data-label="Public profile">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
         <circle cx="8" cy="5.5" r="2.5" stroke="currentColor" stroke-width="1.5"/>
@@ -162,7 +150,9 @@
       {% include "_sidebar_avatar.html" %}
       <div class="nav-user-info">
         <div class="nav-user-name">{{ nav_user.username.title() if nav_user else "Profile" }}</div>
-        <div class="nav-user-rank">View profile</div>
+        <div class="nav-user-rank">
+          {% if nav_rank %}Rank #{{ nav_rank }}{% else %}View profile{% endif %}
+        </div>
       </div>
     </a>
 
@@ -180,127 +170,84 @@
       {% endif %}
     {% endwith %}
 
-    <div class="detail-layout">
+    <!-- Page header -->
+    <div style="margin-bottom:20px;">
+      <a href="{{ url_for('public_profile', username=profile_user.username, tab='plans') }}" class="sl-back-link">
+        ← {{ profile_user.username.title() }}
+      </a>
+      <h1 class="page-title" style="margin-top:6px;font-size:20px;">
+        {{ profile_user.username.title() }}'s Workout Plans
+      </h1>
+    </div>
 
-      <!-- Left: plan detail -->
-      <div style="display:flex;flex-direction:column;gap:14px;">
-        <div class="card">
-          <a href="{{ url_for('public_feed') }}"
-             style="font-size:12px;color:var(--text-tertiary);text-decoration:none;display:inline-block;margin-bottom:12px;">
-            ← Back to feed
-          </a>
+    {% if plans %}
+      <div class="pp-plans-list">
+        {% for plan in plans %}
+          {% set likes      = likes_map.get(plan.id, 0) %}
+          {% set n_comments = comments_map.get(plan.id, 0) %}
+          {% set tags       = tags_map.get(plan.id, ['Workout Plan']) %}
+          <div class="pp-plan-card card">
 
-          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:4px;">
-            <div>
-              <h1 class="page-title" style="margin-bottom:4px;">{{ plan.title }}</h1>
-              <span class="vis-badge {% if plan.is_public %}vis-public{% else %}vis-private{% endif %}">
-                {{ 'Public' if plan.is_public else 'Private' }}
-              </span>
+            <div class="pp-plan-title">
+              {{ plan.title }}
+              {% if is_own_profile %}
+                {% if plan.is_public %}
+                  <span class="vis-badge vis-public" style="font-size:10px;vertical-align:middle;margin-left:6px;">Public</span>
+                {% else %}
+                  <span class="vis-badge vis-private" style="font-size:10px;vertical-align:middle;margin-left:6px;">Private</span>
+                {% endif %}
+              {% endif %}
             </div>
-            {% if is_owner %}
-              <form action="{{ url_for('toggle_plan_visibility', plan_id=plan.id) }}" method="POST" style="flex-shrink:0;margin-top:4px;">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button class="vis-toggle-btn {% if plan.is_public %}vis-toggle-private{% else %}vis-toggle-public{% endif %}" type="submit">
-                  {{ 'Make Private' if plan.is_public else 'Make Public' }}
-                </button>
-              </form>
-            {% endif %}
-          </div>
 
-          <p class="muted" style="margin-bottom:14px;">
-            Shared by
-            {% if plan.user %}
-              <a href="{{ url_for('public_profile', username=plan.user.username) }}"
-                 style="color:var(--accent);text-decoration:none;">{{ plan.user.username }}</a>
-            {% else %}
-              Unknown user
-            {% endif %}
-          </p>
-
-          <hr class="card-divider">
-
-          {% set plan_exercises = (plan.description or '').split(', ') | reject('equalto', '') | list %}
-          {% if plan_exercises %}
-            <div style="font-size:11px;color:var(--text-tertiary);margin-bottom:8px;letter-spacing:0.06em;text-transform:uppercase;font-weight:500;">
-              Exercises · {{ plan_exercises | length }}
-            </div>
-            <div style="display:flex;flex-direction:column;gap:6px;">
-              {% for ex in plan_exercises %}
-              <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--surface-raised,var(--bg-secondary));border-radius:var(--radius-sm,6px);font-size:13px;color:var(--text-primary);">
-                <div class="ex-icon cat-arms" style="width:24px;height:24px;font-size:10px;border-radius:5px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:600;">
-                  {{ ex[0] | upper }}
-                </div>
-                <span>{{ ex }}</span>
+            {% if plan.description %}
+              <div class="pp-plan-desc">
+                {{ plan.description[:140] }}{% if plan.description | length > 140 %}…{% endif %}
               </div>
+            {% endif %}
+
+            <div class="fd-tags" style="margin-bottom:0;">
+              {% for tag in tags %}
+                <span class="fd-tag">{{ tag }}</span>
               {% endfor %}
             </div>
-          {% else %}
-            <p style="font-size:13px;color:var(--text-secondary);line-height:1.6;">No exercises added.</p>
-          {% endif %}
 
-          <div class="workout-actions" style="margin-top:16px;">
-            <form action="{{ url_for('toggle_workout_like', plan_id=plan.id) }}" method="POST">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <button class="btn {% if user_has_liked %}btn-primary{% else %}btn-secondary{% endif %}"
-                      type="submit" style="font-size:12px;padding:6px 16px;display:flex;align-items:center;gap:6px;">
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <div class="pp-plan-footer">
+              <span class="pp-plan-stat">
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
                   <path d="M8 13.5C4 11 1.5 8.5 1.5 5.5A3.5 3.5 0 018 3.6 3.5 3.5 0 0114.5 5.5C14.5 8.5 12 11 8 13.5z"
-                        stroke="currentColor" stroke-width="1.5"
-                        {% if user_has_liked %}fill="currentColor"{% endif %}/>
+                        stroke="currentColor" stroke-width="1.5"/>
                 </svg>
-                {{ likes_count }} {{ "Like" if not user_has_liked else "Unlike" }}
-              </button>
-            </form>
+                {{ likes }}
+              </span>
+              <span class="pp-plan-stat">
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                  <path d="M2 2h12a1 1 0 011 1v8a1 1 0 01-1 1H5l-3 3V3a1 1 0 011-1z"
+                        stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                </svg>
+                {{ n_comments }}
+              </span>
+              <a href="{{ url_for('workout_detail', plan_id=plan.id) }}"
+                 class="btn btn-secondary pp-plan-view">View Plan</a>
+            </div>
+
           </div>
-        </div>
+        {% endfor %}
       </div>
 
-      <!-- Right: comments -->
-      <div class="card">
-        <div class="card-title">Comments ({{ comments | length }})</div>
-
-        <form action="{{ url_for('add_workout_comment', plan_id=plan.id) }}" method="POST"
-              class="comment-form">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <textarea name="body" rows="3"
-                    placeholder="Write a comment…" required></textarea>
-          <button class="btn btn-primary" type="submit"
-                  style="font-size:12px;padding:6px 14px;">Post</button>
-        </form>
-
-        <hr class="card-divider">
-
-        <div class="comments-section" style="margin-top:0;">
-          {% if comments %}
-            {% for comment in comments %}
-              <div class="comment-card card" style="margin-bottom:8px;padding:12px;">
-                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-                  <div class="avatar" style="background:var(--purple-50);color:var(--purple-600);width:28px;height:28px;font-size:10px;flex-shrink:0;">
-                    {% if comment.user %}{{ comment.user.username[:2].upper() }}{% else %}?{% endif %}
-                  </div>
-                  <span style="font-size:13px;font-weight:500;">
-                    {% if comment.user %}{{ comment.user.username }}{% else %}User{% endif %}
-                  </span>
-                  <span class="muted" style="margin-left:auto;">
-                    {{ comment.created_at.strftime("%d %b") }}
-                  </span>
-                </div>
-                <p style="font-size:13px;color:var(--text-secondary);margin:0;line-height:1.5;">
-                  {{ comment.body }}
-                </p>
-              </div>
-            {% endfor %}
-          {% else %}
-            <p class="muted" style="text-align:center;padding:16px 0;">
-              No comments yet. Be the first!
-            </p>
-          {% endif %}
-        </div>
+    {% else %}
+      <div class="sl-empty card">
+        <div class="sl-empty-icon">📋</div>
+        {% if is_own_profile %}
+          <div class="sl-empty-title">No plans yet</div>
+          <div class="sl-empty-sub">Head to <a href="{{ url_for('plans') }}" style="color:var(--accent);">My Plans</a> to create your first workout plan.</div>
+        {% else %}
+          <div class="sl-empty-title">No public plans yet</div>
+          <div class="sl-empty-sub">{{ profile_user.username.title() }} hasn't shared any public workout plans yet.</div>
+        {% endif %}
       </div>
+    {% endif %}
 
-    </div>
   </main>
-
 </div>
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
