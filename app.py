@@ -971,6 +971,7 @@ def leaderboard():
         user=user,
         rank=get_user_rank(session['user_id']),
         today=datetime.now(timezone.utc),
+        week_num=datetime.now(timezone.utc).isocalendar()[1],
     )
 
 

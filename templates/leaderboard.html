@@ -42,6 +42,32 @@
     .rb-diamond  { background: var(--r-diamond-bg);  color: var(--r-diamond); }
     .rb-emerald  { background: var(--r-emerald-bg);  color: var(--r-emerald); }
     .rb-champion { background: var(--r-champion-bg); color: var(--r-champion); font-weight: 700; }
+
+    @media (max-width: 640px) {
+      /* Hide avatar, tier, profile link, and expand chevron — keep #, Athlete, Volume */
+      .lb-table th:nth-child(2),
+      .lb-table td:nth-child(2),
+      .lb-table th:nth-child(5),
+      .lb-table td:nth-child(5),
+      .lb-table th:nth-child(6),
+      .lb-table td:nth-child(6),
+      .lb-table th:nth-child(7),
+      .lb-table td:nth-child(7) { display: none; }
+
+      /* Narrow rank number column */
+      .lb-table th:nth-child(1),
+      .lb-table td:nth-child(1) { width: 28px; padding: 8px 2px; }
+
+      /* Allow athlete badges to wrap */
+      .lb-user-badges { flex-wrap: wrap; }
+
+      /* Tighten table padding */
+      .lb-table td,
+      .lb-table th { padding: 8px 4px; }
+
+      /* Shrink rank badge slightly */
+      .rank-badge { font-size: 10.5px; padding: 2px 7px; }
+    }
   </style>
 </head>
 <body>
@@ -190,7 +216,7 @@
     <div class="page-header">
       <h1 class="page-title">Leaderboard</h1>
       <p class="page-sub">
-        Week {{ today.strftime("%U") if today is defined else "" }} ·
+        Week {{ week_num }} ·
         {{ leaderboard_data | length }} athletes this week
       </p>
     </div>

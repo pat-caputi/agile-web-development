@@ -205,6 +205,37 @@
     .cat-arms      { background:#F1EFE8;color:#444441; }
     .cat-core      { background:#FBEAF0;color:#72243E; }
     .cat-cardio    { background:#EAF3DE;color:#27500A; }
+
+    /* ── Exercise block drag-and-drop ── */
+    .ex-drag-handle {
+      display: flex;
+      flex-direction: column;
+      gap: 2.5px;
+      flex-shrink: 0;
+      opacity: 0.20;
+      transition: opacity 0.12s;
+      padding: 4px 6px 4px 2px;
+      cursor: grab;
+    }
+    .ex-drag-handle:active { cursor: grabbing; }
+    .ex-drag-handle span {
+      display: block;
+      width: 14px;
+      height: 1.5px;
+      background: currentColor;
+      border-radius: 1px;
+    }
+    .exercise-block:hover .ex-drag-handle { opacity: 0.50; }
+    .exercise-block.ex-dragging {
+      opacity: 0.35;
+      border-color: var(--accent);
+    }
+    .ex-drop-placeholder {
+      border: 1.5px dashed var(--accent);
+      border-radius: 26px;
+      background: var(--accent-light);
+      opacity: 0.45;
+    }
   </style>
 </head>
 <body>
@@ -676,8 +707,9 @@ function togglePick(el) {
   setCounters[id] = 1;
   const tick = `<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   document.getElementById('exerciseList').insertAdjacentHTML('beforeend', `
-    <div class="card exercise-block" id="${bid}" data-exname="${name}">
+    <div class="card exercise-block" id="${bid}" data-exname="${name}" draggable="true">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+        <div class="ex-drag-handle" title="Drag to reorder"><span></span><span></span><span></span></div>
         <div class="ex-icon ${cls}" style="flex-shrink:0;">${name[0]}</div>
         <div style="flex:1;"><div style="font-size:14px;font-weight:500;">${name}</div><div style="font-size:11.5px;color:var(--text-tertiary);">${cat} · ${equip}</div></div>
         <button class="btn btn-secondary" style="padding:5px 10px;font-size:12px;" onclick="removeExercise('${bid}','${el.dataset.name}')">Remove</button>
@@ -689,6 +721,7 @@ function togglePick(el) {
       <button class="btn btn-secondary" style="margin-top:10px;font-size:12px;padding:6px 12px;" onclick="addSet(${id})">+ Add set</button>
     </div>`);
   updateProgress();
+  initWorkoutDnd();
 }
 
 function filterExercises(q) {
@@ -767,6 +800,77 @@ function submitWorkout() {
   form.submit();
 }
 
+// ── EXERCISE BLOCK DRAG AND DROP ──
+let _exDragSrc = null, _exPlaceholder = null;
+
+function initWorkoutDnd() {
+  const container = document.getElementById('exerciseList');
+  if (!container || container._dndInit) return;
+  container._dndInit = true;
+
+  container.addEventListener('dragstart', e => {
+    // don't initiate drag from inputs/buttons/textareas
+    if (['INPUT','TEXTAREA','BUTTON','SELECT'].includes(e.target.tagName)) {
+      e.preventDefault(); return;
+    }
+    const block = e.target.closest('.exercise-block');
+    if (!block) return;
+    _exDragSrc = block;
+    _exPlaceholder = document.createElement('div');
+    _exPlaceholder.className = 'ex-drop-placeholder';
+    _exPlaceholder.style.height = block.offsetHeight + 'px';
+    requestAnimationFrame(() => block.classList.add('ex-dragging'));
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', '');
+  });
+
+  container.addEventListener('dragend', e => {
+    const block = e.target.closest('.exercise-block');
+    if (!block) return;
+    block.classList.remove('ex-dragging');
+    _exPlaceholder?.remove();
+    _exPlaceholder = null;
+    _exDragSrc = null;
+    saveWorkoutExerciseOrder();
+  });
+
+  container.addEventListener('dragover', e => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (!_exDragSrc || !_exPlaceholder) return;
+    const target = e.target.closest('.exercise-block');
+    if (!target || target === _exDragSrc) return;
+    const rect = target.getBoundingClientRect();
+    const after = e.clientY > rect.top + rect.height / 2;
+    if (after) { target.after(_exPlaceholder); } else { target.before(_exPlaceholder); }
+  });
+
+  container.addEventListener('drop', e => {
+    e.preventDefault();
+    if (!_exDragSrc || !_exPlaceholder) return;
+    container.insertBefore(_exDragSrc, _exPlaceholder);
+    _exPlaceholder.remove();
+    _exPlaceholder = null;
+    _exDragSrc.classList.remove('ex-dragging');
+    _exDragSrc = null;
+    saveWorkoutExerciseOrder();
+  });
+}
+
+function saveWorkoutExerciseOrder() {
+  const params = new URLSearchParams(window.location.search);
+  const planKey = params.get('plan');
+  const customPlanId = params.get('plan_id');
+  const exercises = [...document.querySelectorAll('#exerciseList .exercise-block')]
+    .map(b => b.dataset.exname);
+  if (!exercises.length) return;
+  if (planKey && !customPlanId) {
+    localStorage.setItem(`plan-order-${planKey}`, JSON.stringify(exercises));
+  } else if (customPlanId) {
+    localStorage.setItem(`plan-order-custom-${customPlanId}`, JSON.stringify(exercises));
+  }
+}
+
 // Init progress on load
 function loadSelectedPlan() {
   const emptyState = document.getElementById('no-plan-state');
@@ -814,6 +918,7 @@ function loadSelectedPlan() {
   });
 
   updateProgress();
+  initWorkoutDnd();
 }
 loadSelectedPlan();
 </script>

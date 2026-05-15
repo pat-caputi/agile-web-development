@@ -187,8 +187,43 @@
     }
 
     @media (max-width: 900px) {
-      .ranks-grid { grid-template-columns: 1fr; }
+      .ranks-grid { grid-template-columns: minmax(0, 1fr); }
       .diagram-card { position: static; }
+    }
+
+    @media (max-width: 640px) {
+      /* Hero banner stacks vertically */
+      .rank-hero {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 16px;
+      }
+      .hero-icon  { font-size: 36px; }
+      .hero-title { font-size: 17px; }
+      .hero-sub   { font-size: 11px; }
+      .hero-foot  { font-size: 10.5px; white-space: normal; word-break: break-word; }
+      .hero-view-btn { align-self: flex-start; }
+
+      /* Allow progress labels to wrap on very narrow screens */
+      .hero-prog-labels { flex-wrap: wrap; gap: 2px 0; }
+
+      /* Muscle cards go single column */
+      .muscle-cards-grid { grid-template-columns: minmax(0, 1fr); }
+
+      /* Tier table: hide description column, allow horizontal scroll within the card */
+      .tier-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      .tier-table th:nth-child(2),
+      .tier-table td:nth-child(2) { display: none; }
+      .tier-table td,
+      .tier-table th { padding: 8px 6px; font-size: 12px; white-space: nowrap; }
+
+      /* Body diagram: shrink SVGs to fit */
+      .body-views { gap: 4px; padding: 8px 4px 4px; }
+      .body-views svg { width: 90px; height: auto; }
+
+      /* Detail panel */
+      .detail-panel { padding: 14px; }
     }
   </style>
 </head>
@@ -588,6 +623,7 @@
         <!-- All tiers reference -->
         <div class="card">
           <div class="card-title">Rank tiers</div>
+          <div class="tier-table-wrap">
           <table class="tier-table">
             <thead>
               <tr>
@@ -628,6 +664,7 @@
               {% endfor %}
             </tbody>
           </table>
+          </div><!-- /.tier-table-wrap -->
         </div>
 
       </div>
