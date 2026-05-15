@@ -19,7 +19,7 @@ from datetime import datetime, timedelta
 
 from werkzeug.security import generate_password_hash
 
-from app import app, db, User, Workout, WorkoutSet
+from app import app, db, User, Workout, WorkoutSet, WorkoutPlan
 
 # Import social models only if they exist.
 try:
@@ -91,20 +91,18 @@ def seed():
         db.session.commit()
 
         # Create demo workouts and workout sets.
+        # Range covers the last 30 days (history) plus the current week (days 0-6)
+        # so the leaderboard, which filters by Workout.date >= start_of_week, always has data.
         for username, _, _ in DEMO_USERS:
             user = User.query.filter_by(username=username).first()
 
             if not user:
                 continue
 
-            existing_count = Workout.query.filter_by(user_id=user.id).count()
-
-            # If this user already has enough seeded workouts, do not spam duplicates.
-            if existing_count >= 5:
-                continue
-
-            for days_ago in range(14, 0, -1):
-                if rng.random() >= 0.70:
+            for days_ago in range(30, -1, -1):
+                # Higher hit rate for current week so leaderboard is well-populated.
+                threshold = 0.50 if days_ago <= 6 else 0.65
+                if rng.random() >= threshold:
                     continue
 
                 workout_date = datetime.utcnow() - timedelta(
@@ -112,12 +110,22 @@ def seed():
                     hours=rng.randint(0, 12),
                 )
 
+                # Skip if a workout already exists for this user on this date.
+                date_start = workout_date.replace(hour=0, minute=0, second=0, microsecond=0)
+                date_end = date_start + timedelta(days=1)
+                existing = Workout.query.filter(
+                    Workout.user_id == user.id,
+                    Workout.date >= date_start,
+                    Workout.date < date_end,
+                ).first()
+                if existing:
+                    continue
+
                 workout = Workout(
                     user_id=user.id,
                     date=workout_date,
                 )
 
-                # These fields are only set if your Workout model supports them.
                 set_if_exists(workout, "is_public", True)
                 set_if_exists(workout, "title", f"{username.title()}'s Training Session")
                 set_if_exists(workout, "name", f"{username.title()}'s Training Session")
@@ -147,8 +155,42 @@ def seed():
 
         db.session.commit()
 
+        # Create public WorkoutPlans so demo users appear in the community feed.
+        PLAN_TEMPLATES = [
+            ("{name}'s Push Day", "Chest, shoulders, and triceps focused session."),
+            ("{name}'s Pull Day", "Back and biceps with heavy compound lifts."),
+            ("{name}'s Leg Day", "Quad-dominant with accessory hamstring work."),
+            ("{name}'s Full Body", "Total body conditioning circuit."),
+            ("{name}'s Cardio Blast", "High-intensity cardio and core work."),
+        ]
+
+        for username, _, _ in DEMO_USERS:
+            user = User.query.filter_by(username=username).first()
+            if not user:
+                continue
+
+            existing_plans = WorkoutPlan.query.filter_by(user_id=user.id, is_public=True).count()
+            if existing_plans >= 3:
+                continue
+
+            for title_tpl, desc in rng.sample(PLAN_TEMPLATES, k=3):
+                title = title_tpl.format(name=username.title())
+                exists = WorkoutPlan.query.filter_by(user_id=user.id, title=title).first()
+                if exists:
+                    continue
+                plan = WorkoutPlan(
+                    title=title,
+                    description=desc,
+                    user_id=user.id,
+                    is_public=True,
+                )
+                db.session.add(plan)
+
+        db.session.commit()
+
         users = User.query.all()
         workouts = Workout.query.all()
+        plans = WorkoutPlan.query.filter_by(is_public=True).all()
 
         # Create follows.
         if Follow:
@@ -176,37 +218,37 @@ def seed():
 
             db.session.commit()
 
-        # Create likes.
+        # Create likes on public WorkoutPlans (what the feed displays).
         if WorkoutLike:
-            for workout in workouts:
+            for plan in plans:
                 for user in users:
                     if rng.random() >= 0.45:
                         continue
 
                     existing_like = WorkoutLike.query.filter_by(
                         user_id=user.id,
-                        workout_id=workout.id,
+                        workout_id=plan.id,
                     ).first()
 
                     if not existing_like:
                         db.session.add(
                             WorkoutLike(
                                 user_id=user.id,
-                                workout_id=workout.id,
+                                workout_id=plan.id,
                             )
                         )
 
             db.session.commit()
 
-        # Create comments.
+        # Create comments on public WorkoutPlans.
         if WorkoutComment:
-            for workout in workouts:
+            for plan in plans:
                 commenters = rng.sample(users, k=min(len(users), rng.randint(1, 3)))
 
                 for user in commenters:
                     existing_comment = WorkoutComment.query.filter_by(
                         user_id=user.id,
-                        workout_id=workout.id,
+                        workout_id=plan.id,
                     ).first()
 
                     if existing_comment:
@@ -215,16 +257,16 @@ def seed():
                     db.session.add(
                         WorkoutComment(
                             user_id=user.id,
-                            workout_id=workout.id,
+                            workout_id=plan.id,
                             body=rng.choice(COMMENTS),
                         )
                     )
 
             db.session.commit()
 
-        print(f"Seeded {len(DEMO_USERS)} demo users with workouts.")
-        print("Added public profile data where supported.")
-        print("Added follows, likes, and comments where supported.")
+        print(f"Seeded {len(DEMO_USERS)} demo users with workouts (current week + 30-day history).")
+        print("Created public WorkoutPlans for the community feed.")
+        print("Added follows, likes, and comments on public plans.")
         print("Login with username 'lebron' / password 'Password123' to test.")
 
 
