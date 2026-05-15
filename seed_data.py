@@ -219,9 +219,12 @@ def seed():
             db.session.commit()
 
         # Create likes on public WorkoutPlans (what the feed displays).
+        # Skip "lebron" so the main demo account doesn't auto-like everything.
         if WorkoutLike:
             for plan in plans:
                 for user in users:
+                    if user.username == "lebron":
+                        continue
                     if rng.random() >= 0.45:
                         continue
 
