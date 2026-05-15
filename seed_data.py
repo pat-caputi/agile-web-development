@@ -15,7 +15,7 @@ Do NOT commit instance/users.db.
 """
 
 import random
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from werkzeug.security import generate_password_hash
 
@@ -105,7 +105,7 @@ def seed():
                 if rng.random() >= threshold:
                     continue
 
-                workout_date = datetime.utcnow() - timedelta(
+                workout_date = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(
                     days=days_ago,
                     hours=rng.randint(0, 12),
                 )
@@ -156,12 +156,13 @@ def seed():
         db.session.commit()
 
         # Create public WorkoutPlans so demo users appear in the community feed.
+        # Descriptions are comma-separated exercise names that match the log_workout picker.
         PLAN_TEMPLATES = [
-            ("{name}'s Push Day", "Chest, shoulders, and triceps focused session."),
-            ("{name}'s Pull Day", "Back and biceps with heavy compound lifts."),
-            ("{name}'s Leg Day", "Quad-dominant with accessory hamstring work."),
-            ("{name}'s Full Body", "Total body conditioning circuit."),
-            ("{name}'s Cardio Blast", "High-intensity cardio and core work."),
+            ("{name}'s Push Day",    "Bench press, Incline bench press, Overhead press, Lateral raises, Tricep pushdown, Cable fly"),
+            ("{name}'s Pull Day",    "Pull up, Barbell row, Lat pulldown, Bicep curl, Hammer curl, Face pull"),
+            ("{name}'s Leg Day",     "Barbell squat, Leg press, Romanian deadlift, Leg curl, Leg extension, Calf raise"),
+            ("{name}'s Full Body",   "Barbell squat, Bench press, Deadlift, Pull up, Overhead press, Bicep curl"),
+            ("{name}'s Cardio Blast","Treadmill, Rowing machine, Stationary bike, Plank, Cable crunch"),
         ]
 
         for username, _, _ in DEMO_USERS:
@@ -169,15 +170,21 @@ def seed():
             if not user:
                 continue
 
-            existing_plans = WorkoutPlan.query.filter_by(user_id=user.id, is_public=True).count()
-            if existing_plans >= 3:
-                continue
+            # Pass 1: fix descriptions on ANY existing plan that matches a template title,
+            # regardless of which templates the original rng.sample chose.
+            for title_tpl, desc in PLAN_TEMPLATES:
+                title = title_tpl.format(name=username.title())
+                existing = WorkoutPlan.query.filter_by(user_id=user.id, title=title).first()
+                if existing:
+                    existing.description = desc
 
+            # Pass 2: create missing plans until the user has at least 3 public plans.
             for title_tpl, desc in rng.sample(PLAN_TEMPLATES, k=3):
                 title = title_tpl.format(name=username.title())
-                exists = WorkoutPlan.query.filter_by(user_id=user.id, title=title).first()
-                if exists:
+                if WorkoutPlan.query.filter_by(user_id=user.id, title=title).first():
                     continue
+                if WorkoutPlan.query.filter_by(user_id=user.id, is_public=True).count() >= 3:
+                    break
                 plan = WorkoutPlan(
                     title=title,
                     description=desc,
@@ -189,7 +196,7 @@ def seed():
         db.session.commit()
 
         users = User.query.all()
-        workouts = Workout.query.all()
+
         plans = WorkoutPlan.query.filter_by(is_public=True).all()
 
         # Create follows.
