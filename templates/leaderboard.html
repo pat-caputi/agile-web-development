@@ -202,7 +202,7 @@
       <div class="nav-user-info">
         <div class="nav-user-name">{{ nav_user.username.title() if nav_user else "Profile" }}</div>
         <div class="nav-user-rank">
-          {% if rank is defined and rank %}Rank #{{ rank }}{% else %}View profile{% endif %}
+          {% if nav_rank %}Rank #{{ nav_rank }}{% else %}View profile{% endif %}
         </div>
       </div>
     </a>
@@ -216,8 +216,8 @@
     <div class="page-header">
       <h1 class="page-title">Leaderboard</h1>
       <p class="page-sub">
-        Week {{ week_num }} ·
-        {{ leaderboard_data | length }} athletes this week
+        All-time ·
+        {{ leaderboard_data | length }} athletes ranked
       </p>
     </div>
 
@@ -266,7 +266,7 @@
               {% endfor %}
             </div>
             <div class="podium-score" data-uid="{{ second.id }}">
-              {{ second.weekly_volume|int }} kg
+              {{ second.total_volume|int }} kg
             </div>
             <div class="podium-block podium-block-second"><span>2</span></div>
           </div>
@@ -291,7 +291,7 @@
               {% endfor %}
             </div>
             <div class="podium-score" data-uid="{{ first.id }}">
-              {{ first.weekly_volume|int }} kg
+              {{ first.total_volume|int }} kg
             </div>
             <div class="podium-block podium-block-first"><span>1</span></div>
           </div>
@@ -316,7 +316,7 @@
               {% endfor %}
             </div>
             <div class="podium-score" data-uid="{{ third.id }}">
-              {{ third.weekly_volume|int }} kg
+              {{ third.total_volume|int }} kg
             </div>
             <div class="podium-block podium-block-third"><span>3</span></div>
           </div>
@@ -371,7 +371,7 @@
               class="lb-tbody-row {% if u.id == current_user_id %}current-user{% endif %}"
               data-uid="{{ u.id }}"
               data-tier="{{ t.name | lower }}"
-              data-vol="{{ (u.weekly_volume or 0) | int }}"
+              data-vol="{{ (u.total_volume or 0) | int }}"
               data-freq="{{ u.workouts_count or 0 }}"
               data-str="{{ u_str | int }}"
               data-pr="{{ u_pr }}"
@@ -413,7 +413,7 @@
 
                 <!-- Score (dynamically updated by JS) -->
                 <td class="lb-score-col lb-score-display" style="text-align:right;">
-                  {{ (u.weekly_volume or 0)|int | string + ' kg' }}
+                  {{ (u.total_volume or 0)|int | string + ' kg' }}
                 </td>
 
                 <!-- Tier badge -->
@@ -441,7 +441,7 @@
                 <td colspan="7">
                   <div class="lb-mini-stats">
                     <div class="lb-stat-item">
-                      <strong>{{ (u.weekly_volume or 0)|int }}</strong>
+                      <strong>{{ (u.total_volume or 0)|int }}</strong>
                       <span>kg volume</span>
                     </div>
                     <div class="lb-stat-item">

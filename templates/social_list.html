@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Search · LiftAGILE</title>
+  <title>{{ profile_user.username.title() }}'s {{ list_type | title }} · LiftAGILE</title>
   <script>
     if (performance.navigation && performance.navigation.type === 1) {
       sessionStorage.removeItem('liftlab-theme');
@@ -119,7 +119,7 @@
 
     {% if nav_user %}
     <a href="{{ url_for('public_profile', username=nav_user.username) }}"
-       class="nav-link {% if request.endpoint == 'public_profile' %}active{% endif %}"
+       class="nav-link {% if request.endpoint in ('public_profile', 'user_followers', 'user_following', 'user_plans') %}active{% endif %}"
        data-label="Public profile">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
         <circle cx="8" cy="5.5" r="2.5" stroke="currentColor" stroke-width="1.5"/>
@@ -150,7 +150,9 @@
       {% include "_sidebar_avatar.html" %}
       <div class="nav-user-info">
         <div class="nav-user-name">{{ nav_user.username.title() if nav_user else "Profile" }}</div>
-        <div class="nav-user-rank">{% if nav_rank %}Rank #{{ nav_rank }}{% else %}View profile{% endif %}</div>
+        <div class="nav-user-rank">
+          {% if nav_rank %}Rank #{{ nav_rank }}{% else %}View profile{% endif %}
+        </div>
       </div>
     </a>
 
@@ -168,161 +170,121 @@
       {% endif %}
     {% endwith %}
 
-    <div class="page-header">
-      <h1 class="page-title">Search</h1>
-      <p class="page-sub">Find users and public workout plans</p>
+    <!-- Page header -->
+    <div style="margin-bottom:20px;">
+      <a href="{{ url_for('public_profile', username=profile_user.username) }}" class="sl-back-link">
+        ← {{ profile_user.username.title() }}
+      </a>
+      <h1 class="page-title" style="margin-top:6px;font-size:20px;">
+        {{ profile_user.username.title() }}'s {{ list_type | title }}
+      </h1>
     </div>
 
-    <form action="{{ url_for('search_page') }}" method="GET" class="search-form" id="searchForm">
-      <input type="text" name="q" id="searchInput" value="{{ query }}"
-             placeholder="Search users or workout plans…" autocomplete="off">
-      <button class="btn btn-primary" type="submit" style="white-space:nowrap;">Search</button>
-    </form>
+    {% if hidden %}
 
-    <!-- Recent searches (rendered by JS from localStorage) -->
-    <div id="recentSearchesSection" style="margin-bottom:16px;">
-      <div class="card">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-          <span class="search-section-title" style="margin:0;">Recent searches</span>
-          <button id="clearAllBtn" onclick="clearAllRecentSearches()"
-                  style="font-size:11px;color:var(--text-tertiary);background:none;border:none;cursor:pointer;padding:2px 4px;border-radius:4px;">
-            Clear all
-          </button>
-        </div>
-        <div id="recentSearchesList"></div>
+      <!-- Hidden lists notice -->
+      <div class="sl-hidden card">
+        <div class="sl-hidden-icon">🔒</div>
+        <div class="sl-hidden-title">Lists are private</div>
+        <div class="sl-hidden-sub">This user only shares their followers and following lists with followers.</div>
       </div>
-    </div>
 
-    {% if query %}
-      <div class="card">
-        <div class="search-section-title">Users</div>
-        {% if users %}
+    {% else %}
+
+      <!-- Search bar -->
+      <form class="sl-search-form" method="GET" action="{{ request.path }}">
+        <div class="sl-search-wrap">
+          <svg class="sl-search-icon" width="15" height="15" viewBox="0 0 16 16" fill="none">
+            <circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          <input
+            type="search"
+            name="q"
+            class="sl-search-input"
+            placeholder="Search {{ list_type }}..."
+            value="{{ q }}"
+            autocomplete="off"
+          >
+        </div>
+        {% if q %}
+          <a href="{{ request.path }}" class="sl-search-clear">Clear</a>
+        {% endif %}
+      </form>
+
+      <!-- User list -->
+      {% if users %}
+        <div class="sl-list">
           {% for u in users %}
-            <div class="search-result-card">
-              <div style="display:flex;align-items:center;gap:10px;">
+            <div class="sl-user-row card">
+
+              <!-- Avatar -->
+              <a href="{{ url_for('public_profile', username=u.username) }}" class="sl-avatar-link">
                 {% if u.profile_photo %}
                   <img src="{{ url_for('static', filename=u.profile_photo) }}"
                        alt="{{ u.username }}"
-                       class="avatar"
-                       style="width:32px;height:32px;object-fit:cover;flex-shrink:0;">
+                       class="sl-avatar-img">
                 {% else %}
-                  <div class="avatar" style="background:var(--purple-50);color:var(--purple-600);width:32px;height:32px;font-size:11px;flex-shrink:0;">
-                    {{ u.username[:2].upper() }}
-                  </div>
+                  <div class="sl-avatar-init">{{ u.username[:2].upper() }}</div>
                 {% endif %}
-                <span style="font-size:13px;font-weight:500;">{{ u.username }}</span>
-              </div>
-              <a href="{{ url_for('public_profile', username=u.username) }}"
-                 class="profile-link"
-                 data-username="{{ u.username }}"
-                 data-initials="{{ u.username[:2].upper() }}"
-                 data-photo="{{ url_for('static', filename=u.profile_photo) if u.profile_photo else '' }}"
-                 style="font-size:12px;color:var(--accent);text-decoration:none;">View profile →</a>
-            </div>
-          {% endfor %}
-        {% else %}
-          <p class="muted">No users found for "{{ query }}".</p>
-        {% endif %}
+              </a>
 
-        <div class="search-section-title" style="margin-top:20px;">Workout Plans</div>
-        {% if plans %}
-          {% for plan in plans %}
-            <div class="search-result-card">
-              <div>
-                <div style="font-size:13px;font-weight:500;">{{ plan.title }}</div>
-                {% if plan.user %}
-                  <div class="muted">by {{ plan.user.username }}</div>
+              <!-- Name + bio -->
+              <div class="sl-user-info">
+                <a href="{{ url_for('public_profile', username=u.username) }}" class="sl-username">
+                  {{ u.username.title() }}
+                </a>
+                {% if u.bio %}
+                  <div class="sl-bio">{{ u.bio[:80] }}{% if u.bio | length > 80 %}…{% endif %}</div>
                 {% endif %}
               </div>
-              <a href="{{ url_for('workout_detail', plan_id=plan.id) }}"
-                 style="font-size:12px;color:var(--accent);text-decoration:none;">View plan →</a>
+
+              <!-- Follow / Unfollow button -->
+              <div class="sl-user-action">
+                {% if u.id != current_user.id %}
+                  {% if u.id in following_ids %}
+                    <form action="{{ url_for('unfollow_user', user_id=u.id) }}" method="POST">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <input type="hidden" name="next" value="{{ request.url }}">
+                      <button type="submit" class="btn btn-secondary sl-action-btn">Unfollow</button>
+                    </form>
+                  {% else %}
+                    <form action="{{ url_for('follow_user', user_id=u.id) }}" method="POST">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <input type="hidden" name="next" value="{{ request.url }}">
+                      <button type="submit" class="btn btn-primary sl-action-btn">Follow</button>
+                    </form>
+                  {% endif %}
+                {% endif %}
+              </div>
+
             </div>
           {% endfor %}
-        {% else %}
-          <p class="muted">No public plans found for "{{ query }}".</p>
-        {% endif %}
-      </div>
+        </div>
+
+      {% else %}
+
+        <!-- Empty state -->
+        <div class="sl-empty card">
+          <div class="sl-empty-icon">👥</div>
+          {% if q %}
+            <div class="sl-empty-title">No results for "{{ q }}"</div>
+            <div class="sl-empty-sub">Try a different search term.</div>
+          {% elif list_type == 'followers' %}
+            <div class="sl-empty-title">No followers yet</div>
+            <div class="sl-empty-sub">{{ profile_user.username.title() }} doesn't have any followers yet.</div>
+          {% else %}
+            <div class="sl-empty-title">Not following anyone</div>
+            <div class="sl-empty-sub">{{ profile_user.username.title() }} isn't following anyone yet.</div>
+          {% endif %}
+        </div>
+
+      {% endif %}
+
     {% endif %}
+
   </main>
-
 </div>
-<script>
-  const STORAGE_KEY = 'liftlab-recent-searches-{{ nav_user.username if nav_user else "guest" }}';
-  const MAX_RECENT  = 10;
-
-  function getRecent() {
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
-    catch { return []; }
-  }
-
-  function saveRecent(username, initials, photo) {
-    let list = getRecent().filter(r => r.username !== username);
-    list.unshift({ username, initials, photo: photo || '' });
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(list.slice(0, MAX_RECENT)));
-  }
-
-  function removeRecent(username) {
-    const list = getRecent().filter(r => r.username !== username);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-    renderRecent();
-  }
-
-  function clearAllRecentSearches() {
-    localStorage.removeItem(STORAGE_KEY);
-    renderRecent();
-  }
-
-  function renderRecent() {
-    const list    = document.getElementById('recentSearchesList');
-    const clearBtn = document.getElementById('clearAllBtn');
-    const recent  = getRecent();
-
-    if (!recent.length) {
-      list.innerHTML = '<p class="muted" style="margin:0;">No recent searches.</p>';
-      clearBtn.style.display = 'none';
-      return;
-    }
-
-    clearBtn.style.display = '';
-    list.innerHTML = recent.map(r => {
-      const avatarHtml = r.photo
-        ? `<img src="${r.photo}" alt="${r.username}" class="avatar"
-               style="width:32px;height:32px;object-fit:cover;flex-shrink:0;">`
-        : `<div class="avatar" style="background:var(--purple-50);color:var(--purple-600);
-               width:32px;height:32px;font-size:11px;flex-shrink:0;">${r.initials}</div>`;
-      return `
-      <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:0.5px solid var(--border);">
-        ${avatarHtml}
-        <a href="/u/${r.username}"
-           style="flex:1;font-size:13px;font-weight:500;color:var(--text-primary);text-decoration:none;">
-          ${r.username}
-        </a>
-        <button onclick="removeRecent('${r.username}')"
-                title="Remove"
-                style="background:none;border:none;cursor:pointer;color:var(--text-tertiary);
-                       padding:4px;border-radius:4px;display:flex;align-items:center;">
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-            <path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-          </svg>
-        </button>
-      </div>
-    `;
-    }).join('');
-
-    /* Remove border from last item */
-    const rows = list.querySelectorAll('div');
-    if (rows.length) rows[rows.length - 1].style.borderBottom = 'none';
-  }
-
-  /* Wire up "View profile →" links to save before navigating */
-  document.querySelectorAll('.profile-link').forEach(link => {
-    link.addEventListener('click', () => {
-      saveRecent(link.dataset.username, link.dataset.initials, link.dataset.photo);
-    });
-  });
-
-  renderRecent();
-</script>
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>
