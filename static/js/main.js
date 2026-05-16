@@ -30,11 +30,7 @@ requestAnimationFrame(() => requestAnimationFrame(() => {
 document.addEventListener('DOMContentLoaded', () => {
 
   // ── 1. DARK MODE ─────────────────────────────
-  const THEME_KEY = 'liftlab-theme'; // sessionStorage — survives navigation, not reload
-
-  // Clean up old localStorage keys from previous implementation
-  localStorage.removeItem('liftlab-theme');
-  localStorage.removeItem('liftlab-theme-os-at-save');
+  const THEME_KEY = 'liftlab-theme';
 
   function applyTheme(theme) {
     document.documentElement.setAttribute('data-theme', theme);
@@ -51,7 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function toggleTheme() {
     const current = document.documentElement.getAttribute('data-theme') || 'light';
     const next    = current === 'dark' ? 'light' : 'dark';
-    sessionStorage.setItem(THEME_KEY, next);
+    localStorage.setItem(THEME_KEY, next);
     applyTheme(next);
   }
 
@@ -60,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Live OS tracking — only fires when user has no active session override
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
-    if (!sessionStorage.getItem(THEME_KEY)) applyTheme(e.matches ? 'dark' : 'light');
+    if (!localStorage.getItem(THEME_KEY)) applyTheme(e.matches ? 'dark' : 'light');
   });
 
   const themeBtn = document.getElementById('themeToggleBtn');
@@ -138,6 +134,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  // ── 6. CARD ENTRANCE ANIMATION (vanilla JS — works before jQuery loads) ──
+  document.querySelectorAll('.fd-card, .plan-card, .pp-plan-card').forEach((el, i) => {
+    setTimeout(() => el.classList.add('card-visible'), i * 40);
+  });
+
 });
 
 // ── jQuery: flash message auto-dismiss & Bootstrap alert wiring ──────────────
@@ -156,9 +157,5 @@ $(function () {
     });
   });
 
-  // Stagger card entrance animation on page load
-  $('.fd-card, .plan-card, .pp-plan-card').each(function (i) {
-    var el = $(this);
-    setTimeout(function () { el.addClass('card-visible'); }, i * 40);
-  });
+  // Card entrance animation handled by vanilla JS above (section 6)
 });

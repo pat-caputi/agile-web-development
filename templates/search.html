@@ -5,12 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Search · LiftAGILE</title>
   <script>
-    if (performance.navigation && performance.navigation.type === 1) {
-      sessionStorage.removeItem('liftlab-theme');
-    }
     document.documentElement.setAttribute(
       'data-theme',
-      sessionStorage.getItem('liftlab-theme') ||
+      localStorage.getItem('liftlab-theme') ||
       (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
     );
     if (localStorage.getItem('liftlab-sidebar') === 'collapsed') {
