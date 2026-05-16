@@ -258,7 +258,7 @@ pip install -r requirements.txt
 If required:
 
 ```bash
-pip install flask flask-sqlalchemy flask-wtf flask-limiter python-dotenv werkzeug pytest
+pip install flask flask-sqlalchemy flask-wtf flask-limiter python-dotenv werkzeug pytest selenium webdriver-manager
 ```
 
 ---
