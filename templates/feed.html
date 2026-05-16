@@ -151,7 +151,7 @@
       {% include "_sidebar_avatar.html" %}
       <div class="nav-user-info">
         <div class="nav-user-name">{{ nav_user.username.title() if nav_user else "Profile" }}</div>
-        <div class="nav-user-rank">View profile</div>
+        <div class="nav-user-rank">{% if nav_rank %}Rank #{{ nav_rank }}{% else %}View profile{% endif %}</div>
       </div>
     </a>
 
@@ -302,9 +302,20 @@
               <div class="cp-plan-card">
                 <div class="cp-plan-badge">Workout Plan</div>
                 <div class="cp-plan-title">{{ post.plan.title }}</div>
-                {% if post.plan.description %}
-                  <div class="cp-plan-desc">
-                    {{ post.plan.description[:120] }}{% if post.plan.description | length > 120 %}…{% endif %}
+                {% set fd_exercises = (post.plan.description or '').split(',') | map('trim') | reject('equalto', '') | list %}
+                {% if fd_exercises %}
+                  <div class="cp-plan-desc" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;">
+                    {% for ex in fd_exercises[:6] %}
+                      <span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;
+                                    padding:2px 7px;border-radius:10px;
+                                    background:var(--surface-2);border:0.5px solid var(--border);
+                                    color:var(--text-secondary);">
+                        {{ ex }}
+                      </span>
+                    {% endfor %}
+                    {% if fd_exercises | length > 6 %}
+                      <span style="font-size:11px;color:var(--text-tertiary);padding:2px 4px;">+{{ fd_exercises | length - 6 }} more</span>
+                    {% endif %}
                   </div>
                 {% endif %}
                 {% if post.plan.is_public %}
@@ -336,6 +347,21 @@
                 </svg>
                 {{ n_comments }}
               </span>
+
+              {% if post.plan and post.plan.user_id != current_user_id %}
+                {% set already_saved = post.plan.id in saved_plan_ids %}
+                <button class="btn fd-save-btn {% if already_saved %}fd-saved{% else %}btn-secondary{% endif %}"
+                        data-plan="{{ post.plan.id }}"
+                        data-saved="{{ 'true' if already_saved else 'false' }}"
+                        title="{{ 'Saved to My Plans' if already_saved else 'Save to My Plans' }}">
+                  <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                    <path d="M3 2h10a1 1 0 011 1v11l-5-3-5 3V3a1 1 0 011-1z"
+                          stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"
+                          {% if already_saved %}fill="currentColor"{% endif %}/>
+                  </svg>
+                  {{ 'Saved' if already_saved else 'Save' }}
+                </button>
+              {% endif %}
             </div>
 
             <!-- Comment previews -->
@@ -464,6 +490,35 @@
           countEl.textContent = data.count;
         })
         .catch(function () { /* silent — optimistic state stands */ });
+    });
+  });
+
+  /* AJAX save plan */
+  document.querySelectorAll('.fd-save-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const planId   = btn.dataset.plan;
+      const wasSaved = btn.dataset.saved === 'true';
+      if (wasSaved) return; /* already saved — no-op */
+
+      btn.disabled = true;
+      fetch(`/plans/${planId}/save`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content }
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (data.ok) {
+            btn.dataset.saved = 'true';
+            btn.classList.remove('btn-secondary');
+            btn.classList.add('fd-saved');
+            btn.title = 'Saved to My Plans';
+            btn.querySelector('svg path').setAttribute('fill', 'currentColor');
+            btn.childNodes[btn.childNodes.length - 1].textContent = ' Saved';
+          } else {
+            btn.disabled = false;
+          }
+        })
+        .catch(() => { btn.disabled = false; });
     });
   });
 </script>

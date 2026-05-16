@@ -126,18 +126,19 @@ USER_ACTIVITY = {
 }
 
 # (title_template, description, is_public)
+# Descriptions are comma-separated exercise names that match the log_workout picker.
 PLAN_TEMPLATES = [
-    ("{name}'s Push Day",          "Chest, shoulders, and triceps — a focused hypertrophy session.",                       True),
-    ("{name}'s Pull Day",          "Back and biceps with heavy compound lifts and controlled tempo.",                       True),
-    ("{name}'s Leg Day",           "Quad-dominant with accessory hamstring and glute work.",                                True),
-    ("{name}'s Full Body",         "Total body conditioning with compound movements and supersets.",                        True),
-    ("{name}'s Cardio Blast",      "High-intensity cardio intervals and core work. Leave nothing in the tank.",            True),
-    ("{name}'s Olympic Day",       "Technique work on snatch and clean and jerk. Warm up thoroughly.",                     True),
-    ("{name}'s Powerlifting Day",  "Competition-style squat, bench, and deadlift with opening and top attempts.",          True),
-    ("{name}'s HIIT Circuit",      "12-exercise circuit, 40 s on / 20 s off, 3 rounds. Minimal rest.",                     True),
-    ("{name}'s Upper Body",        "Push/pull superset upper body workout for size and strength.",                          True),
-    ("{name}'s Secret Program",    "Private program in progress — not ready to share yet.",                                 False),
-    ("{name}'s Deload Week",       "Reduced intensity, focus on form and mobility. Necessary for long-term progress.",      False),
+    ("{name}'s Push Day",         "Bench press, Incline bench press, Overhead press, Lateral raises, Tricep pushdown, Cable fly",        True),
+    ("{name}'s Pull Day",         "Pull up, Barbell row, Lat pulldown, Bicep curl, Hammer curl, Face pull",                              True),
+    ("{name}'s Leg Day",          "Barbell squat, Leg press, Romanian deadlift, Leg curl, Leg extension, Hip thrust, Calf raise",        True),
+    ("{name}'s Full Body",        "Barbell squat, Bench press, Deadlift, Pull up, Overhead press, Bicep curl",                           True),
+    ("{name}'s Cardio Blast",     "Push up, Plank, Cable crunch, Hanging leg raise, Russian twist, Barbell squat",                       True),
+    ("{name}'s Olympic Day",      "Deadlift, Barbell squat, Overhead press, Barbell row, Bench press, Lat pulldown",                     True),
+    ("{name}'s Powerlifting Day", "Barbell squat, Bench press, Deadlift, Overhead press, Barbell row",                                   True),
+    ("{name}'s HIIT Circuit",     "Barbell squat, Push up, Deadlift, Bicep curl, Tricep pushdown, Plank, Cable crunch",                  True),
+    ("{name}'s Upper Body",       "Bench press, Barbell row, Overhead press, Lat pulldown, Bicep curl, Tricep pushdown, Lateral raises", True),
+    ("{name}'s Secret Program",   "Bench press, Barbell squat, Deadlift, Overhead press, Barbell row",                                   False),
+    ("{name}'s Deload Week",      "Push up, Lat pulldown, Leg curl, Leg extension, Bicep curl, Plank",                                   False),
 ]
 
 
@@ -292,7 +293,7 @@ def seed():
                 if rng.random() >= threshold:
                     continue
 
-                workout_date = datetime.utcnow() - timedelta(
+                workout_date = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(
                     days=days_ago,
                     hours=rng.randint(0, 16),
                 )
@@ -329,11 +330,24 @@ def seed():
         db.session.commit()
 
         # ── Workout plans (public and private) ────────────────────────
+        # Build a suffix→desc map so we can fix every plan in the DB by title,
+        # regardless of which user owns it (covers user-saved copies too).
+        desc_by_suffix = {
+            title_tpl.split('}', 1)[1]: desc
+            for title_tpl, desc, _ in PLAN_TEMPLATES
+        }
+        for plan in WorkoutPlan.query.all():
+            for suffix, desc in desc_by_suffix.items():
+                if plan.title.endswith(suffix):
+                    plan.description = desc
+                    break
+
         for username, *_ in DEMO_USERS:
             user = User.query.filter_by(username=username).first()
             if not user:
                 continue
 
+            # Create any plans this user is still missing (random sample for variety).
             for title_tpl, desc, is_public in rng.sample(PLAN_TEMPLATES, k=min(6, len(PLAN_TEMPLATES))):
                 title = title_tpl.format(name=username.title())
                 if WorkoutPlan.query.filter_by(user_id=user.id, title=title).first():

@@ -150,7 +150,7 @@
       {% include "_sidebar_avatar.html" %}
       <div class="nav-user-info">
         <div class="nav-user-name">{{ nav_user.username.title() if nav_user else "Profile" }}</div>
-        <div class="nav-user-rank">View profile</div>
+        <div class="nav-user-rank">{% if nav_rank %}Rank #{{ nav_rank }}{% else %}View profile{% endif %}</div>
       </div>
     </a>
 

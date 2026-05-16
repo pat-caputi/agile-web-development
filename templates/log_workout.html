@@ -334,8 +334,8 @@
         </div>
 
         <div class="nav-user-rank">
-          {% if rank is defined and rank %}
-            Rank #{{ rank }}
+          {% if nav_rank %}
+            Rank #{{ nav_rank }}
           {% else %}
             View profile
           {% endif %}
@@ -871,6 +871,22 @@ function saveWorkoutExerciseOrder() {
   }
 }
 
+// Resolve an exercise name to its picker item, tolerating data-name suffixes
+// (e.g. "Romanian deadlift" matches data-name="romanian deadlift rdl").
+function findPickerItem(exerciseName) {
+  const ex = exerciseName.toLowerCase().trim();
+  return [...document.querySelectorAll('.exercise-pick-item')].find(item => {
+    const display = item.querySelector('div:last-child > div:first-child')?.textContent.trim().toLowerCase() ?? '';
+    const dataName = item.dataset.name?.toLowerCase() ?? '';
+    return display === ex || dataName === ex || dataName.startsWith(ex + ' ') || dataName.startsWith(ex);
+  });
+}
+
+// Return true if every name in the array has a matching picker item.
+function exerciseListIsValid(names) {
+  return Array.isArray(names) && names.length > 0 && names.every(n => !!findPickerItem(n));
+}
+
 // Init progress on load
 function loadSelectedPlan() {
   const emptyState = document.getElementById('no-plan-state');
@@ -887,34 +903,33 @@ function loadSelectedPlan() {
   document.getElementById('workoutName').value = selectedPlan.name;
 
   document.querySelectorAll('.exercise-block').forEach(block => block.remove());
-
-  document.querySelectorAll('.exercise-pick-item').forEach(item => {
-    item.classList.remove('selected');
-  });
+  document.querySelectorAll('.exercise-pick-item').forEach(item => item.classList.remove('selected'));
 
   const params = new URLSearchParams(window.location.search);
   const planKey = params.get('plan');
   const customPlanId = params.get('plan_id');
 
   let savedOrder = null;
-
   if (planKey && !customPlanId) {
-    savedOrder = JSON.parse(localStorage.getItem(`plan-order-${planKey}`));
+    const raw = localStorage.getItem(`plan-order-${planKey}`);
+    try { savedOrder = JSON.parse(raw); } catch(_) {}
   } else if (customPlanId) {
-    savedOrder = JSON.parse(localStorage.getItem(`plan-order-custom-${customPlanId}`));
+    const raw = localStorage.getItem(`plan-order-custom-${customPlanId}`);
+    try { savedOrder = JSON.parse(raw); } catch(_) {}
+  }
+
+  // Discard stale localStorage entries whose names don't match any picker item.
+  if (savedOrder && !exerciseListIsValid(savedOrder)) {
+    savedOrder = null;
+    if (planKey && !customPlanId)   localStorage.removeItem(`plan-order-${planKey}`);
+    else if (customPlanId)          localStorage.removeItem(`plan-order-custom-${customPlanId}`);
   }
 
   const exercisesToLoad = savedOrder || selectedPlan.exercises;
 
   exercisesToLoad.forEach(exerciseName => {
-    const target = [...document.querySelectorAll('.exercise-pick-item')].find(item => {
-      const label = item.querySelector('div:last-child > div:first-child');
-      return label && label.textContent.trim().toLowerCase() === exerciseName.toLowerCase();
-    });
-
-    if (target) {
-      togglePick(target);
-    }
+    const target = findPickerItem(exerciseName);
+    if (target) togglePick(target);
   });
 
   updateProgress();

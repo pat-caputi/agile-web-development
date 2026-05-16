@@ -162,11 +162,7 @@
     </div>
 
     <div class="nav-user-rank">
-      {% if rank is defined and rank %}
-        Rank #{{ rank }}
-      {% else %}
-        View profile
-      {% endif %}
+      {% if nav_rank %}Rank #{{ nav_rank }}{% else %}View profile{% endif %}
     </div>
   </div>
 </a>
@@ -302,7 +298,7 @@
                 <span class="rank-name">
                   {% if entry.id == user.id %}You{% else %}{{ entry.username.title() }}{% endif %}
                 </span>
-                <span class="rank-score">{{ '{:,.0f}'.format(entry.weekly_volume or 0) }} kg</span>
+                <span class="rank-score">{{ '{:,.0f}'.format(entry.total_volume or 0) }} kg</span>
               </div>
             {% else %}
               <p class="muted" style="text-align:center;padding:12px 0;">No workouts logged this week.</p>

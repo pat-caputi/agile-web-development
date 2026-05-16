@@ -202,7 +202,7 @@
       <div class="nav-user-info">
         <div class="nav-user-name">{{ nav_user.username.title() if nav_user else "Profile" }}</div>
         <div class="nav-user-rank">
-          {% if rank is defined and rank %}Rank #{{ rank }}{% else %}View profile{% endif %}
+          {% if nav_rank %}Rank #{{ nav_rank }}{% else %}View profile{% endif %}
         </div>
       </div>
     </a>
