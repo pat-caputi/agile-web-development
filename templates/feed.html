@@ -274,6 +274,21 @@
                 {{ n_comments }}
               </span>
 
+              {% if plan.user_id != current_user_id %}
+                {% set already_saved = plan.id in saved_plan_ids %}
+                <button class="btn fd-save-btn {% if already_saved %}fd-saved{% else %}btn-secondary{% endif %}"
+                        data-plan="{{ plan.id }}"
+                        data-saved="{{ 'true' if already_saved else 'false' }}"
+                        title="{{ 'Saved to My Plans' if already_saved else 'Save to My Plans' }}">
+                  <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                    <path d="M3 2h10a1 1 0 011 1v11l-5-3-5 3V3a1 1 0 011-1z"
+                          stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"
+                          {% if already_saved %}fill="currentColor"{% endif %}/>
+                  </svg>
+                  {{ 'Saved' if already_saved else 'Save' }}
+                </button>
+              {% endif %}
+
               <a href="{{ url_for('workout_detail', plan_id=plan.id) }}"
                  class="btn btn-secondary fd-view-btn">View Plan</a>
             </div>
@@ -367,6 +382,35 @@
         .catch(() => {
           /* Silent fail — the optimistic state stays; the server stays authoritative on refresh */
         });
+    });
+  });
+
+  /* AJAX save plan */
+  document.querySelectorAll('.fd-save-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const planId   = btn.dataset.plan;
+      const wasSaved = btn.dataset.saved === 'true';
+      if (wasSaved) return; /* already saved — no-op */
+
+      btn.disabled = true;
+      fetch(`/plans/${planId}/save`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content }
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (data.ok) {
+            btn.dataset.saved = 'true';
+            btn.classList.remove('btn-secondary');
+            btn.classList.add('fd-saved');
+            btn.title = 'Saved to My Plans';
+            btn.querySelector('svg path').setAttribute('fill', 'currentColor');
+            btn.childNodes[btn.childNodes.length - 1].textContent = ' Saved';
+          } else {
+            btn.disabled = false;
+          }
+        })
+        .catch(() => { btn.disabled = false; });
     });
   });
 </script>

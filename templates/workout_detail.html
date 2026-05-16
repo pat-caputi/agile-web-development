@@ -247,6 +247,19 @@
               </svg>
               Start this plan
             </a>
+            {% else %}
+            <button id="detailSaveBtn"
+                    class="btn {% if user_has_saved %}btn-primary{% else %}btn-secondary{% endif %}"
+                    data-plan="{{ plan.id }}"
+                    data-saved="{{ 'true' if user_has_saved else 'false' }}"
+                    style="font-size:12px;padding:6px 14px;display:flex;align-items:center;gap:6px;">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                <path d="M3 2h10a1 1 0 011 1v11l-5-3-5 3V3a1 1 0 011-1z"
+                      stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"
+                      {% if user_has_saved %}fill="currentColor"{% endif %}/>
+              </svg>
+              <span>{{ 'Saved to My Plans' if user_has_saved else 'Save to My Plans' }}</span>
+            </button>
             {% endif %}
             <form action="{{ url_for('toggle_workout_like', plan_id=plan.id) }}" method="POST">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -311,6 +324,32 @@
   </main>
 
 </div>
+<script>
+  const saveBtn = document.getElementById('detailSaveBtn');
+  if (saveBtn) {
+    saveBtn.addEventListener('click', () => {
+      if (saveBtn.dataset.saved === 'true') return;
+      saveBtn.disabled = true;
+      fetch(`/plans/${saveBtn.dataset.plan}/save`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content }
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (data.ok) {
+            saveBtn.dataset.saved = 'true';
+            saveBtn.classList.remove('btn-secondary');
+            saveBtn.classList.add('btn-primary');
+            saveBtn.querySelector('svg path').setAttribute('fill', 'currentColor');
+            saveBtn.querySelector('span').textContent = 'Saved to My Plans';
+          } else {
+            saveBtn.disabled = false;
+          }
+        })
+        .catch(() => { saveBtn.disabled = false; });
+    });
+  }
+</script>
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>
