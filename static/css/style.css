@@ -981,6 +981,24 @@ img.nav-user-avatar {
   font-weight: 500;
 }
 
+/* ── Bootstrap flash alert override ─────── */
+.flash-msg {
+  border-radius: var(--radius-md) !important;
+  font-size: 13px !important;
+  margin-bottom: 12px !important;
+}
+
+/* ── jQuery card entrance animation ─────── */
+.fd-card, .plan-card, .pp-plan-card {
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.fd-card.card-visible, .plan-card.card-visible, .pp-plan-card.card-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 /* ══════════════════════════════════════════
    PLANS
 ══════════════════════════════════════════ */

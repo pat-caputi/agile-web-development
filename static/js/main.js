@@ -139,3 +139,26 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
 });
+
+// ── jQuery: flash message auto-dismiss & Bootstrap alert wiring ──────────────
+$(function () {
+  // Auto-dismiss Bootstrap alerts after 4 seconds
+  setTimeout(function () {
+    $('.flash-msg').fadeTo(400, 0, function () {
+      $(this).slideUp(200, function () { $(this).remove(); });
+    });
+  }, 4000);
+
+  // Wire Bootstrap dismiss button for any manually-rendered alerts
+  $(document).on('click', '.flash-msg .btn-close', function () {
+    $(this).closest('.flash-msg').fadeTo(300, 0, function () {
+      $(this).slideUp(150, function () { $(this).remove(); });
+    });
+  });
+
+  // Stagger card entrance animation on page load
+  $('.fd-card, .plan-card, .pp-plan-card').each(function (i) {
+    var el = $(this);
+    setTimeout(function () { el.addClass('card-visible'); }, i * 40);
+  });
+});
