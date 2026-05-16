@@ -1068,6 +1068,36 @@ def delete_plan(plan_id):
     return jsonify({"ok": True})
 
 
+@app.route('/plans/<int:plan_id>/save', methods=['POST'])
+def save_plan(plan_id):
+    user, err = _require_login()
+    if err:
+        return jsonify({"ok": False, "error": "Not logged in"}), 401
+
+    plan = db.session.get(WorkoutPlan, plan_id)
+    if plan is None or not plan.is_public:
+        return jsonify({"ok": False, "error": "Not found"}), 404
+
+    if plan.user_id == user.id:
+        return jsonify({"ok": False, "error": "Already yours"}), 400
+
+    already = WorkoutPlan.query.filter_by(
+        user_id=user.id, title=plan.title, description=plan.description
+    ).first()
+    if already:
+        return jsonify({"ok": True, "title": already.title, "already_saved": True})
+
+    copy = WorkoutPlan(
+        title=plan.title,
+        description=plan.description,
+        user_id=user.id,
+        is_public=False,
+    )
+    db.session.add(copy)
+    db.session.commit()
+    return jsonify({"ok": True, "title": copy.title, "already_saved": False})
+
+
 @app.route('/calendar')
 def calendar():
     if 'user_id' not in session:
@@ -1389,6 +1419,14 @@ def public_feed():
 
     tags_map = {p.id: get_plan_tags(p) for p in plans}
 
+    saved_plan_ids = set()
+    if plan_ids:
+        user_plans = WorkoutPlan.query.filter_by(user_id=user.id).all()
+        user_descs = {(p.title, p.description) for p in user_plans}
+        for p in plans:
+            if p.user_id != user.id and (p.title, p.description) in user_descs:
+                saved_plan_ids.add(p.id)
+
     return render_template(
         "feed.html",
         plans=plans,
@@ -1398,6 +1436,8 @@ def public_feed():
         comments_preview_map=comments_preview_map,
         liked_by_user_set=liked_by_user_set,
         tags_map=tags_map,
+        current_user_id=user.id,
+        saved_plan_ids=saved_plan_ids,
     )
 
 
@@ -1667,13 +1707,21 @@ def workout_detail(plan_id):
         .all()
     )
 
+    is_owner = (plan.user_id == user.id)
+    user_has_saved = False
+    if not is_owner:
+        user_has_saved = WorkoutPlan.query.filter_by(
+            user_id=user.id, title=plan.title, description=plan.description
+        ).first() is not None
+
     return render_template(
         "workout_detail.html",
         plan=plan,
         likes_count=likes_count,
         user_has_liked=user_has_liked,
         comments=comments,
-        is_owner=(plan.user_id == user.id),
+        is_owner=is_owner,
+        user_has_saved=user_has_saved,
     )
 
 
