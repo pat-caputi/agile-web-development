@@ -39,10 +39,13 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 PROFILE_UPLOAD_FOLDER = os.path.join(app.root_path, "static", "uploads", "profile_pictures")
+COMMUNITY_UPLOAD_FOLDER = os.path.join(app.root_path, "static", "uploads", "community_posts")
 ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
 
 app.config["PROFILE_UPLOAD_FOLDER"] = PROFILE_UPLOAD_FOLDER
+app.config["COMMUNITY_UPLOAD_FOLDER"] = COMMUNITY_UPLOAD_FOLDER
 os.makedirs(PROFILE_UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(COMMUNITY_UPLOAD_FOLDER, exist_ok=True)
 
 db = SQLAlchemy(app)
 
@@ -69,6 +72,7 @@ class User(db.Model):
     bio = db.Column(db.String(280), default="")
     profile_photo = db.Column(db.String(255), default="")
     profile_public = db.Column(db.Boolean, default=True)
+    show_follow_lists = db.Column(db.Boolean, default=True)
 
 
 class Workout(db.Model):
@@ -123,6 +127,17 @@ class Follow(db.Model):
     )
 
 
+class FollowRequest(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    requester_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    target_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    __table_args__ = (
+        db.UniqueConstraint("requester_id", "target_id", name="unique_follow_request"),
+    )
+
+
 class WorkoutLike(db.Model):
     id = db.Column(db.Integer, primary_key=True)
 
@@ -158,6 +173,38 @@ class CalendarEntry(db.Model):
     __table_args__ = (db.UniqueConstraint('user_id', 'date', name='uq_cal_user_date'),)
 
 
+class CommunityPost(db.Model):
+    __tablename__ = "community_post"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    body = db.Column(db.Text, default="")
+    image_path = db.Column(db.String(255), nullable=True)
+    plan_id = db.Column(db.Integer, db.ForeignKey("workout_plan.id"), nullable=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    is_public = db.Column(db.Boolean, default=True)
+    user = db.relationship("User", backref="community_posts")
+    plan = db.relationship("WorkoutPlan", backref="community_posts")
+
+
+class CommunityPostLike(db.Model):
+    __tablename__ = "community_post_like"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    post_id = db.Column(db.Integer, db.ForeignKey("community_post.id"), nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    __table_args__ = (db.UniqueConstraint("user_id", "post_id", name="unique_cp_like"),)
+
+
+class CommunityPostComment(db.Model):
+    __tablename__ = "community_post_comment"
+    id = db.Column(db.Integer, primary_key=True)
+    body = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    post_id = db.Column(db.Integer, db.ForeignKey("community_post.id"), nullable=False)
+    user = db.relationship("User", backref="community_post_comments")
+
+
 # ── Create DB ──
 with app.app_context():
     db.create_all()
@@ -166,7 +213,20 @@ with app.app_context():
 PLAN_COLORS = ['#534AB7', '#085041', '#712B13', '#633806', '#27500A', '#1A5276', '#4A154B', '#6D1A36']
 
 # ── Rank tier thresholds ──
-TIER_THRESHOLDS = [
+# Thresholds for the leaderboard (total accumulated volume: weight × reps across all sets)
+LEADERBOARD_TIER_THRESHOLDS = [
+    (500000, 'Champion', '🏆', 'rb-champion'),
+    (300000, 'Emerald',  '💚', 'rb-emerald'),
+    (180000, 'Diamond',  '💎', 'rb-diamond'),
+    (100000, 'Platinum', '🔷', 'rb-platinum'),
+    (50000,  'Gold',     '🥇', 'rb-gold'),
+    (20000,  'Silver',   '🥈', 'rb-silver'),
+    (5000,   'Bronze',   '🥉', 'rb-bronze'),
+    (0,      'Unranked', '—',  'rb-unranked'),
+]
+
+# Thresholds for My Ranks (per-muscle-group PR score: best_weight × best_reps per exercise)
+RANK_TIER_THRESHOLDS = [
     (100000, 'Champion', '🏆', 'rb-champion'),
     (50000,  'Emerald',  '💚', 'rb-emerald'),
     (25000,  'Diamond',  '💎', 'rb-diamond'),
@@ -226,14 +286,16 @@ EXERCISE_MUSCLE_MAP = {
 }
 
 
-def get_tier(points):
+def get_tier(points, thresholds=None):
+    if thresholds is None:
+        thresholds = LEADERBOARD_TIER_THRESHOLDS
     v = int(points or 0)
-    for i, (threshold, name, icon, css) in enumerate(TIER_THRESHOLDS):
+    for i, (threshold, name, icon, css) in enumerate(thresholds):
         if v >= threshold:
             if i == 0:
                 pct, next_threshold, next_name = 100, None, None
             else:
-                next_threshold, next_name, _, _ = TIER_THRESHOLDS[i - 1]
+                next_threshold, next_name, _, _ = thresholds[i - 1]
                 pct = min(99, int((v - threshold) / (next_threshold - threshold) * 100))
             return {
                 'name': name, 'icon': icon, 'css': css,
@@ -269,7 +331,7 @@ def get_muscle_group_data(user_id):
     muscle_data = {}
     for g in MUSCLE_GROUPS:
         cfg = MUSCLE_CONFIG[g]
-        tier = get_tier(group_points[g])
+        tier = get_tier(group_points[g], RANK_TIER_THRESHOLDS)
         muscle_data[g] = {
             'label':      cfg['label'],
             'letter':     cfg['letter'],
@@ -288,7 +350,7 @@ def get_muscle_group_data(user_id):
 
     total_points = sum(group_points.values())
     avg_points = total_points / len(MUSCLE_GROUPS)
-    overall_t = get_tier(avg_points)
+    overall_t = get_tier(avg_points, RANK_TIER_THRESHOLDS)
     overall_tier = {**overall_t, 'total_points': total_points}
 
     return muscle_data, overall_tier
@@ -390,16 +452,14 @@ def get_day_streak(user_id):
 
 
 def get_user_rank(user_id):
-    start_of_week = get_start_of_week()
-
+    """Returns the user's position in the all-time leaderboard (1 = highest volume)."""
     leaderboard_data = (
         db.session.query(
             User.id,
-            func.sum(WorkoutSet.weight * WorkoutSet.reps).label('weekly_volume')
+            func.sum(WorkoutSet.weight * WorkoutSet.reps).label('total_volume')
         )
         .join(Workout, Workout.user_id == User.id)
         .join(WorkoutSet, WorkoutSet.workout_id == Workout.id)
-        .filter(Workout.date >= start_of_week)
         .group_by(User.id)
         .order_by(func.sum(WorkoutSet.weight * WorkoutSet.reps).desc())
         .all()
@@ -410,6 +470,18 @@ def get_user_rank(user_id):
             return index
 
     return None
+
+
+def get_volume_tier(user_id):
+    """Returns a tier dict based on a user's total all-time workout volume (weight × reps).
+    Consistent with the all-time leaderboard tier shown on the leaderboard page."""
+    vol = (
+        db.session.query(func.sum(WorkoutSet.weight * WorkoutSet.reps))
+        .join(Workout, Workout.id == WorkoutSet.workout_id)
+        .filter(Workout.user_id == user_id)
+        .scalar()
+    ) or 0
+    return get_tier(int(vol))
 
 def get_current_streak(user_id):
     workouts = (
@@ -917,41 +989,42 @@ def leaderboard():
         session.clear()
         return redirect('/login')
 
-    start_of_week = get_start_of_week()
-
     leaderboard_data = (
         db.session.query(
             User.id,
             User.username,
             User.profile_photo,
             func.count(func.distinct(Workout.id)).label('workouts_count'),
-            func.sum(WorkoutSet.weight * WorkoutSet.reps).label('weekly_volume')
+            func.sum(WorkoutSet.weight * WorkoutSet.reps).label('total_volume')
         )
         .join(Workout, Workout.user_id == User.id)
         .join(WorkoutSet, WorkoutSet.workout_id == Workout.id)
-        .filter(Workout.date >= start_of_week)
         .group_by(User.id, User.username, User.profile_photo)
         .order_by(func.sum(WorkoutSet.weight * WorkoutSet.reps).desc())
         .all()
     )
 
     tier_map = {
-        item.id: get_tier(item.weekly_volume or 0)
+        item.id: get_tier(item.total_volume or 0)
         for item in leaderboard_data
     }
 
-    # PR count and strength score per user
+    # PR count and strength score per user.
+    # Strength score = sum of (best_weight × best_reps) across all PersonalRecord entries —
+    # a peak-strength metric distinct from the raw accumulated-volume score used for tier badges.
     all_prs = PersonalRecord.query.all()
     pr_count_map = {}
+    pr_score_map = {}
     for pr in all_prs:
         pr_count_map[pr.user_id] = pr_count_map.get(pr.user_id, 0) + 1
+        pr_score_map[pr.user_id] = pr_score_map.get(pr.user_id, 0) + int(pr.best_weight * pr.best_reps)
 
-    strength_map = {uid: tier['points'] for uid, tier in tier_map.items()}
+    strength_map = {uid: pr_score_map.get(uid, 0) for uid in tier_map}
 
     # Achievement badges — one winner per category
     badges_map = {}
     if leaderboard_data:
-        vol_w = max(leaderboard_data, key=lambda r: r.weekly_volume or 0)
+        vol_w = max(leaderboard_data, key=lambda r: r.total_volume or 0)
         badges_map.setdefault(vol_w.id, []).append('vol')
         freq_w = max(leaderboard_data, key=lambda r: r.workouts_count or 0)
         badges_map.setdefault(freq_w.id, []).append('freq')
@@ -971,7 +1044,6 @@ def leaderboard():
         user=user,
         rank=get_user_rank(session['user_id']),
         today=datetime.now(timezone.utc),
-        week_num=datetime.now(timezone.utc).isocalendar()[1],
     )
 
 
@@ -1187,6 +1259,15 @@ def profile():
         return redirect('/login')
 
     if request.method == 'POST':
+        form_action = request.form.get('form_action', 'profile')
+
+        if form_action == 'privacy':
+            user.profile_public = 'profile_private' not in request.form
+            user.show_follow_lists = 'show_follow_lists' in request.form
+            db.session.commit()
+            flash("Privacy settings updated.")
+            return redirect(url_for('profile'))
+
         user.bio = request.form.get('bio', '').strip()[:280]
 
         photo = request.files.get('profile_photo')
@@ -1216,7 +1297,7 @@ def profile():
     )
 
     rank = get_user_rank(session['user_id'])
-    _, overall_tier = get_muscle_group_data(session['user_id'])
+    overall_tier = get_volume_tier(session['user_id'])
     day_streak = get_day_streak(session['user_id'])
 
     recent_workouts = (
@@ -1262,6 +1343,14 @@ def profile():
         ).get('icon_color', '#333'),
     } for p in prs]
 
+    pending_requests = (
+        FollowRequest.query
+        .filter_by(target_id=user.id)
+        .order_by(FollowRequest.created_at.desc())
+        .all()
+    )
+    requesters = {fr.id: db.session.get(User, fr.requester_id) for fr in pending_requests}
+
     return render_template(
         'profile.html',
         user=user,
@@ -1271,6 +1360,8 @@ def profile():
         day_streak=day_streak,
         recent_workouts=workout_cards,
         pr_list=pr_list,
+        pending_requests=pending_requests,
+        requesters=requesters,
     )
 
 
@@ -1313,90 +1404,147 @@ def _require_login():
     return user, None
 
 
-@app.route("/feed")
+@app.route("/feed", methods=["GET", "POST"])
 def public_feed():
     user, err = _require_login()
     if err:
         return err
 
+    # ── Create post (POST) ──
+    if request.method == "POST":
+        body = request.form.get("body", "").strip()
+        plan_id_str = request.form.get("plan_id", "").strip()
+        image_path = None
+
+        photo = request.files.get("image")
+        if photo and photo.filename:
+            if not allowed_image_file(photo.filename) or not allowed_image_mimetype(photo):
+                flash("Please upload a valid image: png, jpg, jpeg, gif, or webp.", "warning")
+                return redirect(url_for("public_feed"))
+            ext = photo.filename.rsplit(".", 1)[1].lower()
+            unique_name = f"post_{user.id}_{uuid4().hex}.{ext}"
+            photo.save(os.path.join(app.config["COMMUNITY_UPLOAD_FOLDER"], unique_name))
+            image_path = f"uploads/community_posts/{unique_name}"
+
+        if not body and not image_path:
+            flash("A post needs some text or an image.", "warning")
+            return redirect(url_for("public_feed"))
+
+        plan_id = None
+        if plan_id_str:
+            try:
+                pid_int = int(plan_id_str)
+                plan_obj = WorkoutPlan.query.get(pid_int)
+                if plan_obj and plan_obj.user_id == user.id:
+                    plan_id = pid_int
+            except (ValueError, TypeError):
+                pass
+
+        db.session.add(CommunityPost(
+            user_id=user.id,
+            body=body,
+            image_path=image_path,
+            plan_id=plan_id,
+            is_public=True,
+        ))
+        db.session.commit()
+        flash("Post shared!", "success")
+        return redirect(url_for("public_feed"))
+
+    # ── Read feed (GET) ──
     feed_filter = request.args.get("filter", "all")
-    base_q = WorkoutPlan.query.filter_by(is_public=True)
+
+    followed_ids = {
+        f.followed_id
+        for f in Follow.query.filter_by(follower_id=user.id).all()
+    }
+
+    # Only show posts from public profiles, profiles the current user follows,
+    # or the current user's own posts.
+    base_q = (
+        CommunityPost.query
+        .join(User, User.id == CommunityPost.user_id)
+        .filter(
+            CommunityPost.is_public == True,
+            db.or_(
+                User.profile_public == True,
+                CommunityPost.user_id.in_(followed_ids),
+                CommunityPost.user_id == user.id,
+            )
+        )
+    )
 
     if feed_filter == "liked":
-        plans = (
+        posts = (
             base_q
-            .outerjoin(WorkoutLike, WorkoutLike.workout_id == WorkoutPlan.id)
-            .group_by(WorkoutPlan.id)
-            .order_by(func.count(WorkoutLike.id).desc(), WorkoutPlan.id.desc())
+            .outerjoin(CommunityPostLike, CommunityPostLike.post_id == CommunityPost.id)
+            .group_by(CommunityPost.id)
+            .order_by(func.count(CommunityPostLike.id).desc(), CommunityPost.id.desc())
             .all()
         )
     elif feed_filter == "following":
-        followed_ids = [
-            f.followed_id
-            for f in Follow.query.filter_by(follower_id=user.id).all()
-        ]
-        plans = (
+        posts = (
             base_q
-            .filter(WorkoutPlan.user_id.in_(followed_ids))
-            .order_by(WorkoutPlan.id.desc())
+            .filter(CommunityPost.user_id.in_(followed_ids))
+            .order_by(CommunityPost.created_at.desc())
             .all()
         ) if followed_ids else []
     else:
-        plans = base_q.order_by(WorkoutPlan.id.desc()).all()
+        posts = base_q.order_by(CommunityPost.created_at.desc()).all()
 
-    plan_ids = [p.id for p in plans]
+    post_ids = [p.id for p in posts]
     likes_map = {}
     comments_map = {}
     comments_preview_map = {}
     liked_by_user_set = set()
 
-    if plan_ids:
-        like_rows = (
-            db.session.query(WorkoutLike.workout_id, func.count(WorkoutLike.id))
-            .filter(WorkoutLike.workout_id.in_(plan_ids))
-            .group_by(WorkoutLike.workout_id)
+    if post_ids:
+        for pid_val, cnt in (
+            db.session.query(CommunityPostLike.post_id, func.count(CommunityPostLike.id))
+            .filter(CommunityPostLike.post_id.in_(post_ids))
+            .group_by(CommunityPostLike.post_id)
             .all()
-        )
-        likes_map = {wid: cnt for wid, cnt in like_rows}
+        ):
+            likes_map[pid_val] = cnt
 
-        comment_rows = (
-            db.session.query(WorkoutComment.workout_id, func.count(WorkoutComment.id))
-            .filter(WorkoutComment.workout_id.in_(plan_ids))
-            .group_by(WorkoutComment.workout_id)
+        for pid_val, cnt in (
+            db.session.query(CommunityPostComment.post_id, func.count(CommunityPostComment.id))
+            .filter(CommunityPostComment.post_id.in_(post_ids))
+            .group_by(CommunityPostComment.post_id)
             .all()
-        )
-        comments_map = {wid: cnt for wid, cnt in comment_rows}
+        ):
+            comments_map[pid_val] = cnt
 
         liked_by_user_set = {
-            lk.workout_id for lk in
-            WorkoutLike.query.filter(
-                WorkoutLike.workout_id.in_(plan_ids),
-                WorkoutLike.user_id == user.id
+            lk.post_id for lk in
+            CommunityPostLike.query.filter(
+                CommunityPostLike.post_id.in_(post_ids),
+                CommunityPostLike.user_id == user.id,
             ).all()
         }
 
-        for pid in plan_ids:
+        for pid_val in post_ids:
             preview = (
-                WorkoutComment.query
-                .filter_by(workout_id=pid)
-                .order_by(WorkoutComment.created_at.desc())
+                CommunityPostComment.query
+                .filter_by(post_id=pid_val)
+                .order_by(CommunityPostComment.created_at.desc())
                 .limit(2)
                 .all()
             )
             if preview:
-                comments_preview_map[pid] = preview
+                comments_preview_map[pid_val] = preview
 
-    tags_map = {p.id: get_plan_tags(p) for p in plans}
+    my_plans = WorkoutPlan.query.filter_by(user_id=user.id).order_by(WorkoutPlan.id.desc()).all()
 
     return render_template(
         "feed.html",
-        plans=plans,
+        posts=posts,
         feed_filter=feed_filter,
         likes_map=likes_map,
         comments_map=comments_map,
         comments_preview_map=comments_preview_map,
         liked_by_user_set=liked_by_user_set,
-        tags_map=tags_map,
+        my_plans=my_plans,
     )
 
 
@@ -1409,7 +1557,7 @@ def public_profile(username):
     profile_user = User.query.filter_by(username=username).first_or_404()
     is_own_profile = profile_user.id == user.id
     profile_user_rank = get_user_rank(profile_user.id)
-    _, profile_user_tier = get_muscle_group_data(profile_user.id)
+    profile_user_tier = get_volume_tier(profile_user.id)
     nav_rank = get_user_rank(user.id)
     active_tab = request.args.get("tab", "plans")
 
@@ -1417,10 +1565,14 @@ def public_profile(username):
         follower_id=user.id, followed_id=profile_user.id
     ).first() is not None
 
+    has_pending_request = FollowRequest.query.filter_by(
+        requester_id=user.id, target_id=profile_user.id
+    ).first() is not None
+
     followers_count = Follow.query.filter_by(followed_id=profile_user.id).count()
     following_count = Follow.query.filter_by(follower_id=profile_user.id).count()
 
-    profile_visible = profile_user.profile_public or is_own_profile
+    profile_visible = profile_user.profile_public or is_own_profile or is_following
 
     # Defaults — safe fallbacks used when profile is private or data is absent
     public_plans       = []
@@ -1578,6 +1730,7 @@ def public_profile(username):
         public_plans_count=public_plans_count,
         is_own_profile=is_own_profile,
         is_following=is_following,
+        has_pending_request=has_pending_request,
         followers_count=followers_count,
         following_count=following_count,
         profile_visible=profile_visible,
@@ -1610,16 +1763,33 @@ def follow_user(user_id):
         flash("You cannot follow yourself.", "warning")
         return redirect(url_for("public_profile", username=user_to_follow.username))
 
-    existing = Follow.query.filter_by(
+    already_following = Follow.query.filter_by(
         follower_id=user.id, followed_id=user_to_follow.id
     ).first()
 
-    if not existing:
+    if already_following:
+        next_url = request.form.get("next", "")
+        if not next_url or not next_url.startswith("/"):
+            next_url = url_for("public_profile", username=user_to_follow.username)
+        return redirect(next_url)
+
+    if not user_to_follow.profile_public:
+        existing_request = FollowRequest.query.filter_by(
+            requester_id=user.id, target_id=user_to_follow.id
+        ).first()
+        if not existing_request:
+            db.session.add(FollowRequest(requester_id=user.id, target_id=user_to_follow.id))
+            db.session.commit()
+            flash(f"Follow request sent to {user_to_follow.username}.", "success")
+    else:
         db.session.add(Follow(follower_id=user.id, followed_id=user_to_follow.id))
         db.session.commit()
         flash(f"You are now following {user_to_follow.username}.", "success")
 
-    return redirect(url_for("public_profile", username=user_to_follow.username))
+    next_url = request.form.get("next", "")
+    if not next_url or not next_url.startswith("/"):
+        next_url = url_for("public_profile", username=user_to_follow.username)
+    return redirect(next_url)
 
 
 @app.route("/unfollow/<int:user_id>", methods=["POST"])
@@ -1639,7 +1809,283 @@ def unfollow_user(user_id):
         db.session.commit()
         flash(f"You unfollowed {user_to_unfollow.username}.", "info")
 
-    return redirect(url_for("public_profile", username=user_to_unfollow.username))
+    next_url = request.form.get("next", "")
+    if not next_url or not next_url.startswith("/"):
+        next_url = url_for("public_profile", username=user_to_unfollow.username)
+    return redirect(next_url)
+
+
+@app.route("/follow-request/<int:request_id>/accept", methods=["POST"])
+def accept_follow_request(request_id):
+    user, err = _require_login()
+    if err:
+        return err
+
+    fr = FollowRequest.query.get_or_404(request_id)
+
+    if fr.target_id != user.id:
+        flash("Not authorised.", "warning")
+        return redirect(url_for("profile"))
+
+    existing = Follow.query.filter_by(
+        follower_id=fr.requester_id, followed_id=fr.target_id
+    ).first()
+    if not existing:
+        db.session.add(Follow(follower_id=fr.requester_id, followed_id=fr.target_id))
+
+    requester_id = fr.requester_id
+    db.session.delete(fr)
+    db.session.commit()
+
+    requester = db.session.get(User, requester_id)
+    if requester:
+        flash(f"You accepted {requester.username}'s follow request.", "success")
+
+    return redirect(url_for("profile"))
+
+
+@app.route("/follow-request/<int:request_id>/decline", methods=["POST"])
+def decline_follow_request(request_id):
+    user, err = _require_login()
+    if err:
+        return err
+
+    fr = FollowRequest.query.get_or_404(request_id)
+
+    if fr.target_id != user.id:
+        flash("Not authorised.", "warning")
+        return redirect(url_for("profile"))
+
+    requester_id = fr.requester_id
+    db.session.delete(fr)
+    db.session.commit()
+
+    requester = db.session.get(User, requester_id)
+    if requester:
+        flash(f"You declined {requester.username}'s follow request.", "info")
+
+    return redirect(url_for("profile"))
+
+
+@app.route("/follow-request/<int:user_id>/cancel", methods=["POST"])
+def cancel_follow_request(user_id):
+    user, err = _require_login()
+    if err:
+        return err
+
+    fr = FollowRequest.query.filter_by(
+        requester_id=user.id, target_id=user_id
+    ).first()
+
+    if fr:
+        db.session.delete(fr)
+        db.session.commit()
+        target = db.session.get(User, user_id)
+        if target:
+            flash(f"Follow request to {target.username} cancelled.", "info")
+
+    target = db.session.get(User, user_id)
+    next_url = request.form.get("next", "")
+    if not next_url or not next_url.startswith("/"):
+        next_url = url_for("public_profile", username=target.username) if target else url_for("dashboard")
+    return redirect(next_url)
+
+
+# ------------------------------------------------------------
+# Social list routes: followers / following / user plans
+# ------------------------------------------------------------
+
+@app.route("/u/<username>/followers")
+def user_followers(username):
+    user, err = _require_login()
+    if err:
+        return err
+
+    profile_user = User.query.filter_by(username=username).first_or_404()
+    is_own_profile = profile_user.id == user.id
+    nav_rank = get_user_rank(user.id)
+    q = request.args.get("q", "").strip()
+
+    current_user_follows_profile = Follow.query.filter_by(
+        follower_id=user.id, followed_id=profile_user.id
+    ).first() is not None
+
+    lists_visible = (
+        is_own_profile
+        or current_user_follows_profile
+        or (profile_user.profile_public and profile_user.show_follow_lists)
+    )
+
+    if not lists_visible:
+        return render_template(
+            "social_list.html",
+            profile_user=profile_user,
+            list_type="followers",
+            users=[],
+            hidden=True,
+            is_own_profile=is_own_profile,
+            q=q,
+            following_ids=set(),
+            current_user=user,
+            nav_rank=nav_rank,
+        )
+
+    query = (
+        db.session.query(User)
+        .join(Follow, Follow.follower_id == User.id)
+        .filter(Follow.followed_id == profile_user.id)
+    )
+    if q:
+        query = query.filter(User.username.ilike(f"%{q}%"))
+    followers = query.order_by(User.username).all()
+
+    following_ids = {
+        f.followed_id
+        for f in Follow.query.filter_by(follower_id=user.id).all()
+    }
+
+    return render_template(
+        "social_list.html",
+        profile_user=profile_user,
+        list_type="followers",
+        users=followers,
+        hidden=False,
+        is_own_profile=is_own_profile,
+        q=q,
+        following_ids=following_ids,
+        current_user=user,
+        nav_rank=nav_rank,
+    )
+
+
+@app.route("/u/<username>/following")
+def user_following(username):
+    user, err = _require_login()
+    if err:
+        return err
+
+    profile_user = User.query.filter_by(username=username).first_or_404()
+    is_own_profile = profile_user.id == user.id
+    nav_rank = get_user_rank(user.id)
+    q = request.args.get("q", "").strip()
+
+    current_user_follows_profile = Follow.query.filter_by(
+        follower_id=user.id, followed_id=profile_user.id
+    ).first() is not None
+
+    lists_visible = (
+        is_own_profile
+        or current_user_follows_profile
+        or (profile_user.profile_public and profile_user.show_follow_lists)
+    )
+
+    if not lists_visible:
+        return render_template(
+            "social_list.html",
+            profile_user=profile_user,
+            list_type="following",
+            users=[],
+            hidden=True,
+            is_own_profile=is_own_profile,
+            q=q,
+            following_ids=set(),
+            current_user=user,
+            nav_rank=nav_rank,
+        )
+
+    query = (
+        db.session.query(User)
+        .join(Follow, Follow.followed_id == User.id)
+        .filter(Follow.follower_id == profile_user.id)
+    )
+    if q:
+        query = query.filter(User.username.ilike(f"%{q}%"))
+    following = query.order_by(User.username).all()
+
+    following_ids = {
+        f.followed_id
+        for f in Follow.query.filter_by(follower_id=user.id).all()
+    }
+
+    return render_template(
+        "social_list.html",
+        profile_user=profile_user,
+        list_type="following",
+        users=following,
+        hidden=False,
+        is_own_profile=is_own_profile,
+        q=q,
+        following_ids=following_ids,
+        current_user=user,
+        nav_rank=nav_rank,
+    )
+
+
+@app.route("/u/<username>/plans")
+def user_plans(username):
+    user, err = _require_login()
+    if err:
+        return err
+
+    profile_user = User.query.filter_by(username=username).first_or_404()
+    is_own_profile = profile_user.id == user.id
+    nav_rank = get_user_rank(user.id)
+    is_following = Follow.query.filter_by(
+        follower_id=user.id, followed_id=profile_user.id
+    ).first() is not None
+    profile_visible = profile_user.profile_public or is_own_profile or is_following
+
+    if not profile_visible:
+        return redirect(url_for("public_profile", username=username))
+
+    if is_own_profile:
+        plans = (
+            WorkoutPlan.query
+            .filter_by(user_id=profile_user.id)
+            .order_by(WorkoutPlan.id.desc())
+            .all()
+        )
+    else:
+        plans = (
+            WorkoutPlan.query
+            .filter_by(user_id=profile_user.id, is_public=True)
+            .order_by(WorkoutPlan.id.desc())
+            .all()
+        )
+
+    plan_ids = [p.id for p in plans]
+    likes_map = {}
+    comments_map = {}
+
+    if plan_ids:
+        like_rows = (
+            db.session.query(WorkoutLike.workout_id, func.count(WorkoutLike.id))
+            .filter(WorkoutLike.workout_id.in_(plan_ids))
+            .group_by(WorkoutLike.workout_id)
+            .all()
+        )
+        likes_map = {wid: cnt for wid, cnt in like_rows}
+
+        comment_rows = (
+            db.session.query(WorkoutComment.workout_id, func.count(WorkoutComment.id))
+            .filter(WorkoutComment.workout_id.in_(plan_ids))
+            .group_by(WorkoutComment.workout_id)
+            .all()
+        )
+        comments_map = {wid: cnt for wid, cnt in comment_rows}
+
+    tags_map = {p.id: get_plan_tags(p) for p in plans}
+
+    return render_template(
+        "user_plans.html",
+        profile_user=profile_user,
+        plans=plans,
+        is_own_profile=is_own_profile,
+        likes_map=likes_map,
+        comments_map=comments_map,
+        tags_map=tags_map,
+        nav_rank=nav_rank,
+    )
 
 
 @app.route("/workout/<int:plan_id>")
@@ -1773,6 +2219,51 @@ def toggle_plan_visibility(plan_id):
 
     next_url = request.form.get("next") or url_for("plans")
     return redirect(next_url)
+
+
+@app.route("/post/<int:post_id>/like/json", methods=["POST"])
+def toggle_post_like_json(post_id):
+    user, err = _require_login()
+    if err:
+        return jsonify({"error": "not logged in"}), 401
+
+    post = CommunityPost.query.get_or_404(post_id)
+    if not post.is_public:
+        return jsonify({"error": "private post"}), 403
+
+    existing = CommunityPostLike.query.filter_by(post_id=post.id, user_id=user.id).first()
+    if existing:
+        db.session.delete(existing)
+        liked = False
+    else:
+        db.session.add(CommunityPostLike(post_id=post.id, user_id=user.id))
+        liked = True
+
+    db.session.commit()
+    count = CommunityPostLike.query.filter_by(post_id=post.id).count()
+    return jsonify({"liked": liked, "count": count})
+
+
+@app.route("/post/<int:post_id>/comment", methods=["POST"])
+def add_post_comment(post_id):
+    user, err = _require_login()
+    if err:
+        return err
+
+    post = CommunityPost.query.get_or_404(post_id)
+    if not post.is_public:
+        flash("Cannot comment on a private post.", "danger")
+        return redirect(url_for("public_feed"))
+
+    body = request.form.get("body", "").strip()
+    if not body:
+        flash("Comment cannot be empty.", "warning")
+        return redirect(url_for("public_feed"))
+
+    db.session.add(CommunityPostComment(body=body, user_id=user.id, post_id=post.id))
+    db.session.commit()
+    flash("Comment added.", "success")
+    return redirect(url_for("public_feed"))
 
 
 @app.route("/search")

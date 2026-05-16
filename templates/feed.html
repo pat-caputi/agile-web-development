@@ -162,17 +162,76 @@
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         {% for category, message in messages %}
-          <div style="margin-bottom:12px;padding:10px 14px;background:var(--success-bg);color:var(--success-text);border-radius:var(--radius-md);font-size:13px;">
-            {{ message }}
-          </div>
+          <div class="feed-flash feed-flash-{{ category }}">{{ message }}</div>
         {% endfor %}
       {% endif %}
     {% endwith %}
 
     <div class="page-header" style="margin-bottom:16px;">
       <h1 class="page-title">Community Feed</h1>
-      <p class="page-sub">Public workout plans shared by the community</p>
+      <p class="page-sub">Share workout updates with the community</p>
     </div>
+
+    <!-- Create post card -->
+    <form method="post"
+          action="{{ url_for('public_feed') }}"
+          enctype="multipart/form-data"
+          class="cp-create fd-card">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="cp-create-header">
+        <!-- Current user avatar -->
+        {% if nav_user and nav_user.profile_photo %}
+          <img src="{{ url_for('static', filename=nav_user.profile_photo) }}"
+               alt="{{ nav_user.username }}"
+               class="cp-create-avatar-img">
+        {% else %}
+          <div class="cp-create-avatar-init">
+            {{ nav_user.username[:2].upper() if nav_user else '?' }}
+          </div>
+        {% endif %}
+
+        <textarea name="body"
+                  class="cp-textarea"
+                  placeholder="Share a workout update…"
+                  rows="2"
+                  maxlength="2000"></textarea>
+      </div>
+
+      <!-- Image preview (hidden until file chosen) -->
+      <div class="cp-img-preview" id="cpImgPreview" style="display:none;">
+        <img id="cpImgPreviewImg" src="" alt="Preview">
+        <button type="button" class="cp-img-remove" id="cpImgRemove" title="Remove image">×</button>
+      </div>
+
+      <div class="cp-create-actions">
+        <!-- Image upload -->
+        <label class="cp-img-label" title="Add photo">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+            <rect x="1" y="3" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.4"/>
+            <circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.4"/>
+            <path d="M12 4h.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          </svg>
+          Photo
+          <input type="file" name="image" accept="image/png,image/jpeg,image/gif,image/webp"
+                 class="cp-img-input" id="cpImgInput">
+        </label>
+
+        <!-- Attach plan dropdown -->
+        {% if my_plans %}
+          <select name="plan_id" class="cp-plan-select">
+            <option value="">Attach plan…</option>
+            {% for plan in my_plans %}
+              <option value="{{ plan.id }}">
+                {{ plan.title }}{% if not plan.is_public %} (private){% endif %}
+              </option>
+            {% endfor %}
+          </select>
+        {% endif %}
+
+        <button type="submit" class="btn btn-primary cp-post-btn">Post</button>
+      </div>
+    </form>
 
     <!-- Filter tabs -->
     <div class="fd-tabs" role="tablist">
@@ -191,61 +250,76 @@
     </div>
 
     <!-- Feed -->
-    {% if plans %}
+    {% if posts %}
       <div class="fd-feed">
-        {% for plan in plans %}
-          {% set likes   = likes_map.get(plan.id, 0) %}
-          {% set n_comments = comments_map.get(plan.id, 0) %}
-          {% set liked   = plan.id in liked_by_user_set %}
-          {% set previews = comments_preview_map.get(plan.id, []) %}
-          {% set tags    = tags_map.get(plan.id, ['Workout Plan']) %}
+        {% for post in posts %}
+          {% set likes      = likes_map.get(post.id, 0) %}
+          {% set n_comments = comments_map.get(post.id, 0) %}
+          {% set liked      = post.id in liked_by_user_set %}
+          {% set previews   = comments_preview_map.get(post.id, []) %}
 
-          <article class="fd-card" data-plan-id="{{ plan.id }}">
+          <article class="fd-card" data-post-id="{{ post.id }}">
 
-            <!-- Card header: avatar + user info -->
+            <!-- Card header: avatar + username + time -->
             <div class="fd-card-header">
-              <a href="{{ url_for('public_profile', username=plan.user.username) if plan.user else '#' }}"
+              <a href="{{ url_for('public_profile', username=post.user.username) if post.user else '#' }}"
                  class="fd-avatar-link">
-                {% if plan.user and plan.user.profile_photo %}
-                  <img src="{{ url_for('static', filename=plan.user.profile_photo) }}"
-                       alt="{{ plan.user.username }}"
+                {% if post.user and post.user.profile_photo %}
+                  <img src="{{ url_for('static', filename=post.user.profile_photo) }}"
+                       alt="{{ post.user.username }}"
                        class="fd-avatar fd-avatar-img">
                 {% else %}
                   <div class="fd-avatar fd-avatar-init">
-                    {{ plan.user.username[:2].upper() if plan.user else '?' }}
+                    {{ post.user.username[:2].upper() if post.user else '?' }}
                   </div>
                 {% endif %}
               </a>
               <div class="fd-user-info">
-                <a href="{{ url_for('public_profile', username=plan.user.username) if plan.user else '#' }}"
+                <a href="{{ url_for('public_profile', username=post.user.username) if post.user else '#' }}"
                    class="fd-username">
-                  {{ plan.user.username if plan.user else 'Unknown' }}
+                  {{ post.user.username if post.user else 'Unknown' }}
                 </a>
-                <span class="fd-meta">Plan #{{ plan.id }}</span>
+                <span class="fd-meta">{{ post.created_at.strftime('%b %d, %Y') }}</span>
               </div>
             </div>
 
-            <!-- Title + description -->
-            <div class="fd-title">{{ plan.title }}</div>
-            {% if plan.description %}
-              <div class="fd-desc">
-                {{ plan.description[:160] }}{% if plan.description | length > 160 %}…{% endif %}
+            <!-- Caption / body -->
+            {% if post.body %}
+              <div class="cp-body">{{ post.body }}</div>
+            {% endif %}
+
+            <!-- Post image -->
+            {% if post.image_path %}
+              <div class="cp-post-img-wrap">
+                <img src="{{ url_for('static', filename=post.image_path) }}"
+                     class="cp-post-img"
+                     alt="Post image">
               </div>
             {% endif %}
 
-            <!-- Tags -->
-            <div class="fd-tags">
-              {% for tag in tags %}
-                <span class="fd-tag">{{ tag }}</span>
-              {% endfor %}
-            </div>
+            <!-- Linked workout plan preview -->
+            {% if post.plan %}
+              <div class="cp-plan-card">
+                <div class="cp-plan-badge">Workout Plan</div>
+                <div class="cp-plan-title">{{ post.plan.title }}</div>
+                {% if post.plan.description %}
+                  <div class="cp-plan-desc">
+                    {{ post.plan.description[:120] }}{% if post.plan.description | length > 120 %}…{% endif %}
+                  </div>
+                {% endif %}
+                {% if post.plan.is_public %}
+                  <a href="{{ url_for('workout_detail', plan_id=post.plan.id) }}"
+                     class="btn btn-secondary cp-plan-btn">View Plan</a>
+                {% endif %}
+              </div>
+            {% endif %}
 
             <div class="fd-divider"></div>
 
             <!-- Action row -->
             <div class="fd-actions">
               <button class="fd-like-btn {% if liked %}liked{% endif %}"
-                      data-plan="{{ plan.id }}"
+                      data-post="{{ post.id }}"
                       data-liked="{{ 'true' if liked else 'false' }}"
                       title="{{ 'Unlike' if liked else 'Like' }}">
                 <svg class="fd-heart" width="15" height="15" viewBox="0 0 16 16" fill="none">
@@ -262,12 +336,9 @@
                 </svg>
                 {{ n_comments }}
               </span>
-
-              <a href="{{ url_for('workout_detail', plan_id=plan.id) }}"
-                 class="btn btn-secondary fd-view-btn">View Plan</a>
             </div>
 
-            <!-- Comment preview -->
+            <!-- Comment previews -->
             {% if previews %}
               <div class="fd-comments">
                 {% for c in previews %}
@@ -279,35 +350,46 @@
                   </div>
                 {% endfor %}
                 {% if n_comments > 2 %}
-                  <a href="{{ url_for('workout_detail', plan_id=plan.id) }}"
-                     class="fd-view-all">View all {{ n_comments }} comments →</a>
+                  <span class="fd-view-all">{{ n_comments }} comments</span>
                 {% endif %}
               </div>
-            {% else %}
-              <div class="fd-no-comments">No comments yet — be the first!</div>
             {% endif %}
+
+            <!-- Inline comment form -->
+            <form method="post"
+                  action="{{ url_for('add_post_comment', post_id=post.id) }}"
+                  class="cp-comment-form">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="text"
+                     name="body"
+                     placeholder="Add a comment…"
+                     class="cp-comment-input"
+                     maxlength="500"
+                     autocomplete="off">
+              <button type="submit" class="cp-comment-submit">Post</button>
+            </form>
 
           </article>
         {% endfor %}
       </div>
 
     {% else %}
-      <!-- Empty state (per tab) -->
+      <!-- Empty state per tab -->
       <div class="fd-empty">
         {% if feed_filter == 'following' %}
           <div class="fd-empty-icon">👥</div>
-          <div class="fd-empty-title">Nobody followed yet</div>
-          <div class="fd-empty-sub">Follow other athletes to see their workouts here.</div>
+          <div class="fd-empty-title">Follow other users to see their posts here</div>
+          <div class="fd-empty-sub">Find athletes to follow and stay up to date with their training.</div>
           <a href="{{ url_for('search_page') }}" class="btn btn-primary" style="margin-top:16px;">Find people</a>
         {% elif feed_filter == 'liked' %}
           <div class="fd-empty-icon">❤️</div>
-          <div class="fd-empty-title">No liked workouts</div>
-          <div class="fd-empty-sub">No public plans have been liked yet. Be the first!</div>
+          <div class="fd-empty-title">No liked posts yet</div>
+          <div class="fd-empty-sub">Like posts from the community feed to see them here.</div>
           <a href="{{ url_for('public_feed') }}" class="btn btn-secondary" style="margin-top:16px;">Browse all</a>
         {% else %}
           <div class="fd-empty-icon">🏋️</div>
           <div class="fd-empty-title">Nothing here yet</div>
-          <div class="fd-empty-sub">Share a public workout plan to start the community feed.</div>
+          <div class="fd-empty-sub">Share a workout update or make a workout plan public to kick things off.</div>
           <a href="{{ url_for('plans') }}" class="btn btn-primary" style="margin-top:16px;">My plans</a>
         {% endif %}
       </div>
@@ -317,34 +399,62 @@
 </div>
 
 <script>
-  /* AJAX like toggle */
-  document.querySelectorAll('.fd-like-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const planId  = btn.dataset.plan;
+  /* Image preview for create-post form */
+  (function () {
+    const input   = document.getElementById('cpImgInput');
+    const preview = document.getElementById('cpImgPreview');
+    const img     = document.getElementById('cpImgPreviewImg');
+    const remove  = document.getElementById('cpImgRemove');
+
+    if (!input) return;
+
+    input.addEventListener('change', function () {
+      const file = this.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        img.src = e.target.result;
+        preview.style.display = 'block';
+      };
+      reader.readAsDataURL(file);
+    });
+
+    remove.addEventListener('click', function () {
+      input.value = '';
+      img.src = '';
+      preview.style.display = 'none';
+    });
+  })();
+
+  /* AJAX like toggle for community posts */
+  document.querySelectorAll('.fd-like-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const postId  = btn.dataset.post;
       const wasLiked = btn.dataset.liked === 'true';
+      const countEl  = btn.querySelector('.fd-like-count');
+      const newLiked = !wasLiked;
 
       /* Optimistic update */
-      const countEl = btn.querySelector('.fd-like-count');
-      const newLiked = !wasLiked;
       btn.dataset.liked = newLiked ? 'true' : 'false';
       btn.classList.toggle('liked', newLiked);
       btn.title = newLiked ? 'Unlike' : 'Like';
       countEl.textContent = parseInt(countEl.textContent, 10) + (newLiked ? 1 : -1);
 
-      fetch(`/workout/${planId}/like/json`, {
+      fetch('/post/' + postId + '/like/json', {
         method: 'POST',
         headers: {
           'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
         }
       })
-        .then(r => r.json())
-        .then(data => {
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
           if (data.error) {
-            /* Roll back on error */
+            /* Roll back */
             btn.dataset.liked = wasLiked ? 'true' : 'false';
             btn.classList.toggle('liked', wasLiked);
             btn.title = wasLiked ? 'Unlike' : 'Like';
-            countEl.textContent = data.count !== undefined ? data.count
+            countEl.textContent = data.count !== undefined
+              ? data.count
               : parseInt(countEl.textContent, 10) + (wasLiked ? 1 : -1);
             return;
           }
@@ -353,9 +463,7 @@
           btn.title = data.liked ? 'Unlike' : 'Like';
           countEl.textContent = data.count;
         })
-        .catch(() => {
-          /* Silent fail — the optimistic state stays; the server stays authoritative on refresh */
-        });
+        .catch(function () { /* silent — optimistic state stands */ });
     });
   });
 </script>
