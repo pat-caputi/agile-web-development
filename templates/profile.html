@@ -5,18 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Profile · LiftAGILE</title>
   <script>
-    if (performance.navigation && performance.navigation.type === 1) {
-      sessionStorage.removeItem('liftlab-theme');
-    }
     document.documentElement.setAttribute(
       'data-theme',
-      sessionStorage.getItem('liftlab-theme') ||
+      localStorage.getItem('liftlab-theme') ||
       (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
     );
     if (localStorage.getItem('liftlab-sidebar') === 'collapsed') {
       document.documentElement.setAttribute('data-sidebar', 'collapsed');
     }
   </script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   <style>
     .profile-layout {
@@ -307,17 +305,17 @@
 
             <!-- Stats -->
             <div class="profile-stats">
-              <div>
+              <div class="ps-stat--workouts">
                 <strong>{{ workouts_count if workouts_count is defined else 0 }}</strong>
                 <span>Workouts</span>
               </div>
 
-              <div>
-                <strong>{% if rank %}#{{ rank }}{% else %}-{% endif %}</strong>
+              <div class="ps-stat--rank">
+                <strong>{% if rank %}#{{ rank }}{% else %}—{% endif %}</strong>
                 <span>Leaderboard</span>
               </div>
 
-              <div>
+              <div class="ps-stat--tier">
                 <strong>
                   <span class="rank-badge {{ overall_tier.css }}" style="font-size:11px;padding:2px 7px;">
                     {{ overall_tier.icon }} {{ overall_tier.name }}
@@ -326,36 +324,12 @@
                 <span>Tier</span>
               </div>
 
-              <div>
+              <div class="ps-stat--streak">
                 <strong>{{ day_streak }}</strong>
                 <span>Day streak</span>
               </div>
             </div>
           </form>
-        </div>
-
-        <div class="card">
-          <div class="card-title">Personal records</div>
-          {% if pr_list %}
-          <div style="display:flex;flex-direction:column;gap:10px;">
-            {% for pr in pr_list %}
-            <div style="display:flex;align-items:center;gap:10px;">
-              <div class="ex-icon" style="background:{{ pr.css }};color:{{ pr.css_color }};width:28px;height:28px;font-size:11px;flex-shrink:0;">
-                {{ pr.exercise[0] }}
-              </div>
-              <div style="flex:1;min-width:0;">
-                <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ pr.exercise }}</div>
-                <div style="font-size:11.5px;color:var(--text-tertiary);">{{ pr.weight | int }} kg × {{ pr.reps }} reps</div>
-              </div>
-              <span class="badge badge-pr" style="font-size:12px;padding:3px 9px;white-space:nowrap;">{{ pr.pts }} pts</span>
-            </div>
-            {% endfor %}
-          </div>
-          {% else %}
-          <div style="font-size:13px;color:var(--text-tertiary);padding:6px 0;">
-            No PRs yet — log a workout to start tracking.
-          </div>
-          {% endif %}
         </div>
 
         <!-- Privacy settings -->
@@ -391,64 +365,90 @@
           </form>
         </div>
 
+        <!-- Appearance settings -->
+        <div class="card">
+          <div class="card-title">Appearance</div>
+          <div class="privacy-toggle-row" style="align-items:center;">
+            <div class="privacy-toggle-info">
+              <div class="privacy-toggle-label">Theme</div>
+              <div class="privacy-toggle-sub">Choose your preferred colour scheme</div>
+            </div>
+            <div class="theme-seg" id="themeSegControl">
+              <button class="theme-seg-btn" id="segLight" onclick="setTheme('light')">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                  <circle cx="8" cy="8" r="3.5" stroke="currentColor" stroke-width="1.5"/>
+                  <path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3.1 3.1l1 1M11.9 11.9l1 1M3.1 12.9l1-1M11.9 4.1l1-1"
+                        stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+                </svg>
+                Light
+              </button>
+              <button class="theme-seg-btn" id="segDark" onclick="setTheme('dark')">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                  <path d="M13.5 9.5A5.5 5.5 0 016.5 2.5a5.5 5.5 0 100 11 5.5 5.5 0 007-4z"
+                        stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+                Dark
+              </button>
+            </div>
+          </div>
+        </div>
+
         <a href="{{ url_for('logout') }}" class="btn btn-secondary btn-block">Sign out</a>
       </div>
 
       <!-- RIGHT COLUMN -->
-      <div class="card">
+      <div style="display:flex;flex-direction:column;gap:14px;">
 
-        <div class="card-title">Recent workouts</div>
-
-        <div style="display:flex;flex-direction:column;gap:10px;">
-
-          {% if recent_workouts %}
-
-            {% for workout in recent_workouts %}
-
-              <div style="display:flex;align-items:flex-start;gap:12px;padding:12px;background:var(--surface-2);border-radius:var(--radius-md);border:0.5px solid var(--border);">
-
-                <div style="text-align:center;min-width:36px;">
-                  <div style="font-size:16px;font-weight:600;">
-                    {{ workout.date.strftime("%d") }}
+        <div class="card">
+          <div class="card-title">Recent workouts</div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            {% if recent_workouts %}
+              {% for workout in recent_workouts %}
+                <div style="display:flex;align-items:flex-start;gap:12px;padding:12px;background:var(--surface-2);border-radius:var(--radius-md);border:0.5px solid var(--border);">
+                  <div style="text-align:center;min-width:36px;">
+                    <div style="font-size:16px;font-weight:600;">{{ workout.date.strftime("%d") }}</div>
+                    <div style="font-size:10px;color:var(--text-tertiary);">{{ workout.date.strftime("%b") }}</div>
                   </div>
-
-                  <div style="font-size:10px;color:var(--text-tertiary);">
-                    {{ workout.date.strftime("%b") }}
+                  <div style="flex:1;">
+                    <div style="font-size:13px;font-weight:500;margin-bottom:3px;">{{ workout.name }}</div>
+                    <div style="font-size:12px;color:var(--text-tertiary);">{{ workout.exercises | join(" · ") }}</div>
                   </div>
-                </div>
-
-                <div style="flex:1;">
-                  <div style="font-size:13px;font-weight:500;margin-bottom:3px;">
-                    {{ workout.name }}
-                  </div>
-
-                  <div style="font-size:12px;color:var(--text-tertiary);">
-                    {{ workout.exercises | join(" · ") }}
+                  <div style="text-align:right;">
+                    <div style="font-size:13px;font-weight:500;">{{ workout.volume | int }} kg</div>
+                    <div style="font-size:11px;color:var(--text-tertiary);">volume</div>
                   </div>
                 </div>
-
-                <div style="text-align:right;">
-                  <div style="font-size:13px;font-weight:500;">
-                    {{ workout.volume | int }} kg
-                  </div>
-
-                  <div style="font-size:11px;color:var(--text-tertiary);">
-                    volume
-                  </div>
-                </div>
-
+              {% endfor %}
+            {% else %}
+              <div style="padding:14px;background:var(--surface-2);border-radius:var(--radius-md);color:var(--text-tertiary);font-size:13px;">
+                No workouts logged yet.
               </div>
+            {% endif %}
+          </div>
+        </div>
 
-            {% endfor %}
-
-          {% else %}
-
-            <div style="padding:14px;background:var(--surface-2);border-radius:var(--radius-md);color:var(--text-tertiary);font-size:13px;">
-              No workouts logged yet.
+        <div class="card">
+          <div class="card-title">Personal records</div>
+          {% if pr_list %}
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            {% for pr in pr_list %}
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div class="ex-icon" style="background:{{ pr.css }};color:{{ pr.css_color }};width:28px;height:28px;font-size:11px;flex-shrink:0;">
+                {{ pr.exercise[0] }}
+              </div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ pr.exercise }}</div>
+                <div style="font-size:11.5px;color:var(--text-tertiary);">{{ pr.weight | int }} kg × {{ pr.reps }} reps</div>
+              </div>
+              <span class="badge badge-pr" style="font-size:12px;padding:3px 9px;white-space:nowrap;">{{ pr.pts }} pts</span>
             </div>
-
+            {% endfor %}
+          </div>
+          {% else %}
+          <div style="font-size:13px;color:var(--text-tertiary);padding:6px 0;">
+            No PRs yet — log a workout to start tracking.
+          </div>
           {% endif %}
-
         </div>
 
       </div>
@@ -458,6 +458,31 @@
   </main>
 </div>
 <script>
+  function setTheme(theme) {
+    localStorage.setItem('liftlab-theme', theme);
+    if (window.toggleTheme) {
+      // sync applyTheme from main.js
+      document.documentElement.setAttribute('data-theme', theme);
+      document.documentElement.style.background  = theme === 'dark' ? '#0F0F0E' : '';
+      document.documentElement.style.colorScheme = theme === 'dark' ? 'dark' : 'light';
+      var iconLight = document.getElementById('themeIconLight');
+      var iconDark  = document.getElementById('themeIconDark');
+      if (iconLight && iconDark) {
+        iconLight.style.display = theme === 'dark' ? 'none'  : 'block';
+        iconDark.style.display  = theme === 'dark' ? 'block' : 'none';
+      }
+    }
+    document.getElementById('segLight').classList.toggle('active', theme === 'light');
+    document.getElementById('segDark').classList.toggle('active', theme === 'dark');
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    var current = localStorage.getItem('liftlab-theme') ||
+      (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.getElementById('segLight').classList.toggle('active', current === 'light');
+    document.getElementById('segDark').classList.toggle('active', current === 'dark');
+  });
+
   const editBioBtn = document.getElementById("editBioBtn");
   const bioEditor = document.getElementById("bioEditor");
   const bioTextarea = document.getElementById("bio");
@@ -488,5 +513,7 @@
   });
 </script>
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

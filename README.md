@@ -187,7 +187,9 @@ Backend responsibilities include:
 ## Frontend
 
 - HTML5
-- CSS3
+- CSS3 (custom stylesheet)
+- Bootstrap 5 (CSS framework)
+- jQuery 3.7
 - JavaScript
 - Jinja2 templating
 - Font Awesome
@@ -310,55 +312,81 @@ http://127.0.0.1:5000
 
 # Running Tests
 
-LiftAGILE includes automated backend testing using pytest.
+LiftAGILE includes two test suites: unit/integration tests and Selenium browser tests.
 
-To run tests:
-
-```bash
-python -m pytest
-```
-
-Expected output:
+## Unit & Integration Tests
 
 ```bash
-23 passed
+python -m pytest tests/test_app.py -v
 ```
+
+Expected output: **20 passed**
+
+## Selenium Browser Tests
+
+Install browser test dependencies first:
+
+```bash
+pip install selenium webdriver-manager
+```
+
+Make sure no Flask server is already running on port 5000, then:
+
+```bash
+python -m pytest tests/test_selenium.py -v
+```
+
+Expected output: **21 passed**
+
+## Run All Tests
+
+```bash
+python -m pytest -v
+```
+
+Expected output: **41 passed**
 
 ---
 
 ## Test Coverage
 
-Automated tests currently cover:
+### Unit & Integration (`test_app.py`)
 
-### Authentication
-- successful login
-- invalid login
-- duplicate registration
+#### Authentication
+- successful login and redirect
+- invalid login handling
+- duplicate registration rejection
 - weak password rejection
-- protected route access
+- protected route access control
+- logout session clearing
+- CSRF enforcement
+- login rate limiting
 
-### Workout Features
-- workout logging
-- personal record creation
-- workout plan creation
-- workout plan editing
-- workout plan deletion
+#### Workout Features
+- workout logging with sets and reps
+- personal record creation and updating
+- workout plan creation, editing, deletion
+- ownership protection (cannot delete others' plans)
 
-### Calendar Features
+#### Calendar Features
 - workout scheduling
-- calendar entry validation
-- scheduled workout loading
+- rejection of other users' plans
 
-### Social Features
+#### Social Features
 - follow/unfollow users
-- like/unlike workout plans
+- like/unlike public workout plans
 - privacy restrictions for private plans
 
-### Security
-- CSRF enforcement
-- access control
-- route protection
-- authorization validation
+### Selenium Browser Tests (`test_selenium.py`)
+
+- Login and register page load and field validation
+- Successful login redirect to dashboard
+- Wrong password and nonexistent user error messages
+- Successful registration and redirect
+- Mismatched passwords, duplicate username, weak password errors
+- Unauthenticated redirect from dashboard
+- Page load smoke tests: dashboard, plans, log workout, profile, leaderboard
+- Logout redirect to login
 
 These tests improve reliability and demonstrate software engineering best practices.
 
