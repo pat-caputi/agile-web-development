@@ -5,18 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Log workout · LiftAGILE</title>
   <script>
-    if (performance.navigation && performance.navigation.type === 1) {
-      sessionStorage.removeItem('liftlab-theme');
-    }
     document.documentElement.setAttribute(
       'data-theme',
-      sessionStorage.getItem('liftlab-theme') ||
+      localStorage.getItem('liftlab-theme') ||
       (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
     );
     if (localStorage.getItem('liftlab-sidebar') === 'collapsed') {
       document.documentElement.setAttribute('data-sidebar', 'collapsed');
     }
   </script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   
   <style>
@@ -175,17 +173,52 @@
     .rest-toast.show { display:block; }
     .rest-count { font-family:var(--mono);font-size:28px;font-weight:500; }
 
-    .modal-backdrop {
+    .modal-overlay {
       display:none;position:fixed;inset:0;
-      background:rgba(0,0,0,0.45);z-index:100;
+      background:transparent;
+      z-index:100;
       align-items:center;justify-content:center;
     }
-    .modal-backdrop.show { display:flex; }
-    .modal {
-      background:var(--surface);border-radius:var(--radius-xl);
-      padding:28px;width:100%;max-width:440px;
-      border:0.5px solid var(--border-md);
+    .modal-overlay.show { display:flex; }
+    .modal-panel {
+      width: 100%; max-width: 440px;
+      background: linear-gradient(145deg, #ede9ff 0%, #e3ecff 42%, #f1e8ff 100%);
+      border: 1px solid rgba(140,120,220,0.28);
+      border-radius: 26px;
+      padding: 24px;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      box-shadow:
+        0 24px 64px rgba(83,74,183,0.22),
+        0 4px 24px rgba(0,0,0,0.10),
+        inset 0 1px 0 rgba(255,255,255,0.75);
+      position: relative;
+      overflow: hidden;
     }
+    .modal-panel::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(255,255,255,0.55) 15%,
+        rgba(255,255,255,1.00) 50%,
+        rgba(255,255,255,0.55) 85%,
+        transparent 100%
+      );
+      pointer-events: none;
+      z-index: 1;
+    }
+    [data-theme="dark"] .modal-panel {
+      background: linear-gradient(145deg, #1e1535 0%, #141028 45%, #1a1030 100%);
+      border-color: rgba(190,165,240,0.20);
+      box-shadow:
+        0 24px 64px rgba(83,74,183,0.30),
+        0 4px 24px rgba(0,0,0,0.20),
+        inset 0 1px 0 rgba(255,255,255,0.08);
+    }
+    .input-error { border-color:#ef4444 !important; background:rgba(239,68,68,0.06) !important; }
     .modal-title { font-size:18px;font-weight:600;letter-spacing:-0.3px;margin-bottom:4px; }
     .modal-sub   { font-size:13px;color:var(--text-secondary);margin-bottom:20px; }
     .summary-row { display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:0.5px solid var(--border);font-size:13px; }
@@ -371,7 +404,7 @@
         <div class="timer-display" id="workoutTimer">00:00</div>
       </div>
       <div class="timer-spacer"></div>
-      <button class="timer-btn" id="timerToggleBtn" onclick="toggleTimer()">Pause</button>
+      <button class="timer-btn" id="timerToggleBtn" onclick="toggleTimer()">Start</button>
       <button class="timer-btn" onclick="resetTimer()">Reset</button>
     </div>
 
@@ -422,17 +455,20 @@
               <div style="font-size:14px;font-weight:500;">Bench press</div>
               <div style="font-size:11.5px;color:var(--text-tertiary);">Chest · Barbell</div>
             </div>
+            <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+              <span style="font-size:11px;color:var(--text-tertiary);">Sets</span>
+              <input class="set-input" type="number" value="3" min="1" max="20" style="width:48px;text-align:center;" oninput="adjustSets('ex-1',this.value)">
+            </div>
             <button class="btn btn-secondary" style="padding:5px 10px;font-size:12px;" onclick="removeExercise('ex-1','bench press')">Remove</button>
           </div>
           <table class="set-table" style="width:100%;">
-            <thead><tr><th style="width:28px;">Set</th><th>Previous</th><th>Weight (kg)</th><th>Reps</th><th>Notes</th><th style="width:34px;"></th></tr></thead>
+            <thead><tr><th style="width:28px;">Set</th><th>Weight (kg)</th><th>Reps</th><th>Notes</th><th style="width:34px;"></th></tr></thead>
             <tbody id="sets-1">
-              <tr class="set-row"><td><span class="set-num">1</span></td><td style="font-size:11.5px;color:var(--text-tertiary);">77.5 × 8</td><td><input class="set-input" type="number" value="80" min="0" step="0.5"></td><td><input class="set-input" type="number" value="8" min="0"></td><td><input class="set-input" type="text" style="width:84px;" placeholder="—"></td><td><button class="btn-done" onclick="toggleDone(this)"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button></td></tr>
-              <tr class="set-row"><td><span class="set-num">2</span></td><td style="font-size:11.5px;color:var(--text-tertiary);">77.5 × 8</td><td><input class="set-input" type="number" value="80" min="0" step="0.5"></td><td><input class="set-input" type="number" value="7" min="0"></td><td><input class="set-input" type="text" style="width:84px;" placeholder="—"></td><td><button class="btn-done" onclick="toggleDone(this)"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button></td></tr>
-              <tr class="set-row"><td><span class="set-num">3</span></td><td style="font-size:11.5px;color:var(--text-tertiary);">75 × 8</td><td><input class="set-input" type="number" value="75" min="0" step="0.5"></td><td><input class="set-input" type="number" value="8" min="0"></td><td><input class="set-input" type="text" style="width:84px;" value="Drop set"></td><td><button class="btn-done" onclick="toggleDone(this)"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button></td></tr>
+              <tr class="set-row"><td><span class="set-num">1</span></td><td><input class="set-input" type="number" value="80" min="0.01" step="0.5" oninput="validateInput(this)"></td><td><input class="set-input" type="number" value="8" min="1" oninput="validateInput(this)"></td><td><input class="set-input" type="text" style="width:84px;" placeholder="—"></td><td><button class="btn-done" onclick="toggleDone(this)"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button></td></tr>
+              <tr class="set-row"><td><span class="set-num">2</span></td><td><input class="set-input" type="number" value="80" min="0.01" step="0.5" oninput="validateInput(this)"></td><td><input class="set-input" type="number" value="7" min="1" oninput="validateInput(this)"></td><td><input class="set-input" type="text" style="width:84px;" placeholder="—"></td><td><button class="btn-done" onclick="toggleDone(this)"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button></td></tr>
+              <tr class="set-row"><td><span class="set-num">3</span></td><td><input class="set-input" type="number" value="75" min="0.01" step="0.5" oninput="validateInput(this)"></td><td><input class="set-input" type="number" value="8" min="1" oninput="validateInput(this)"></td><td><input class="set-input" type="text" style="width:84px;" placeholder="—"></td><td><button class="btn-done" onclick="toggleDone(this)"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button></td></tr>
             </tbody>
           </table>
-          <button class="btn btn-secondary" style="margin-top:10px;font-size:12px;padding:6px 12px;" onclick="addSet(1)">+ Add set</button>
         </div>
 
         <!-- Overhead press (pre-loaded) -->
@@ -443,17 +479,20 @@
               <div style="font-size:14px;font-weight:500;">Overhead press</div>
               <div style="font-size:11.5px;color:var(--text-tertiary);">Shoulders · Barbell</div>
             </div>
+            <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+              <span style="font-size:11px;color:var(--text-tertiary);">Sets</span>
+              <input class="set-input" type="number" value="3" min="1" max="20" style="width:48px;text-align:center;" oninput="adjustSets('ex-2',this.value)">
+            </div>
             <button class="btn btn-secondary" style="padding:5px 10px;font-size:12px;" onclick="removeExercise('ex-2','overhead press')">Remove</button>
           </div>
           <table class="set-table" style="width:100%;">
-            <thead><tr><th style="width:28px;">Set</th><th>Previous</th><th>Weight (kg)</th><th>Reps</th><th>Notes</th><th style="width:34px;"></th></tr></thead>
+            <thead><tr><th style="width:28px;">Set</th><th>Weight (kg)</th><th>Reps</th><th>Notes</th><th style="width:34px;"></th></tr></thead>
             <tbody id="sets-2">
-              <tr class="set-row"><td><span class="set-num">1</span></td><td style="font-size:11.5px;color:var(--text-tertiary);">52.5 × 8</td><td><input class="set-input" type="number" value="55" min="0" step="0.5"></td><td><input class="set-input" type="number" value="8" min="0"></td><td><input class="set-input" type="text" style="width:84px;" placeholder="—"></td><td><button class="btn-done" onclick="toggleDone(this)"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button></td></tr>
-              <tr class="set-row"><td><span class="set-num">2</span></td><td style="font-size:11.5px;color:var(--text-tertiary);">52.5 × 7</td><td><input class="set-input" type="number" value="55" min="0" step="0.5"></td><td><input class="set-input" type="number" value="6" min="0"></td><td><input class="set-input" type="text" style="width:84px;" placeholder="—"></td><td><button class="btn-done" onclick="toggleDone(this)"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button></td></tr>
-              <tr class="set-row"><td><span class="set-num">3</span></td><td style="font-size:11.5px;color:var(--text-tertiary);">52.5 × 6</td><td><input class="set-input" type="number" value="52.5" min="0" step="0.5"></td><td><input class="set-input" type="number" value="6" min="0"></td><td><input class="set-input" type="text" style="width:84px;" placeholder="—"></td><td><button class="btn-done" onclick="toggleDone(this)"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button></td></tr>
+              <tr class="set-row"><td><span class="set-num">1</span></td><td><input class="set-input" type="number" value="55" min="0.01" step="0.5" oninput="validateInput(this)"></td><td><input class="set-input" type="number" value="8" min="1" oninput="validateInput(this)"></td><td><input class="set-input" type="text" style="width:84px;" placeholder="—"></td><td><button class="btn-done" onclick="toggleDone(this)"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button></td></tr>
+              <tr class="set-row"><td><span class="set-num">2</span></td><td><input class="set-input" type="number" value="55" min="0.01" step="0.5" oninput="validateInput(this)"></td><td><input class="set-input" type="number" value="6" min="1" oninput="validateInput(this)"></td><td><input class="set-input" type="text" style="width:84px;" placeholder="—"></td><td><button class="btn-done" onclick="toggleDone(this)"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button></td></tr>
+              <tr class="set-row"><td><span class="set-num">3</span></td><td><input class="set-input" type="number" value="52.5" min="0.01" step="0.5" oninput="validateInput(this)"></td><td><input class="set-input" type="number" value="6" min="1" oninput="validateInput(this)"></td><td><input class="set-input" type="text" style="width:84px;" placeholder="—"></td><td><button class="btn-done" onclick="toggleDone(this)"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button></td></tr>
             </tbody>
           </table>
-          <button class="btn btn-secondary" style="margin-top:10px;font-size:12px;padding:6px 12px;" onclick="addSet(2)">+ Add set</button>
         </div>
 
         <div id="exerciseList"></div>
@@ -468,6 +507,9 @@
         </div>
 
         <!-- Save / discard -->
+        <div id="saveErrorMsg" style="display:none;font-size:12px;color:#ef4444;padding:6px 0 2px;font-weight:500;">
+          Please enter a positive weight and reps for all sets before saving.
+        </div>
         <div style="display:flex;gap:10px;padding-bottom:24px;">
           <button class="btn btn-primary" style="flex:1;" onclick="saveWorkout()">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8.5l3.5 3.5 6.5-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -571,8 +613,8 @@
 </div>
 
 <!-- Summary modal -->
-<div class="modal-backdrop" id="summaryModal">
-  <div class="modal">
+<div class="modal-overlay" id="summaryModal">
+  <div class="modal-panel">
     <div class="modal-title">Workout complete!</div>
     <div class="modal-sub" id="summaryName" style="margin-bottom:16px;"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:18px;text-align:center;">
@@ -602,8 +644,7 @@
 <script>
   
 const selectedPlan = {{ (selected_plan | tojson) if selected_plan else 'null' }};
-let setCounters = {1:3, 2:3};
-let timerSecs = 0, timerRunning = true;
+let timerSecs = 0, timerRunning = false;
 
 setInterval(() => {
   if (!timerRunning) return;
@@ -626,6 +667,8 @@ function toggleDone(btn) {
   const done = !row.classList.contains('done');
   row.classList.toggle('done', done);
   btn.classList.toggle('done', done);
+  // Re-run validation on this row's number inputs whenever tick state changes
+  row.querySelectorAll('input[type="number"]').forEach(validateInput);
   if (done) {
     clearInterval(restInt);
     let r = 90;
@@ -681,12 +724,35 @@ function updateProgressChips() {
 }
 
 // ── SET MANAGEMENT ──
-function addSet(id) {
-  setCounters[id] = (setCounters[id] || 1) + 1;
-  const n = setCounters[id];
+function validateInput(input) {
+  const row = input.closest('.set-row');
+  if (!row || !row.classList.contains('done')) {
+    input.classList.remove('input-error');
+    return;
+  }
+  const val = parseFloat(input.value);
+  const min = parseFloat(input.min);
+  input.classList.toggle('input-error', !input.value || isNaN(val) || val < min);
+}
+
+function adjustSets(exId, count) {
+  count = Math.max(1, Math.min(20, parseInt(count) || 1));
+  const tbody = document.querySelector(`#${exId} tbody`);
+  if (!tbody) return;
+  const rows = Array.from(tbody.querySelectorAll('.set-row'));
+  const current = rows.length;
   const tick = `<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-  document.getElementById(`sets-${id}`).insertAdjacentHTML('beforeend',
-    `<tr class="set-row"><td><span class="set-num">${n}</span></td><td style="font-size:11.5px;color:var(--text-tertiary);">—</td><td><input class="set-input" type="number" placeholder="0" min="0" step="0.5"></td><td><input class="set-input" type="number" placeholder="0" min="0"></td><td><input class="set-input" type="text" style="width:84px;" placeholder="—"></td><td><button class="btn-done" onclick="toggleDone(this)">${tick}</button></td></tr>`);
+  if (count > current) {
+    for (let i = current + 1; i <= count; i++) {
+      tbody.insertAdjacentHTML('beforeend',
+        `<tr class="set-row"><td><span class="set-num">${i}</span></td><td><input class="set-input" type="number" placeholder="0" min="0.01" step="0.5" oninput="validateInput(this)"></td><td><input class="set-input" type="number" placeholder="0" min="1" oninput="validateInput(this)"></td><td><input class="set-input" type="text" style="width:84px;" placeholder="—"></td><td><button class="btn-done" onclick="toggleDone(this)">${tick}</button></td></tr>`
+      );
+    }
+  } else {
+    for (let i = current; i > count; i--) {
+      rows[i - 1]?.remove();
+    }
+  }
   updateProgress();
 }
 
@@ -704,7 +770,6 @@ function togglePick(el) {
   const bid   = `ex-${id}`;
   if (el.classList.contains('selected')) { el.classList.remove('selected'); document.getElementById(bid)?.remove(); updateProgress(); return; }
   el.classList.add('selected');
-  setCounters[id] = 1;
   const tick = `<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   document.getElementById('exerciseList').insertAdjacentHTML('beforeend', `
     <div class="card exercise-block" id="${bid}" data-exname="${name}" draggable="true">
@@ -712,13 +777,16 @@ function togglePick(el) {
         <div class="ex-drag-handle" title="Drag to reorder"><span></span><span></span><span></span></div>
         <div class="ex-icon ${cls}" style="flex-shrink:0;">${name[0]}</div>
         <div style="flex:1;"><div style="font-size:14px;font-weight:500;">${name}</div><div style="font-size:11.5px;color:var(--text-tertiary);">${cat} · ${equip}</div></div>
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+          <span style="font-size:11px;color:var(--text-tertiary);">Sets</span>
+          <input class="set-input" type="number" value="1" min="1" max="20" style="width:48px;text-align:center;" oninput="adjustSets('${bid}',this.value)">
+        </div>
         <button class="btn btn-secondary" style="padding:5px 10px;font-size:12px;" onclick="removeExercise('${bid}','${el.dataset.name}')">Remove</button>
       </div>
-      <table class="set-table" style="width:100%;"><thead><tr><th style="width:28px;">Set</th><th>Previous</th><th>Weight (kg)</th><th>Reps</th><th>Notes</th><th style="width:34px;"></th></tr></thead>
+      <table class="set-table" style="width:100%;"><thead><tr><th style="width:28px;">Set</th><th>Weight (kg)</th><th>Reps</th><th>Notes</th><th style="width:34px;"></th></tr></thead>
       <tbody id="sets-${id}">
-        <tr class="set-row"><td><span class="set-num">1</span></td><td style="font-size:11.5px;color:var(--text-tertiary);">—</td><td><input class="set-input" type="number" placeholder="0" min="0" step="0.5"></td><td><input class="set-input" type="number" placeholder="0" min="0"></td><td><input class="set-input" type="text" style="width:84px;" placeholder="—"></td><td><button class="btn-done" onclick="toggleDone(this)">${tick}</button></td></tr>
+        <tr class="set-row"><td><span class="set-num">1</span></td><td><input class="set-input" type="number" placeholder="0" min="0.01" step="0.5" oninput="validateInput(this)"></td><td><input class="set-input" type="number" placeholder="0" min="1" oninput="validateInput(this)"></td><td><input class="set-input" type="text" style="width:84px;" placeholder="—"></td><td><button class="btn-done" onclick="toggleDone(this)">${tick}</button></td></tr>
       </tbody></table>
-      <button class="btn btn-secondary" style="margin-top:10px;font-size:12px;padding:6px 12px;" onclick="addSet(${id})">+ Add set</button>
     </div>`);
   updateProgress();
   initWorkoutDnd();
@@ -742,35 +810,69 @@ function filterCategory(cat, btn) {
 let _workoutSets = [];
 
 function saveWorkout() {
+  const errEl = document.getElementById('saveErrorMsg');
+
+  // Must have at least one ticked set
+  if (document.querySelectorAll('.set-row.done').length === 0) {
+    errEl.textContent = 'Please tick at least one completed set before saving.';
+    errEl.style.display = 'block';
+    setTimeout(() => errEl.style.display = 'none', 3500);
+    return;
+  }
+
+  // Clear any previous error styling from unticked rows
+  document.querySelectorAll('.set-row:not(.done) input[type="number"]').forEach(i => i.classList.remove('input-error'));
+
+  // Only validate rows that have been ticked as done
+  let errors = 0;
+  document.querySelectorAll('.set-row.done').forEach(r => {
+    const numInputs = r.querySelectorAll('input[type="number"]');
+    const wInput = numInputs[0], rInput = numInputs[1];
+    if (!wInput || !rInput) return;
+    const w    = parseFloat(wInput.value);
+    const reps = parseInt(rInput.value);
+    const wBad = !wInput.value || isNaN(w) || w <= 0;
+    const rBad = !rInput.value || isNaN(reps) || reps < 1;
+    wInput.classList.toggle('input-error', wBad);
+    rInput.classList.toggle('input-error', rBad);
+    if (wBad || rBad) errors++;
+  });
+  if (errors) {
+    errEl.textContent = 'Please enter a positive weight and reps for all ticked sets.';
+    errEl.style.display = 'block';
+    setTimeout(() => errEl.style.display = 'none', 3500);
+    return;
+  }
+
   timerRunning = false;
   const name   = document.getElementById('workoutName').value || 'Workout';
   const blocks = document.querySelectorAll('.exercise-block');
   const mins   = Math.floor(timerSecs / 60);
-  const secs = timerSecs % 60;
+  const secs   = timerSecs % 60;
   _workoutSets = [];
   let vol = 0, lines = '';
   blocks.forEach(b => {
     const exName = b.dataset.exname || 'Exercise';
     let sets = 0, v = 0;
     b.querySelectorAll('.set-row').forEach(r => {
-    const isDone = r.classList.contains('done');
-    const w = parseFloat(r.querySelectorAll('input')[0]?.value) || 0;
-    const reps = parseInt(r.querySelectorAll('input')[1]?.value) || 0;
-
-    if (isDone && w > 0 && reps > 0) {
-      _workoutSets.push({exercise: exName, weight: w, reps: reps});
-      v += w * reps;
-      sets++;
-    }
-  });
+      const isDone  = r.classList.contains('done');
+      const numInps = r.querySelectorAll('input[type="number"]');
+      const w    = parseFloat(numInps[0]?.value) || 0;
+      const reps = parseInt(numInps[1]?.value)   || 0;
+      if (isDone && w > 0 && reps > 0) {
+        _workoutSets.push({exercise: exName, weight: w, reps: reps});
+        v += w * reps;
+        sets++;
+      }
+    });
     vol += v;
     lines += `<div class="summary-row"><span>${exName}</span><span style="color:var(--text-secondary);font-size:12px;">${sets} set${sets !== 1 ? 's' : ''} · ${v.toLocaleString()} kg</span></div>`;
   });
-  document.getElementById('summaryName').textContent    = name;
-  document.getElementById('sumDuration').textContent = `${mins}m ${secs}s`;
-  document.getElementById('sumExercises').textContent   = blocks.length;
-  document.getElementById('sumVolume').textContent      = vol.toLocaleString();
-  document.getElementById('sumExList').innerHTML        = lines || `<div style="font-size:13px;color:var(--text-tertiary);">No sets logged</div>`;
+  document.getElementById('summaryName').textContent  = name;
+  document.getElementById('sumDuration').textContent  = `${mins}m ${secs}s`;
+  document.getElementById('sumExercises').textContent = blocks.length;
+  document.getElementById('sumVolume').textContent    = vol.toLocaleString();
+  document.getElementById('sumExList').innerHTML      = lines || `<div style="font-size:13px;color:var(--text-tertiary);">No sets logged</div>`;
   document.getElementById('summaryModal').classList.add('show');
 }
 
@@ -937,5 +1039,7 @@ function loadSelectedPlan() {
 }
 loadSelectedPlan();
 </script>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

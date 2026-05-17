@@ -5,18 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard · LiftAGILE</title>
   <script>
-    if (performance.navigation && performance.navigation.type === 1) {
-      sessionStorage.removeItem('liftlab-theme');
-    }
     document.documentElement.setAttribute(
       'data-theme',
-      sessionStorage.getItem('liftlab-theme') ||
+      localStorage.getItem('liftlab-theme') ||
       (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
     );
     if (localStorage.getItem('liftlab-sidebar') === 'collapsed') {
       document.documentElement.setAttribute('data-sidebar', 'collapsed');
     }
   </script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
@@ -176,8 +174,9 @@
   <main class="main">
     {% with messages = get_flashed_messages() %}
       {% if messages %}
-        <div style="margin-bottom:15px;padding:10px;background:#d4edda;color:#155724;border-radius:6px;">
+        <div class="alert alert-success flash-msg alert-dismissible fade show" role="alert">
           {{ messages[0] }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
       {% endif %}
     {% endwith %}
@@ -185,12 +184,12 @@
       <h1 class="page-title">
         {{ greeting }} {{ emoji }}, {{ nav_user.username.title() if nav_user else "User" }}
       </h1>
-      <p class="page-sub">{{ today.strftime("%A, %d %B") }} · Week {{ today.strftime("%U") }} · {{ workouts_count }} workouts this week</p>
+      <p class="page-sub">{{ today.strftime("%A, %d %B") }} · Week {{ today.strftime("%V") }} · {{ workouts_count }} workouts this week</p>
     </div>
 
     <!-- Stat cards -->
     <div class="stats-grid">
-      <div class="stat-card">
+      <div class="stat-card stat-card--blue">
         <div class="stat-label">Weekly volume</div>
         <div class="stat-value">{{ weekly_volume }}<span class="stat-unit"> kg</span></div>
         <div class="stat-meta">
@@ -205,17 +204,17 @@
           </span>
         </div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card stat-card--green">
         <div class="stat-label">Workouts logged</div>
         <div class="stat-value">{{ workouts_count }}</div>
         <div class="stat-meta">Goal: 5 / week</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card stat-card--amber">
         <div class="stat-label">Current streak</div>
         <div class="stat-value">{{ streak }}<span class="stat-unit"> days</span></div>
         <div class="stat-meta"><span class="badge badge-pr">Personal best</span></div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card stat-card--red">
         <div class="stat-label">Leaderboard rank</div>
         <div class="stat-value">{% if rank %}#{{ rank }}{% else %}—{% endif %}</div>
         <div class="stat-meta">of {{ total_users }} user{{ 's' if total_users != 1 else '' }}</div>
@@ -317,5 +316,7 @@
   </main>
 </div>
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
